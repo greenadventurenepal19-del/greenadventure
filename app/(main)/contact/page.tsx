@@ -36,6 +36,7 @@ export default function ContactPage() {
     locationLine1: "Thamel, Kathmandu",
     locationLine2: "Bagmati Province, Nepal 44600",
     phonePrimary: "+977 1 4412345",
+    phoneWhatsapp: "+977 9801234567",
     emailPrimary: "info@greenadventure.com",
     emailSecondary: "bookings@greenadventure.com",
     mapLat: 27.7126,
