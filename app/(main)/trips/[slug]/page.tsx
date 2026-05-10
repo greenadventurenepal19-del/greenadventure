@@ -6,8 +6,6 @@ import {
   MapPin, Clock, TrendingUp, Leaf, Cloud, Users, Heart, MessageCircle
 } from "lucide-react";
 import TripBookingWidget from "@/components/TripBookingWidget";
-import { doc, getDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
 
 const tripData: Record<string, any> = {
   "annapurna-base-camp-trek": {
@@ -113,12 +111,22 @@ export default async function TripDetailPage({ params }: { params: Promise<{ slu
   };
 
   try {
-    const contactDoc = await getDoc(doc(db, "settings", "contact_info"));
-    if (contactDoc.exists()) {
-      contactSettings = { ...contactSettings, ...contactDoc.data() };
+    const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
+    if (projectId) {
+      const res = await fetch(`https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/settings/contact_info`, { 
+        next: { revalidate: 3600 } 
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.fields) {
+          if (data.fields.phonePrimary?.stringValue) contactSettings.phonePrimary = data.fields.phonePrimary.stringValue;
+          if (data.fields.phoneWhatsapp?.stringValue) contactSettings.phoneWhatsapp = data.fields.phoneWhatsapp.stringValue;
+          if (data.fields.emailPrimary?.stringValue) contactSettings.emailPrimary = data.fields.emailPrimary.stringValue;
+        }
+      }
     }
   } catch (error) {
-    console.error("Failed to fetch contact settings", error);
+    console.error("Failed to fetch contact settings via REST", error);
   }
   
   return (
