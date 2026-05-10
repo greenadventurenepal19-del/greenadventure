@@ -74,7 +74,17 @@ export function Navbar() {
     setActiveDropdown(null);
   }, [pathname]);
 
-  const isTransparent = !isScrolled && !isOpen;
+  // Define routes that have a dark hero image at the top
+  const hasHeroImage = 
+    pathname === "/" || 
+    pathname === "/about" || 
+    pathname === "/contact" || 
+    pathname === "/trips" || 
+    pathname.startsWith("/trips/") ||
+    pathname === "/destinations" ||
+    pathname.startsWith("/destinations/");
+
+  const isTransparent = !isScrolled && !isOpen && hasHeroImage;
 
   return (
     <motion.header 
@@ -96,23 +106,25 @@ export function Navbar() {
         className={`pointer-events-auto flex items-center justify-between transition-all duration-500 w-full ${
           isTransparent
             ? "max-w-7xl bg-transparent border-transparent px-2"
-            : "max-w-5xl bg-background/85 dark:bg-background/70 backdrop-blur-2xl border border-border/50 shadow-2xl rounded-full px-6 py-1.5 md:py-2"
+            : "max-w-5xl bg-background/90 dark:bg-background/80 backdrop-blur-2xl border border-border/50 shadow-2xl rounded-full px-6 py-1.5 md:py-2"
         }`}
       >
-        <Link href="/" className="flex items-center gap-2 group">
-          <div className={`hidden md:flex p-2 rounded-xl transition-colors ${
-            isTransparent ? "bg-white/20 text-white group-hover:bg-white/30" : "bg-brand-500/10 text-brand-600 dark:text-brand-500 group-hover:bg-brand-500/20"
-          }`}>
-            <Mountain className="h-6 w-6" />
-          </div>
-          <span className={`text-xl font-bold tracking-tight transition-colors ${
-            isTransparent ? "text-white" : "text-foreground"
-          }`}>
-            Green<span className={isTransparent ? "text-brand-300" : "text-brand-600 dark:text-brand-500"}>Adventure</span>
-          </span>
-        </Link>
+        <div className="flex-1">
+          <Link href="/" className="flex items-center gap-2 group w-fit">
+            <div className={`hidden md:flex p-2 rounded-xl transition-colors ${
+              isTransparent ? "bg-white/20 text-white group-hover:bg-white/30 backdrop-blur-md" : "bg-brand-500/10 text-brand-600 dark:text-brand-500 group-hover:bg-brand-500/20"
+            }`}>
+              <Mountain className="h-6 w-6" />
+            </div>
+            <span className={`text-xl font-bold tracking-tight transition-colors ${
+              isTransparent ? "text-white drop-shadow-md" : "text-foreground"
+            }`}>
+              Green<span className={isTransparent ? "text-brand-300 drop-shadow-sm" : "text-brand-600 dark:text-brand-500"}>Adventure</span>
+            </span>
+          </Link>
+        </div>
 
-        <nav className="hidden md:flex items-center gap-2">
+        <nav className="hidden md:flex items-center justify-center gap-2">
           {navLinks.map((link) => {
             const isActive = pathname === link.href || (link.dropdown && pathname.startsWith(link.href));
             const hasDropdown = !!link.dropdown;
@@ -128,12 +140,12 @@ export function Navbar() {
                   href={link.href}
                   className={`flex items-center gap-1 px-4 py-2 rounded-full text-sm font-semibold transition-all duration-200 relative overflow-hidden ${
                     isTransparent 
-                      ? isActive ? "text-white" : "text-white/80 hover:text-white"
+                      ? isActive ? "text-white drop-shadow-md" : "text-white/90 hover:text-white drop-shadow-md"
                       : isActive ? "text-brand-600 dark:text-brand-500" : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
                   <span className={`absolute inset-0 rounded-full opacity-0 scale-75 group-hover:opacity-100 group-hover:scale-100 transition-all duration-300 -z-10 ${
-                    isTransparent ? "bg-white/10" : "bg-brand-500/10 dark:bg-brand-500/20"
+                    isTransparent ? "bg-white/10 backdrop-blur-md" : "bg-brand-500/10 dark:bg-brand-500/20"
                   }`} />
                   
                   {link.name}
@@ -143,7 +155,7 @@ export function Navbar() {
                     <motion.div
                       layoutId="nav-active"
                       className={`absolute bottom-1.5 left-1/2 -translate-x-1/2 h-1 w-1 rounded-full ${
-                        isTransparent ? "bg-white" : "bg-brand-600 dark:bg-brand-500"
+                        isTransparent ? "bg-brand-400" : "bg-brand-600 dark:bg-brand-500"
                       }`}
                       transition={{ type: "spring", stiffness: 300, damping: 30 }}
                     />
@@ -189,35 +201,29 @@ export function Navbar() {
               </div>
             );
           })}
-          
-          <div className={`flex items-center gap-4 pl-4 border-l ml-2 ${
-            isTransparent ? "border-white/20" : "border-border/50"
-          }`}>
-            <div className={isTransparent ? "opacity-90 invert dark:invert-0" : ""}>
+        </nav>
+
+        <div className="hidden md:flex flex-1 justify-end items-center">
+          <div className="flex items-center gap-4 pl-4 border-l border-border/50">
+            <div>
               <ThemeToggle />
             </div>
             <Link
               href="/contact"
-              className={`px-6 py-2.5 rounded-full font-bold text-sm transition-all hover:scale-105 active:scale-95 ${
-                isTransparent 
-                  ? "bg-white text-black hover:bg-white/90 shadow-[0_0_20px_rgba(255,255,255,0.3)]" 
-                  : "bg-brand-600 text-white hover:bg-brand-700 shadow-md shadow-brand-500/20"
-              }`}
+              className="px-6 py-2.5 rounded-full font-bold text-sm transition-all hover:scale-105 active:scale-95 bg-brand-600 text-white hover:bg-brand-700 shadow-md shadow-brand-500/20"
             >
               Book Now
             </Link>
           </div>
-        </nav>
+        </div>
 
         <div className="flex items-center gap-3 md:hidden">
-          <div className={isTransparent ? "opacity-90 invert dark:invert-0" : ""}>
+          <div>
             <ThemeToggle />
           </div>
           <button
             onClick={() => setIsOpen(!isOpen)}
-            className={`p-2 transition-colors ${
-              isTransparent ? "text-white" : "text-foreground"
-            }`}
+            className="p-2 transition-colors text-foreground"
             aria-label="Toggle menu"
           >
             {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}

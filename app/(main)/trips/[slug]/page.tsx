@@ -6,6 +6,7 @@ import {
   MapPin, Clock, TrendingUp, Leaf, Cloud, Users, Heart, MessageCircle
 } from "lucide-react";
 import TripBookingWidget from "@/components/TripBookingWidget";
+import TripBookingModalWrapper from "@/components/TripBookingModalWrapper";
 
 const tripData: Record<string, any> = {
   "annapurna-base-camp-trek": {
@@ -181,24 +182,12 @@ export default async function TripDetailPage({ params }: { params: Promise<{ slu
             </span>
           </div>
 
-          <div className="flex flex-wrap gap-4">
-            <Link href="#booking-widget" className="px-8 py-3 rounded-full bg-white text-black font-semibold transition-all hover:bg-gray-100 shadow-xl">
-              Book Now
-            </Link>
-            <Link href="#booking-widget" className="px-8 py-3 rounded-full bg-black/40 hover:bg-black/60 border border-white/20 backdrop-blur-md text-white font-semibold transition-all shadow-xl">
-              Customize Trip
-            </Link>
-            {contactSettings.phoneWhatsapp && (
-              <a
-                href={`https://wa.me/${contactSettings.phoneWhatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(`Hi, I am interested in the ${trip.title} trip.`)}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="px-8 py-3 rounded-full bg-[#25D366]/80 hover:bg-[#25D366] border border-[#25D366]/20 backdrop-blur-md text-white font-semibold transition-all shadow-xl flex items-center gap-2"
-              >
-                <MessageCircle className="h-5 w-5" /> WhatsApp
-              </a>
-            )}
-          </div>
+          <TripBookingModalWrapper
+            tripTitle={trip.title}
+            tripSlug={slug}
+            price={trip.price}
+            contactSettings={contactSettings}
+          />
         </div>
       </section>
 

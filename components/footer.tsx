@@ -161,11 +161,19 @@ export function Footer() {
           <p className="text-sm text-slate-500 font-medium">
             © {new Date().getFullYear()} Green Adventure Treks & Expeditions. All rights reserved.
           </p>
-          <div className="flex gap-4">
-            {/* Affiliation badges */}
-            <div className="px-5 py-2.5 bg-white/5 border border-white/10 rounded-xl text-[10px] font-black tracking-widest text-slate-300 hover:bg-brand-600 hover:text-white transition-all cursor-pointer">TAAN</div>
-            <div className="px-5 py-2.5 bg-white/5 border border-white/10 rounded-xl text-[10px] font-black tracking-widest text-slate-300 hover:bg-brand-600 hover:text-white transition-all cursor-pointer">NMA</div>
-            <div className="px-5 py-2.5 bg-white/5 border border-white/10 rounded-xl text-[10px] font-black tracking-widest text-slate-300 hover:bg-brand-600 hover:text-white transition-all cursor-pointer">NTB</div>
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-slate-500 font-medium">GreenAdventure by</span>
+            <a 
+              href="http://tritechies.vercel.app/" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="group flex items-center gap-1.5 px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-sm font-bold text-slate-300 hover:bg-brand-500/10 hover:border-brand-500/30 transition-all shadow-sm"
+            >
+              <span className="text-emerald-400 group-hover:text-emerald-300 transition-colors drop-shadow-sm">
+                tritechies.
+              </span>
+              <ArrowUpRight className="w-3.5 h-3.5 text-brand-500 group-hover:text-brand-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
+            </a>
           </div>
         </div>
       </div>

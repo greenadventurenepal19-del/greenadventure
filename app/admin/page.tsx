@@ -14,6 +14,7 @@ import {
 export default function AdminPage() {
   const { user, isAdmin, isSuperAdmin, loading, loginWithGoogle, logout } = useAdminAuth();
   const [activeTab, setActiveTab] = useState<"contacts" | "access" | "settings" | "hero">("contacts");
+  const [contactFilter, setContactFilter] = useState<"all" | "booking" | "inquiry">("all");
   
   // Data states
   const [contacts, setContacts] = useState<any[]>([]);
@@ -341,20 +342,42 @@ export default function AdminPage() {
                   <h2 className="text-3xl font-bold text-white tracking-tight">Contact Requests</h2>
                   <p className="text-white/50 mt-1">Manage and respond to customer inquiries.</p>
                 </div>
-                <div className="flex items-center gap-3 bg-white/5 border border-white/10 p-1.5 rounded-xl">
+
+                <div className="flex items-center gap-2 bg-white/5 border border-white/10 p-1 rounded-xl overflow-x-auto">
+                  <button 
+                    onClick={() => setContactFilter("all")}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${contactFilter === "all" ? "bg-white/10 text-white" : "text-white/50 hover:text-white/80"}`}
+                  >
+                    All Requests
+                  </button>
+                  <button 
+                    onClick={() => setContactFilter("booking")}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${contactFilter === "booking" ? "bg-brand-500/20 text-brand-400" : "text-white/50 hover:text-white/80"}`}
+                  >
+                    Booking Requests
+                  </button>
+                  <button 
+                    onClick={() => setContactFilter("inquiry")}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${contactFilter === "inquiry" ? "bg-blue-500/20 text-blue-400" : "text-white/50 hover:text-white/80"}`}
+                  >
+                    Inquiries
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-3 bg-white/5 border border-white/10 p-1.5 rounded-xl shrink-0">
                   <div className="px-4 py-2 bg-black/40 rounded-lg">
-                    <span className="text-2xl font-bold text-brand-400">{contacts.filter(c => c.status !== "processed").length}</span>
+                    <span className="text-2xl font-bold text-brand-400">{contacts.filter(c => c.status !== "processed" && (contactFilter === "all" || c.type === contactFilter || (contactFilter === "inquiry" && !c.type))).length}</span>
                     <span className="text-xs text-white/50 ml-2 uppercase tracking-wider">Pending</span>
                   </div>
                   <div className="px-4 py-2">
-                    <span className="text-2xl font-bold text-white/80">{contacts.filter(c => c.status === "processed").length}</span>
+                    <span className="text-2xl font-bold text-white/80">{contacts.filter(c => c.status === "processed" && (contactFilter === "all" || c.type === contactFilter || (contactFilter === "inquiry" && !c.type))).length}</span>
                     <span className="text-xs text-white/50 ml-2 uppercase tracking-wider">Done</span>
                   </div>
                 </div>
               </div>
               
               <div className="grid gap-6">
-                {contacts.length === 0 ? (
+                {contacts.filter(c => contactFilter === "all" || c.type === contactFilter || (contactFilter === "inquiry" && !c.type)).length === 0 ? (
                   <div className="bg-white/5 border border-white/5 p-16 rounded-[2rem] text-center text-white/50 backdrop-blur-md">
                     <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-6">
                       <Sparkles className="w-10 h-10 text-white/20" />
@@ -363,7 +386,7 @@ export default function AdminPage() {
                     <p>There are no contact requests to display.</p>
                   </div>
                 ) : (
-                  contacts.map(contact => (
+                  contacts.filter(c => contactFilter === "all" || c.type === contactFilter || (contactFilter === "inquiry" && !c.type)).map(contact => (
                     <div key={contact.id} className={`group border p-6 md:p-8 rounded-[2rem] flex flex-col md:flex-row gap-8 relative overflow-hidden transition-all duration-300 hover:shadow-2xl ${
                       contact.status === "processed" 
                         ? "bg-white/[0.02] border-white/5 opacity-75 hover:opacity-100" 
