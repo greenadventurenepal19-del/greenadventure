@@ -182,10 +182,10 @@ export default async function TripDetailPage({ params }: { params: Promise<{ slu
           </div>
 
           <div className="flex flex-wrap gap-4">
-            <Link href="#book" className="px-8 py-3 rounded-full bg-white text-black font-semibold transition-all hover:bg-gray-100 shadow-xl">
+            <Link href="#booking-widget" className="px-8 py-3 rounded-full bg-white text-black font-semibold transition-all hover:bg-gray-100 shadow-xl">
               Book Now
             </Link>
-            <Link href="#customize" className="px-8 py-3 rounded-full bg-black/40 hover:bg-black/60 border border-white/20 backdrop-blur-md text-white font-semibold transition-all shadow-xl">
+            <Link href="#booking-widget" className="px-8 py-3 rounded-full bg-black/40 hover:bg-black/60 border border-white/20 backdrop-blur-md text-white font-semibold transition-all shadow-xl">
               Customize Trip
             </Link>
             {contactSettings.phoneWhatsapp && (
@@ -316,7 +316,7 @@ export default async function TripDetailPage({ params }: { params: Promise<{ slu
 
           {/* Sticky Sidebar */}
           <div className="w-full lg:w-1/3">
-            <div className="sticky top-32 space-y-8">
+            <div id="booking-widget" className="sticky top-32 space-y-8 scroll-mt-32">
               {/* Booking Widget */}
               <TripBookingWidget 
                 tripTitle={trip.title} 

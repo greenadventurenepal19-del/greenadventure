@@ -42,3 +42,8 @@ next-env.d.ts
 
 # python
 venv/
+bgrem/
+
+# large media
+public/herovidoe.gif
+public/herovidoe.mp4
