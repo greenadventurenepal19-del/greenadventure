@@ -3,7 +3,7 @@ import Link from "next/link";
 import { 
   Calendar, Mountain, DollarSign, Activity, 
   Map, CheckCircle, XCircle, ChevronDown, Star,
-  MapPin, Clock, TrendingUp, Leaf, Cloud, Users, Heart
+  MapPin, Clock, TrendingUp, Leaf, Cloud, Users, Heart, MessageCircle
 } from "lucide-react";
 import TripBookingWidget from "@/components/TripBookingWidget";
 import { doc, getDoc } from "firebase/firestore";
@@ -106,8 +106,9 @@ export default async function TripDetailPage({ params }: { params: Promise<{ slu
   };
 
   // Fetch Contact Info Settings for Need Help section
-  let contactSettings = {
+  let contactSettings: any = {
     phonePrimary: "+977 1 4412345",
+    phoneWhatsapp: "+977 9801234567",
     emailPrimary: "info@greenadventure.com"
   };
 
@@ -179,6 +180,16 @@ export default async function TripDetailPage({ params }: { params: Promise<{ slu
             <Link href="#customize" className="px-8 py-3 rounded-full bg-black/40 hover:bg-black/60 border border-white/20 backdrop-blur-md text-white font-semibold transition-all shadow-xl">
               Customize Trip
             </Link>
+            {contactSettings.phoneWhatsapp && (
+              <a
+                href={`https://wa.me/${contactSettings.phoneWhatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(`Hi, I am interested in the ${trip.title} trip.`)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-8 py-3 rounded-full bg-[#25D366]/80 hover:bg-[#25D366] border border-[#25D366]/20 backdrop-blur-md text-white font-semibold transition-all shadow-xl flex items-center gap-2"
+              >
+                <MessageCircle className="h-5 w-5" /> WhatsApp
+              </a>
+            )}
           </div>
         </div>
       </section>
