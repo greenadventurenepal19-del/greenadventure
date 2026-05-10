@@ -263,7 +263,7 @@ export default function DestinationDynamicPage() {
       opacity: 1,
       y: 0,
       rotateX: 0,
-      transition: { delay: i * 0.1, duration: 0.8, ease: [0.215, 0.61, 0.355, 1] }
+      transition: { delay: i * 0.1, duration: 0.8, ease: [0.215, 0.61, 0.355, 1] as const }
     })
   };
 
