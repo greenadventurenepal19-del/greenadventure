@@ -83,7 +83,11 @@ export function Navbar() {
         hidden: { y: "-100%" }
       }}
       animate={hidden ? "hidden" : "visible"}
-      transition={{ duration: 0.35, ease: "easeInOut" }}
+      transition={{ 
+        duration: hidden ? 0.4 : 0.2,
+        delay: hidden ? 0.3 : 0,
+        ease: "easeInOut" 
+      }}
       className={`fixed top-0 left-0 right-0 z-50 flex justify-center px-4 transition-all duration-500 pointer-events-none ${
         isScrolled ? "pt-4" : "pt-6"
       }`}
@@ -92,11 +96,11 @@ export function Navbar() {
         className={`pointer-events-auto flex items-center justify-between transition-all duration-500 w-full ${
           isTransparent
             ? "max-w-7xl bg-transparent border-transparent px-2"
-            : "max-w-5xl bg-background/85 dark:bg-background/70 backdrop-blur-2xl border border-border/50 shadow-2xl rounded-full px-6 py-3"
+            : "max-w-5xl bg-background/85 dark:bg-background/70 backdrop-blur-2xl border border-border/50 shadow-2xl rounded-full px-6 py-1.5 md:py-2"
         }`}
       >
         <Link href="/" className="flex items-center gap-2 group">
-          <div className={`p-2 rounded-xl transition-colors ${
+          <div className={`hidden md:flex p-2 rounded-xl transition-colors ${
             isTransparent ? "bg-white/20 text-white group-hover:bg-white/30" : "bg-brand-500/10 text-brand-600 dark:text-brand-500 group-hover:bg-brand-500/20"
           }`}>
             <Mountain className="h-6 w-6" />
@@ -104,7 +108,7 @@ export function Navbar() {
           <span className={`text-xl font-bold tracking-tight transition-colors ${
             isTransparent ? "text-white" : "text-foreground"
           }`}>
-            Green <span className={isTransparent ? "text-brand-300" : "text-brand-600 dark:text-brand-500"}>Adventure</span>
+            Green<span className={isTransparent ? "text-brand-300" : "text-brand-600 dark:text-brand-500"}>Adventure</span>
           </span>
         </Link>
 

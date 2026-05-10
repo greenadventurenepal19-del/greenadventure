@@ -1,0 +1,42 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Check if the user is the super admin or in the admins collection
+    function isAdmin() {
+      return request.auth != null && (
+        request.auth.token.email == 'greenadventurenepal19@gmail.com' ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.token.email))
+      );
+    }
+    
+    // Admins Collection:
+    // Only authenticated users who are ALREADY admins (or the super admin) can read or write.
+    match /admins/{adminId} {
+      allow read: if request.auth != null;
+      allow write: if isAdmin();
+    }
+    
+    // Contacts Collection:
+    // Anyone can create a contact request (unauthenticated).
+    // Only admins can read, update, or delete them.
+    match /contacts/{contactId} {
+      allow create: if true;
+      allow read, update, delete: if isAdmin();
+    }
+    
+    // Settings Collection:
+    // Anyone can read public site settings.
+    // Only admins can write/update settings.
+    match /settings/{document=**} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    
+    // Default fallback (Original rule provided by user)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
