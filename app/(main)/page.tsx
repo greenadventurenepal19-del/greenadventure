@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import LiquidSlider from "@/components/LiquidSlider";
 
 const ParachuteIcon = ({ className }: { className?: string }) => (
   <svg viewBox="0 0 200 250" fill="none" stroke="currentColor" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -116,12 +117,16 @@ export default function HomePage() {
   const audioRef = React.useRef<HTMLAudioElement>(null);
   const [isMuted, setIsMuted] = React.useState(true);
   const [currentSlide, setCurrentSlide] = React.useState(0);
+  const [isHovered, setIsHovered] = React.useState(false);
+  const [isMouseDown, setIsMouseDown] = React.useState(false);
 
   const [heroSlidesText, setHeroSlidesText] = React.useState({
     slide1Title: "NEPAL",
     slide1Subtitle: "Discover the breathtaking landscapes, vibrant culture, and ancient heritage of the Himalayas. The perfect start to your unforgettable journey.",
     slide2Title: "ANNAPURNA",
-    slide2Subtitle: "Trek through lush valleys and traditional mountain villages to the heart of the majestic Annapurna sanctuary."
+    slide2Subtitle: "Trek through lush valleys and traditional mountain villages to the heart of the majestic Annapurna sanctuary.",
+    slide3Title: "NIGHT SKY",
+    slide3Subtitle: "Camp under a blanket of stars and witness the Milky Way in absolute clarity."
   });
 
   React.useEffect(() => {
@@ -140,22 +145,25 @@ export default function HomePage() {
 
   const heroSlides = [
     {
-      title: heroSlidesText.slide1Title,
-      image: "/herovidoe.gif",
-      subtitle: heroSlidesText.slide1Subtitle
+      title: heroSlidesText.slide1Title || "HIMALAYAS",
+      image: "/images/hero-grass.jpg",
+      subtitle: heroSlidesText.slide1Subtitle || "Experience the majestic serenity of the high Himalayas and witness sunrise over the peaks."
     },
     {
-      title: heroSlidesText.slide2Title,
-      image: "/heroviode2.gif",
-      subtitle: heroSlidesText.slide2Subtitle
+      title: heroSlidesText.slide2Title || "BASE CAMP",
+      image: "/images/hero-snow.jpg",
+      subtitle: heroSlidesText.slide2Subtitle || "Journey to the edge of the world's highest peaks and stay in iconic mountain lodges."
+    },
+    {
+      title: heroSlidesText.slide3Title || "NIGHT SKY",
+      image: "/images/hero-night.jpg",
+      subtitle: heroSlidesText.slide3Subtitle || "Camp under a blanket of stars and witness the Milky Way in absolute clarity."
     }
   ];
 
   React.useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % heroSlides.length);
-    }, 12000);
-    return () => clearInterval(timer);
+    // Liquid slider is now user-controlled via hover and click, 
+    // no auto-sliding interval.
   }, []);
 
   const toggleMute = () => {
@@ -197,7 +205,16 @@ export default function HomePage() {
       </motion.div>
 
       {/* 1. HERO SECTION (Advanced 3D Layered Parallax) */}
-      <section className="relative h-[100svh] min-h-[700px] overflow-hidden flex flex-col justify-end pb-24 md:pb-32">
+      <section 
+        className="relative h-[100svh] min-h-[700px] overflow-hidden flex flex-col justify-end pb-24 md:pb-32 cursor-pointer"
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => { setIsHovered(false); setIsMouseDown(false); }}
+        onMouseDown={() => setIsMouseDown(true)}
+        onMouseUp={() => setIsMouseDown(false)}
+        onClick={() => {
+          setCurrentSlide((prev) => (prev + 1) % heroSlides.length);
+        }}
+      >
         
         {/* HERO TAGS (Floating over Hero top) */}
         <div className="absolute top-20 md:top-28 left-0 right-0 z-40 px-4 pointer-events-none">
@@ -239,26 +256,16 @@ export default function HomePage() {
             </motion.div>
           </div>
         </div>
-        {/* Layer 1: Background GIF Slideshow */}
+        {/* Layer 1: Background Liquid Slider */}
         <motion.div style={{ y: bgY }} className="absolute -inset-[10%] z-0 pointer-events-none">
-          <AnimatePresence initial={false}>
-            <motion.div
-              key={currentSlide}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 1.5, ease: "easeInOut" }}
-              className="absolute inset-0"
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={heroSlides[currentSlide].image}
-                alt="Hero background"
-                className="w-full h-full object-cover"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-black/40" />
-            </motion.div>
-          </AnimatePresence>
+          <LiquidSlider 
+            slides={heroSlides.map(s => s.image)}
+            currentIndex={currentSlide}
+            nextIndex={(currentSlide + 1) % heroSlides.length}
+            isHovered={isHovered}
+            isMouseDown={isMouseDown}
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-black/40 z-10 pointer-events-none" />
         </motion.div>
 
         {/* Layer 2: Massive Typography */}
