@@ -32,13 +32,13 @@ export default function ContactPage() {
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const [settings, setSettings] = useState({
-    officeDesc: "Drop by our office in the heart of Kathmandu for a cup of tea and let's discuss your next adventure.",
-    locationLine1: "Thamel, Kathmandu",
-    locationLine2: "Bagmati Province, Nepal 44600",
-    phonePrimary: "+977 1 4412345",
-    phoneWhatsapp: "+977 9801234567",
-    emailPrimary: "info@greenadventure.com",
-    emailSecondary: "bookings@greenadventure.com",
+    officeDesc: "",
+    locationLine1: "",
+    locationLine2: "",
+    phonePrimary: "",
+    phoneWhatsapp: "",
+    emailPrimary: "",
+    emailSecondary: "",
     mapLat: 27.7126,
     mapLng: 85.3145,
     mapZoom: 15
@@ -49,7 +49,8 @@ export default function ContactPage() {
       try {
         const docSnap = await getDoc(doc(db, "settings", "contact_info"));
         if (docSnap.exists()) {
-          setSettings(docSnap.data() as any);
+          const data = docSnap.data() as Partial<typeof settings>;
+          setSettings(prev => ({ ...prev, ...data }));
         }
       } catch (error) {
         console.error("Error fetching contact settings:", error);
@@ -57,6 +58,10 @@ export default function ContactPage() {
     }
     fetchSettings();
   }, []);
+
+  const hasLocation = !!(settings.locationLine1 || settings.locationLine2);
+  const hasPhone = !!(settings.phonePrimary || settings.phoneWhatsapp);
+  const hasEmail = !!(settings.emailPrimary || settings.emailSecondary);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -300,47 +305,73 @@ export default function ContactPage() {
           <div className="space-y-10">
             <div>
               <h2 className="text-3xl font-bold mb-6">Our Office</h2>
-              <p className="text-muted-foreground text-lg mb-8 whitespace-pre-wrap">
-                {settings.officeDesc}
-              </p>
+              {settings.officeDesc && (
+                <p className="text-muted-foreground text-lg mb-8 whitespace-pre-wrap">
+                  {settings.officeDesc}
+                </p>
+              )}
             </div>
 
             <div className="space-y-6">
-              <div className="flex items-start gap-4">
-                <div className="h-12 w-12 rounded-full bg-brand-100 dark:bg-brand-900/30 text-brand-600 dark:text-brand-500 flex items-center justify-center shrink-0">
-                  <MapPin className="h-6 w-6" />
+              {hasLocation && (
+                <div className="flex items-start gap-4">
+                  <div className="h-12 w-12 rounded-full bg-brand-100 dark:bg-brand-900/30 text-brand-600 dark:text-brand-500 flex items-center justify-center shrink-0">
+                    <MapPin className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-xl mb-1">Location</h3>
+                    <p className="text-muted-foreground">
+                      {settings.locationLine1}
+                      {settings.locationLine1 && settings.locationLine2 && <br />}
+                      {settings.locationLine2}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="font-bold text-xl mb-1">Location</h3>
-                  <p className="text-muted-foreground">{settings.locationLine1}<br />{settings.locationLine2}</p>
-                </div>
-              </div>
-              
-              <div className="flex items-start gap-4">
-                <div className="h-12 w-12 rounded-full bg-brand-100 dark:bg-brand-900/30 text-brand-600 dark:text-brand-500 flex items-center justify-center shrink-0">
-                  <Phone className="h-6 w-6" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-xl mb-1">Phone</h3>
-                  <p className="text-muted-foreground">
-                    {settings.phonePrimary}
-                    {settings.phoneWhatsapp && <><br />{settings.phoneWhatsapp} (WhatsApp)</>}
-                  </p>
-                </div>
-              </div>
+              )}
 
-              <div className="flex items-start gap-4">
-                <div className="h-12 w-12 rounded-full bg-brand-100 dark:bg-brand-900/30 text-brand-600 dark:text-brand-500 flex items-center justify-center shrink-0">
-                  <Mail className="h-6 w-6" />
+              {hasPhone && (
+                <div className="flex items-start gap-4">
+                  <div className="h-12 w-12 rounded-full bg-brand-100 dark:bg-brand-900/30 text-brand-600 dark:text-brand-500 flex items-center justify-center shrink-0">
+                    <Phone className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-xl mb-1">Phone</h3>
+                    <p className="text-muted-foreground">
+                      {settings.phonePrimary && (
+                        <a href={`tel:${settings.phonePrimary.replace(/[^0-9+]/g, "")}`} className="hover:text-foreground transition-colors">
+                          {settings.phonePrimary}
+                        </a>
+                      )}
+                      {settings.phonePrimary && settings.phoneWhatsapp && <br />}
+                      {settings.phoneWhatsapp && <>{settings.phoneWhatsapp} (WhatsApp)</>}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="font-bold text-xl mb-1">Email</h3>
-                  <p className="text-muted-foreground">
-                    {settings.emailPrimary}
-                    {settings.emailSecondary && <><br />{settings.emailSecondary}</>}
-                  </p>
+              )}
+
+              {hasEmail && (
+                <div className="flex items-start gap-4">
+                  <div className="h-12 w-12 rounded-full bg-brand-100 dark:bg-brand-900/30 text-brand-600 dark:text-brand-500 flex items-center justify-center shrink-0">
+                    <Mail className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-xl mb-1">Email</h3>
+                    <p className="text-muted-foreground break-all">
+                      {settings.emailPrimary && (
+                        <a href={`mailto:${settings.emailPrimary}`} className="hover:text-foreground transition-colors">
+                          {settings.emailPrimary}
+                        </a>
+                      )}
+                      {settings.emailPrimary && settings.emailSecondary && <br />}
+                      {settings.emailSecondary && (
+                        <a href={`mailto:${settings.emailSecondary}`} className="hover:text-foreground transition-colors">
+                          {settings.emailSecondary}
+                        </a>
+                      )}
+                    </p>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
 
             {/* Map Integration */}

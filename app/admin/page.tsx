@@ -2,48 +2,166 @@
 
 import { useState, useEffect } from "react";
 import { useAdminAuth } from "@/components/admin-auth-provider";
-import { db } from "@/lib/firebase";
+import { db, storage } from "@/lib/firebase";
 import { 
   collection, query, orderBy, onSnapshot, 
   doc, setDoc, deleteDoc, updateDoc, serverTimestamp 
 } from "firebase/firestore";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { 
-  Clock, Trash2, Plus, ShieldCheck, AlertCircle, Sparkles, User, MessageSquare, Settings, CheckCircle, LogOut, Mail, Shield, Users
+  Clock, Trash2, Plus, ShieldCheck, AlertCircle, Sparkles, User, MessageSquare, Settings, CheckCircle, LogOut, Mail, Shield, Users, Map, MapPin, Edit, Navigation, X, UploadCloud, Award
 } from "lucide-react";
+import Image from "next/image";
+import {
+  WHY_CHOOSE_ICON_NAMES,
+  DEFAULT_WHY_CHOOSE,
+  resolveIcon,
+  type WhyChooseSettings,
+  type WhyChooseFeature,
+} from "@/lib/why-choose";
 
 export default function AdminPage() {
   const { user, isAdmin, isSuperAdmin, loading, loginWithGoogle, logout } = useAdminAuth();
-  const [activeTab, setActiveTab] = useState<"contacts" | "access" | "settings" | "hero">("contacts");
+  const [activeTab, setActiveTab] = useState<"contacts" | "access" | "settings" | "hero" | "trips" | "regions" | "reviews" | "whyChoose">("contacts");
   const [contactFilter, setContactFilter] = useState<"all" | "booking" | "inquiry">("all");
   
   // Data states
   const [contacts, setContacts] = useState<any[]>([]);
   const [adminsList, setAdminsList] = useState<any[]>([]);
+  const [trips, setTrips] = useState<any[]>([]);
   const [newAdminEmail, setNewAdminEmail] = useState("");
+  
+  // Trip Modal State
+  const [isTripModalOpen, setIsTripModalOpen] = useState(false);
+  const [editingTrip, setEditingTrip] = useState<any>(null);
+  const [tripFormData, setTripFormData] = useState({
+    title: "",
+    region: "",
+    duration: "",
+    price: "",
+    difficulty: "moderate",
+    desc: "",
+    image: "",
+    isFeatured: false,
+    tripType: "Tour",
+    groupSize: "",
+    tags: [] as string[],
+    slug: "",
+    rating: 5,
+    altitude: "",
+    overview: "",
+    itinerary: [] as { day: string; title: string; desc: string }[],
+    includes: [] as string[],
+    excludes: [] as string[],
+  });
+  
+  const [showDetailedInfo, setShowDetailedInfo] = useState(false);
 
-  // Settings state
+  // Available tags for selection
+  const availableTags = [
+    "Eco-Friendly", "Small Group", "Cultural", "Spiritual", 
+    "Wildlife", "Adventure", "Family", "Honeymoon", 
+    "Photography", "Zero Waste", "Local Guide", "Wellness"
+  ];
+
+  // Reviews State
+  const [reviews, setReviews] = useState<any[]>([]);
+  const [reviewFilter, setReviewFilter] = useState<"all" | "pending" | "approved" | "rejected">("pending");
+
+  // Region Modal State
+  const [regions, setRegions] = useState<any[]>([]);
+  const [isRegionModalOpen, setIsRegionModalOpen] = useState(false);
+  const [editingRegion, setEditingRegion] = useState<any>(null);
+  const [regionFormData, setRegionFormData] = useState({
+    title: "",
+    desc: "",
+    image: "",
+    order: 0,
+  });
+
+  // Settings state - empty by default so admin must explicitly fill them in.
+  // The frontend reads from `settings/contact_info` and only displays values
+  // that have been saved here.
   const [settings, setSettings] = useState({
-    officeDesc: "Drop by our office in the heart of Kathmandu for a cup of tea and let's discuss your next adventure.",
-    locationLine1: "Thamel, Kathmandu",
-    locationLine2: "Bagmati Province, Nepal 44600",
-    phonePrimary: "+977 1 4412345",
-    phoneWhatsapp: "+977 9801234567",
-    emailPrimary: "info@greenadventure.com",
-    emailSecondary: "bookings@greenadventure.com",
+    officeDesc: "",
+    locationLine1: "",
+    locationLine2: "",
+    phonePrimary: "",
+    phoneWhatsapp: "",
+    emailPrimary: "",
+    emailSecondary: "",
     mapLat: 27.7126,
     mapLng: 85.3145,
     mapZoom: 15
   });
   const [isSavingSettings, setIsSavingSettings] = useState(false);
+  const [permissionError, setPermissionError] = useState(false);
+
+  const [isUploadingTripImage, setIsUploadingTripImage] = useState(false);
+  const [isUploadingRegionImage, setIsUploadingRegionImage] = useState(false);
+
+  const handleTripImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploadingTripImage(true);
+    try {
+      const res = await fetch(`/api/upload?filename=${encodeURIComponent(file.name)}`, {
+        method: 'POST',
+        body: file,
+      });
+      const data = await res.json();
+      if (data.url) {
+        setTripFormData({ ...tripFormData, image: data.url });
+      } else {
+        throw new Error(data.error || "Failed to upload image");
+      }
+    } catch (error) {
+      console.error("Error uploading image:", error);
+      alert("Failed to upload image to blob");
+    } finally {
+      setIsUploadingTripImage(false);
+    }
+  };
+
+  const handleRegionImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploadingRegionImage(true);
+    try {
+      const res = await fetch(`/api/upload?filename=${encodeURIComponent(file.name)}`, {
+        method: 'POST',
+        body: file,
+      });
+      const data = await res.json();
+      if (data.url) {
+        setRegionFormData({ ...regionFormData, image: data.url });
+      } else {
+        throw new Error(data.error || "Failed to upload image");
+      }
+    } catch (error) {
+      console.error("Error uploading image:", error);
+      alert("Failed to upload image to blob");
+    } finally {
+      setIsUploadingRegionImage(false);
+    }
+  };
 
   // Hero settings state
   const [heroSettings, setHeroSettings] = useState({
     slide1Title: "NEPAL",
     slide1Subtitle: "Discover the breathtaking landscapes, vibrant culture, and ancient heritage of the Himalayas. The perfect start to your unforgettable journey.",
-    slide2Title: "ANNAPURNA",
-    slide2Subtitle: "Trek through lush valleys and traditional mountain villages to the heart of the majestic Annapurna sanctuary."
+    slide2Title: "BHUTAN",
+    slide2Subtitle: "Explore the capital city Thimphu, visit the iconic Tiger's Nest Monastery in Paro, and experience traditional Bhutanese culture.",
+    slide3Title: "INDIA",
+    slide3Subtitle: "Experience spiritual journeys from Varanasi to the Taj Mahal, or explore beaches, backwaters and mountain tea cultures."
   });
   const [isSavingHero, setIsSavingHero] = useState(false);
+
+  // "Why Choose Us" section state
+  const [whyChoose, setWhyChoose] = useState<WhyChooseSettings>(DEFAULT_WHY_CHOOSE);
+  const [isSavingWhyChoose, setIsSavingWhyChoose] = useState(false);
 
   // Subscriptions
   useEffect(() => {
@@ -63,10 +181,24 @@ export default function AdminPage() {
       setAdminsList(data);
     });
 
-    // Listen to settings
+    // Listen to trips
+    const qTrips = query(collection(db, "trips"));
+    const unsubTrips = onSnapshot(qTrips, (snapshot) => {
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setTrips(data);
+      setPermissionError(false); // Clear error if successful
+    }, (error: any) => {
+      console.error("Error fetching trips:", error);
+      if (error.code === 'permission-denied') {
+        setPermissionError(true);
+      }
+    });
+
+    // Listen to settings (merge so partial saves preserve unspecified fields)
     const unsubSettings = onSnapshot(doc(db, "settings", "contact_info"), (docSnap) => {
       if (docSnap.exists()) {
-        setSettings(docSnap.data() as any);
+        const data = docSnap.data() as any;
+        setSettings(prev => ({ ...prev, ...data }));
       }
     });
 
@@ -77,13 +209,66 @@ export default function AdminPage() {
       }
     });
 
+    // Listen to "Why Choose Us" settings (merge with defaults so partial saves are safe)
+    const unsubWhyChoose = onSnapshot(doc(db, "settings", "why_choose_us"), (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data() as Partial<WhyChooseSettings>;
+        setWhyChoose(prev => ({
+          ...prev,
+          ...data,
+          features: Array.isArray(data.features) && data.features.length > 0 ? data.features : prev.features,
+        }));
+      }
+    });
+
+    // Listen to regions
+    const unsubRegions = onSnapshot(collection(db, "regions"), (snapshot) => {
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      data.sort((a: any, b: any) => (a.order || 0) - (b.order || 0));
+      setRegions(data);
+    });
+
+    // Listen to reviews
+    const unsubReviews = onSnapshot(collection(db, "reviews"), (snapshot) => {
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      data.sort((a: any, b: any) => {
+        const aTime = a.createdAt?.seconds || 0;
+        const bTime = b.createdAt?.seconds || 0;
+        return bTime - aTime;
+      });
+      setReviews(data);
+    });
+
     return () => {
       unsubContacts();
       unsubAdmins();
+      unsubTrips();
       unsubSettings();
       unsubHero();
+      unsubWhyChoose();
+      unsubRegions();
+      unsubReviews();
     };
   }, [isAdmin]);
+
+  const handleSetReviewStatus = async (id: string, status: "approved" | "rejected" | "pending") => {
+    try {
+      await updateDoc(doc(db, "reviews", id), { status });
+    } catch (err) {
+      console.error("Error updating review status:", err);
+      alert("Failed to update review.");
+    }
+  };
+
+  const handleDeleteReview = async (id: string) => {
+    if (!confirm("Permanently delete this review?")) return;
+    try {
+      await deleteDoc(doc(db, "reviews", id));
+    } catch (err) {
+      console.error("Error deleting review:", err);
+      alert("Failed to delete review.");
+    }
+  };
 
   const handleAddAdmin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -131,6 +316,57 @@ export default function AdminPage() {
     }
   };
 
+  const handleSaveWhyChoose = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSavingWhyChoose(true);
+    try {
+      const cleaned: WhyChooseSettings = {
+        title: whyChoose.title.trim(),
+        titleHighlight: whyChoose.titleHighlight.trim(),
+        description: whyChoose.description.trim(),
+        trustBadge: whyChoose.trustBadge.trim(),
+        features: whyChoose.features
+          .map(f => ({
+            iconName: f.iconName,
+            title: (f.title || "").trim(),
+            desc: (f.desc || "").trim(),
+          }))
+          .filter(f => f.title || f.desc),
+      };
+      await setDoc(doc(db, "settings", "why_choose_us"), cleaned);
+      alert('"Why Choose Us" section saved successfully!');
+    } catch (error) {
+      console.error("Error saving Why Choose Us settings", error);
+      alert("Failed to save. Make sure you have admin permission.");
+    } finally {
+      setIsSavingWhyChoose(false);
+    }
+  };
+
+  const updateWhyChooseFeature = (index: number, patch: Partial<WhyChooseFeature>) => {
+    setWhyChoose(prev => ({
+      ...prev,
+      features: prev.features.map((f, i) => (i === index ? { ...f, ...patch } : f)),
+    }));
+  };
+
+  const addWhyChooseFeature = () => {
+    setWhyChoose(prev => ({
+      ...prev,
+      features: [
+        ...prev.features,
+        { iconName: "Sparkles", title: "New Feature", desc: "Describe what makes this special." },
+      ],
+    }));
+  };
+
+  const removeWhyChooseFeature = (index: number) => {
+    setWhyChoose(prev => ({
+      ...prev,
+      features: prev.features.filter((_, i) => i !== index),
+    }));
+  };
+
   const handleRemoveAdmin = async (email: string) => {
     if (confirm(`Are you sure you want to remove ${email} from admins?`)) {
       try {
@@ -165,6 +401,77 @@ export default function AdminPage() {
       }
     }
   };
+
+  const handleSaveTrip = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const slug = tripFormData.slug || tripFormData.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+      const dataToSave = { ...tripFormData, slug };
+
+      if (editingTrip) {
+        await updateDoc(doc(db, "trips", editingTrip.id), dataToSave);
+      } else {
+        const newTripRef = doc(collection(db, "trips"));
+        await setDoc(newTripRef, { ...dataToSave, createdAt: serverTimestamp() });
+      }
+      setIsTripModalOpen(false);
+      setEditingTrip(null);
+      setShowDetailedInfo(false);
+      setTripFormData({ title: "", region: "", duration: "", price: "", difficulty: "moderate", desc: "", image: "", isFeatured: false, tripType: "Tour", groupSize: "", tags: [], slug: "", rating: 5, altitude: "", overview: "", itinerary: [], includes: [], excludes: [] });
+    } catch (error) {
+      console.error("Error saving trip", error);
+      alert("Failed to save trip.");
+    }
+  };
+
+  const handleDeleteTrip = async (id: string) => {
+    if (confirm("Are you sure you want to delete this trip?")) {
+      try {
+        await deleteDoc(doc(db, "trips", id));
+      } catch (error) {
+        console.error("Error deleting trip", error);
+        alert("Failed to delete trip.");
+      }
+    }
+  };
+
+  const handleSaveRegion = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      if (editingRegion) {
+        await updateDoc(doc(db, "regions", editingRegion.id), regionFormData);
+      } else {
+        const newRegionRef = doc(collection(db, "regions"));
+        await setDoc(newRegionRef, { ...regionFormData, createdAt: serverTimestamp() });
+      }
+      setIsRegionModalOpen(false);
+      setEditingRegion(null);
+      setRegionFormData({ title: "", desc: "", image: "", order: 0 });
+    } catch (error) {
+      console.error("Error saving region", error);
+      alert("Failed to save region.");
+    }
+  };
+
+  const handleDeleteRegion = async (id: string) => {
+    if (confirm("Are you sure you want to delete this region?")) {
+      try {
+        await deleteDoc(doc(db, "regions", id));
+      } catch (error) {
+        console.error("Error deleting region", error);
+        alert("Failed to delete region.");
+      }
+    }
+  };
+
+  const toggleFeatured = async (trip: any) => {
+    try {
+      await updateDoc(doc(db, "trips", trip.id), { isFeatured: !trip.isFeatured });
+    } catch (error) {
+      console.error("Error toggling featured", error);
+    }
+  };
+
 
   if (loading) {
     return (
@@ -272,6 +579,18 @@ export default function AdminPage() {
         </div>
       </header>
 
+      {permissionError && (
+        <div className="bg-red-950/40 border-b border-red-500/30 text-red-200 p-4 text-center z-40 relative">
+          <p className="flex items-center justify-center gap-2">
+            <AlertCircle className="w-5 h-5 text-red-400" />
+            <span>
+              <strong>Firebase Permission Error:</strong> Your Firestore security rules are blocking access. 
+              Please deploy <code className="bg-black/30 px-1.5 py-0.5 rounded text-red-300 font-mono text-sm mx-1">docs/firebase.rules</code> to your Firebase project console to enable data fetching and seeding.
+            </span>
+          </p>
+        </div>
+      )}
+
       {/* Main Layout */}
       <div className="flex-1 container mx-auto px-6 py-10 flex flex-col lg:flex-row gap-10 relative z-10">
         
@@ -307,6 +626,18 @@ export default function AdminPage() {
           </button>
           
           <button 
+            onClick={() => setActiveTab("trips")}
+            className={`w-full flex items-center gap-4 px-5 py-4 rounded-2xl font-medium transition-all ${
+              activeTab === "trips" 
+                ? "bg-gradient-to-r from-brand-500/20 to-transparent text-brand-400 border border-brand-500/30 shadow-[inset_4px_0_0_0_rgba(34,197,94,1)]" 
+                : "text-white/60 hover:bg-white/5 hover:text-white border border-transparent"
+            }`}
+          >
+            <Map className="w-5 h-5" /> 
+            Destinations & Trips
+          </button>
+          
+          <button 
             onClick={() => setActiveTab("settings")}
             className={`w-full flex items-center gap-4 px-5 py-4 rounded-2xl font-medium transition-all ${
               activeTab === "settings" 
@@ -318,6 +649,23 @@ export default function AdminPage() {
             Contact Info Settings
           </button>
           
+          <button
+            onClick={() => setActiveTab("reviews")}
+            className={`w-full flex items-center gap-4 px-5 py-4 rounded-2xl font-medium transition-all ${
+              activeTab === "reviews"
+                ? "bg-gradient-to-r from-brand-500/20 to-transparent text-brand-400 border border-brand-500/30 shadow-[inset_4px_0_0_0_rgba(34,197,94,1)]"
+                : "text-white/60 hover:bg-white/5 hover:text-white border border-transparent"
+            }`}
+          >
+            <MessageSquare className="w-5 h-5" />
+            Client Reviews
+            {reviews.filter(r => r.status === "pending").length > 0 && (
+              <span className="ml-auto bg-brand-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                {reviews.filter(r => r.status === "pending").length}
+              </span>
+            )}
+          </button>
+
           <button 
             onClick={() => setActiveTab("hero")}
             className={`w-full flex items-center gap-4 px-5 py-4 rounded-2xl font-medium transition-all ${
@@ -328,6 +676,18 @@ export default function AdminPage() {
           >
             <Sparkles className="w-5 h-5" /> 
             Hero Settings
+          </button>
+
+          <button
+            onClick={() => setActiveTab("whyChoose")}
+            className={`w-full flex items-center gap-4 px-5 py-4 rounded-2xl font-medium transition-all ${
+              activeTab === "whyChoose"
+                ? "bg-gradient-to-r from-brand-500/20 to-transparent text-brand-400 border border-brand-500/30 shadow-[inset_4px_0_0_0_rgba(34,197,94,1)]"
+                : "text-white/60 hover:bg-white/5 hover:text-white border border-transparent"
+            }`}
+          >
+            <Award className="w-5 h-5" />
+            Why Choose Us
           </button>
         </div>
 
@@ -616,6 +976,89 @@ export default function AdminPage() {
             </div>
           )}
 
+          {/* TRIPS TAB */}
+          {activeTab === "trips" && (
+            <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h2 className="text-3xl font-bold text-white tracking-tight">Destinations & Trips</h2>
+                  <p className="text-white/50 mt-1">Manage your tour packages and feature them on the home page.</p>
+                </div>
+                <div className="flex gap-3">
+                  <button 
+                    onClick={() => {
+                      setEditingTrip(null);
+                      setShowDetailedInfo(false);
+                      setTripFormData({ title: "", region: "", duration: "", price: "", difficulty: "moderate", desc: "", image: "", isFeatured: false, tripType: "Tour", groupSize: "", tags: [], slug: "", rating: 5, altitude: "", overview: "", itinerary: [], includes: [], excludes: [] });
+                      setIsTripModalOpen(true);
+                    }}
+                    className="bg-brand-600 hover:bg-brand-500 text-white font-bold py-3 px-6 rounded-xl flex items-center justify-center gap-2 transition-all hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-brand-500/20"
+                  >
+                    <Plus className="w-5 h-5" /> Add Trip
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {trips.length === 0 ? (
+                  <div className="col-span-full bg-white/5 border border-white/5 p-16 rounded-[2rem] text-center text-white/50 backdrop-blur-md">
+                    <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-6">
+                      <Map className="w-10 h-10 text-white/20" />
+                    </div>
+                    <h3 className="text-xl font-bold text-white mb-2">No trips added yet.</h3>
+                    <p>Click "Add Trip" to create your first package.</p>
+                  </div>
+                ) : (
+                  trips.map(trip => (
+                    <div key={trip.id} className="bg-card/80 backdrop-blur-md border border-border/50 rounded-[2rem] overflow-hidden hover:border-brand-500/30 transition-all flex flex-col relative group">
+                      <div className="relative h-48 w-full overflow-hidden bg-black/50">
+                        {trip.image ? (
+                          <img src={trip.image} alt={trip.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+                        ) : (
+                          <div className="flex items-center justify-center h-full text-white/20"><Map className="w-10 h-10" /></div>
+                        )}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
+                        <div className="absolute top-4 right-4 flex gap-2">
+                          <button 
+                            onClick={() => { setEditingTrip(trip); setShowDetailedInfo(false); setTripFormData({ tags: [], groupSize: "", slug: "", rating: 5, altitude: "", overview: "", itinerary: [], ...trip, includes: Array.isArray(trip.includes) ? trip.includes : (typeof trip.includes === 'string' ? trip.includes.split('\n').filter(Boolean) : []), excludes: Array.isArray(trip.excludes) ? trip.excludes : (typeof trip.excludes === 'string' ? trip.excludes.split('\n').filter(Boolean) : []) }); setIsTripModalOpen(true); }}
+                            className="p-2 bg-black/60 hover:bg-brand-500/80 text-white backdrop-blur-sm rounded-lg transition-colors border border-white/20"
+                            title="Edit Trip"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                          <button 
+                            onClick={() => handleDeleteTrip(trip.id)}
+                            className="p-2 bg-black/60 hover:bg-red-500/80 text-white backdrop-blur-sm rounded-lg transition-colors border border-white/20"
+                            title="Delete Trip"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                      <div className="p-6 flex flex-col flex-1">
+                        <div className="flex justify-between items-start gap-4 mb-2">
+                          <h3 className="text-xl font-bold text-white tracking-tight line-clamp-2">{trip.title}</h3>
+                        </div>
+                        <p className="text-sm text-white/50 mb-4 line-clamp-2">{trip.desc}</p>
+                        
+                        <div className="flex items-center justify-between mt-auto pt-4 border-t border-white/10">
+                          <div className="text-brand-400 font-bold">{trip.price}</div>
+                          <button 
+                            onClick={() => toggleFeatured(trip)}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors border ${trip.isFeatured ? 'bg-brand-500/20 text-brand-400 border-brand-500/30' : 'bg-white/5 text-white/40 border-white/10 hover:bg-white/10 hover:text-white'}`}
+                          >
+                            {trip.isFeatured ? <Sparkles className="w-3.5 h-3.5" /> : null}
+                            {trip.isFeatured ? 'Featured' : 'Not Featured'}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
+
           {/* CONTACT INFO SETTINGS TAB */}
           {activeTab === "settings" && (
             <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -635,8 +1078,8 @@ export default function AdminPage() {
                       <textarea
                         value={settings.officeDesc}
                         onChange={(e) => setSettings({ ...settings, officeDesc: e.target.value })}
-                        className="w-full bg-black/60 border border-white/10 rounded-xl px-5 py-4 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all text-white min-h-[100px]"
-                        required
+                        placeholder="Drop by our office in the heart of Kathmandu for a cup of tea and let's discuss your next adventure."
+                        className="w-full bg-black/60 border border-white/10 rounded-xl px-5 py-4 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all text-white min-h-[100px] placeholder:text-white/30"
                       />
                     </div>
 
@@ -647,8 +1090,8 @@ export default function AdminPage() {
                           type="text"
                           value={settings.locationLine1}
                           onChange={(e) => setSettings({ ...settings, locationLine1: e.target.value })}
-                          className="w-full bg-black/60 border border-white/10 rounded-xl px-5 py-4 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all text-white"
-                          required
+                          placeholder="e.g. Thamel, Kathmandu"
+                          className="w-full bg-black/60 border border-white/10 rounded-xl px-5 py-4 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all text-white placeholder:text-white/30"
                         />
                       </div>
                       <div>
@@ -657,8 +1100,8 @@ export default function AdminPage() {
                           type="text"
                           value={settings.locationLine2}
                           onChange={(e) => setSettings({ ...settings, locationLine2: e.target.value })}
-                          className="w-full bg-black/60 border border-white/10 rounded-xl px-5 py-4 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all text-white"
-                          required
+                          placeholder="e.g. Bagmati Province, Nepal 44600"
+                          className="w-full bg-black/60 border border-white/10 rounded-xl px-5 py-4 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all text-white placeholder:text-white/30"
                         />
                       </div>
                     </div>
@@ -674,8 +1117,8 @@ export default function AdminPage() {
                           type="text"
                           value={settings.phonePrimary}
                           onChange={(e) => setSettings({ ...settings, phonePrimary: e.target.value })}
-                          className="w-full bg-black/60 border border-white/10 rounded-xl px-5 py-4 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all text-white"
-                          required
+                          placeholder="e.g. +977 1 4412345"
+                          className="w-full bg-black/60 border border-white/10 rounded-xl px-5 py-4 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all text-white placeholder:text-white/30"
                         />
                       </div>
                       <div>
@@ -684,7 +1127,8 @@ export default function AdminPage() {
                           type="text"
                           value={settings.phoneWhatsapp}
                           onChange={(e) => setSettings({ ...settings, phoneWhatsapp: e.target.value })}
-                          className="w-full bg-black/60 border border-white/10 rounded-xl px-5 py-4 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all text-white"
+                          placeholder="e.g. +977 9801234567"
+                          className="w-full bg-black/60 border border-white/10 rounded-xl px-5 py-4 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all text-white placeholder:text-white/30"
                         />
                       </div>
                     </div>
@@ -696,8 +1140,8 @@ export default function AdminPage() {
                           type="email"
                           value={settings.emailPrimary}
                           onChange={(e) => setSettings({ ...settings, emailPrimary: e.target.value })}
-                          className="w-full bg-black/60 border border-white/10 rounded-xl px-5 py-4 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all text-white"
-                          required
+                          placeholder="e.g. info@yourdomain.com"
+                          className="w-full bg-black/60 border border-white/10 rounded-xl px-5 py-4 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all text-white placeholder:text-white/30"
                         />
                       </div>
                       <div>
@@ -706,7 +1150,8 @@ export default function AdminPage() {
                           type="email"
                           value={settings.emailSecondary}
                           onChange={(e) => setSettings({ ...settings, emailSecondary: e.target.value })}
-                          className="w-full bg-black/60 border border-white/10 rounded-xl px-5 py-4 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all text-white"
+                          placeholder="e.g. bookings@yourdomain.com"
+                          className="w-full bg-black/60 border border-white/10 rounded-xl px-5 py-4 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all text-white placeholder:text-white/30"
                         />
                       </div>
                     </div>
@@ -775,6 +1220,146 @@ export default function AdminPage() {
             </div>
           )}
 
+          {/* REVIEWS TAB */}
+          {activeTab === "reviews" && (
+            <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h2 className="text-3xl font-bold text-white tracking-tight">Client Reviews</h2>
+                  <p className="text-white/50 mt-1">Approve, reject or delete reviews submitted by your clients.</p>
+                </div>
+
+                <div className="flex items-center gap-2 bg-white/5 border border-white/10 p-1 rounded-xl overflow-x-auto">
+                  {(["pending", "approved", "rejected", "all"] as const).map((f) => {
+                    const count = f === "all" ? reviews.length : reviews.filter(r => r.status === f).length;
+                    return (
+                      <button
+                        key={f}
+                        onClick={() => setReviewFilter(f)}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap capitalize flex items-center gap-2 ${
+                          reviewFilter === f
+                            ? f === "approved"
+                              ? "bg-brand-500/20 text-brand-400"
+                              : f === "rejected"
+                              ? "bg-red-500/20 text-red-400"
+                              : f === "pending"
+                              ? "bg-amber-500/20 text-amber-400"
+                              : "bg-white/10 text-white"
+                            : "text-white/50 hover:text-white/80"
+                        }`}
+                      >
+                        {f}
+                        <span className="text-[10px] bg-black/40 px-1.5 py-0.5 rounded-full font-bold">{count}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {(() => {
+                const visible = reviewFilter === "all"
+                  ? reviews
+                  : reviews.filter(r => r.status === reviewFilter);
+
+                if (visible.length === 0) {
+                  return (
+                    <div className="bg-white/5 border border-white/5 p-16 rounded-[2rem] text-center text-white/50 backdrop-blur-md">
+                      <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <MessageSquare className="w-10 h-10 text-white/20" />
+                      </div>
+                      <h3 className="text-xl font-bold text-white mb-2">No {reviewFilter !== "all" ? reviewFilter : ""} reviews</h3>
+                      <p>When clients submit reviews on the home page, they&apos;ll appear here.</p>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {visible.map((review: any) => {
+                      const status: string = review.status || "pending";
+                      const statusBadge =
+                        status === "approved"
+                          ? "bg-brand-500/20 text-brand-400 border-brand-500/30"
+                          : status === "rejected"
+                          ? "bg-red-500/20 text-red-400 border-red-500/30"
+                          : "bg-amber-500/20 text-amber-400 border-amber-500/30";
+                      return (
+                        <div
+                          key={review.id}
+                          className="bg-white/5 backdrop-blur-md border border-white/10 rounded-3xl p-6 flex flex-col gap-4 hover:border-brand-500/30 transition-colors"
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border ${statusBadge}`}>
+                              {status}
+                            </span>
+                            <div className="flex items-center gap-1">
+                              {[...Array(5)].map((_, j) => (
+                                <svg
+                                  key={j}
+                                  className={`w-4 h-4 ${j < (review.rating || 5) ? "text-yellow-500" : "text-white/20"}`}
+                                  fill="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+                                </svg>
+                              ))}
+                            </div>
+                          </div>
+
+                          <p className="text-white/80 text-sm leading-relaxed line-clamp-5 italic">
+                            &quot;{review.message}&quot;
+                          </p>
+
+                          <div className="flex items-center gap-3 pt-2 border-t border-white/5">
+                            {review.photo ? (
+                              <div className="relative h-10 w-10 rounded-full overflow-hidden border border-white/10 shrink-0">
+                                <Image src={review.photo} alt={review.name || ""} fill className="object-cover" />
+                              </div>
+                            ) : (
+                              <div className="h-10 w-10 rounded-full bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center text-white font-bold text-sm shrink-0">
+                                {review.name?.[0] || "?"}
+                              </div>
+                            )}
+                            <div className="min-w-0">
+                              <h4 className="font-bold text-white truncate">{review.name || "Anonymous"}</h4>
+                              {review.role && <p className="text-xs text-white/50 truncate">{review.role}</p>}
+                            </div>
+                          </div>
+
+                          <div className="flex flex-wrap gap-2 mt-auto pt-3 border-t border-white/5">
+                            {status !== "approved" && (
+                              <button
+                                onClick={() => handleSetReviewStatus(review.id, "approved")}
+                                className="flex-1 px-3 py-2 rounded-lg bg-brand-500/20 hover:bg-brand-500/30 text-brand-300 text-xs font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-1.5"
+                              >
+                                <CheckCircle className="w-3.5 h-3.5" /> Approve
+                              </button>
+                            )}
+                            {status !== "rejected" && (
+                              <button
+                                onClick={() => handleSetReviewStatus(review.id, "rejected")}
+                                className="flex-1 px-3 py-2 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 text-xs font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-1.5"
+                              >
+                                <X className="w-3.5 h-3.5" /> Reject
+                              </button>
+                            )}
+                            <button
+                              onClick={() => handleDeleteReview(review.id)}
+                              className="px-3 py-2 rounded-lg bg-red-500/15 hover:bg-red-500/25 text-red-300 text-xs font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-1.5"
+                              title="Delete permanently"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+            </div>
+          )}
+
           {/* HERO SETTINGS TAB */}
           {activeTab === "hero" && (
             <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -834,6 +1419,30 @@ export default function AdminPage() {
                     </div>
                   </div>
 
+                  <div className="space-y-4 pt-6 border-t border-white/10">
+                    <h3 className="font-bold text-xl text-white">Slide 3: India</h3>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-white/60 mb-2">Main Title (Massive Text)</label>
+                      <input
+                        type="text"
+                        value={heroSettings.slide3Title || ""}
+                        onChange={(e) => setHeroSettings({ ...heroSettings, slide3Title: e.target.value })}
+                        className="w-full bg-black/60 border border-white/10 rounded-xl px-5 py-4 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all text-white font-bold"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-white/60 mb-2">Subtitle / Description</label>
+                      <textarea
+                        value={heroSettings.slide3Subtitle || ""}
+                        onChange={(e) => setHeroSettings({ ...heroSettings, slide3Subtitle: e.target.value })}
+                        className="w-full bg-black/60 border border-white/10 rounded-xl px-5 py-4 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all text-white min-h-[100px]"
+                        required
+                      />
+                    </div>
+                  </div>
+
                   <div className="pt-6 border-t border-white/10 flex justify-end">
                     <button 
                       type="submit"
@@ -857,8 +1466,865 @@ export default function AdminPage() {
             </div>
           )}
 
+          {/* WHY CHOOSE US TAB */}
+          {activeTab === "whyChoose" && (
+            <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div>
+                <h2 className="text-3xl font-bold text-white tracking-tight">&quot;Why Choose Us&quot; Section</h2>
+                <p className="text-white/50 mt-1">Manage the heading, trust badge, and feature cards shown on the home page.</p>
+              </div>
+
+              <div className="bg-white/5 border border-white/10 rounded-[2rem] overflow-hidden backdrop-blur-md">
+                <form onSubmit={handleSaveWhyChoose} className="p-8 space-y-8">
+
+                  {/* Heading group */}
+                  <div className="space-y-4">
+                    <h3 className="font-bold text-xl text-white">Heading</h3>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="md:col-span-2">
+                        <label className="block text-sm font-medium text-white/60 mb-2">Title</label>
+                        <input
+                          type="text"
+                          value={whyChoose.title}
+                          onChange={(e) => setWhyChoose({ ...whyChoose, title: e.target.value })}
+                          placeholder="e.g. Why Choose"
+                          className="w-full bg-black/60 border border-white/10 rounded-xl px-5 py-4 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all text-white placeholder:text-white/30"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-white/60 mb-2">Highlighted word</label>
+                        <input
+                          type="text"
+                          value={whyChoose.titleHighlight}
+                          onChange={(e) => setWhyChoose({ ...whyChoose, titleHighlight: e.target.value })}
+                          placeholder="e.g. Us"
+                          className="w-full bg-black/60 border border-white/10 rounded-xl px-5 py-4 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all text-brand-400 font-bold placeholder:text-white/30"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-white/60 mb-2">Description</label>
+                      <textarea
+                        value={whyChoose.description}
+                        onChange={(e) => setWhyChoose({ ...whyChoose, description: e.target.value })}
+                        placeholder="Short paragraph displayed below the heading."
+                        className="w-full bg-black/60 border border-white/10 rounded-xl px-5 py-4 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all text-white min-h-[100px] placeholder:text-white/30"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-white/60 mb-2">Trust badge text</label>
+                      <input
+                        type="text"
+                        value={whyChoose.trustBadge}
+                        onChange={(e) => setWhyChoose({ ...whyChoose, trustBadge: e.target.value })}
+                        placeholder="e.g. Trusted by 10,000+ Explorers"
+                        className="w-full bg-black/60 border border-white/10 rounded-xl px-5 py-4 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all text-white placeholder:text-white/30"
+                      />
+                      <p className="text-xs text-white/40 mt-2">Leave empty to hide the badge.</p>
+                    </div>
+                  </div>
+
+                  {/* Feature cards */}
+                  <div className="space-y-4 pt-6 border-t border-white/10">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="font-bold text-xl text-white">Feature cards</h3>
+                        <p className="text-sm text-white/50 mt-1">Add up to 8 cards. They render in a responsive grid.</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={addWhyChooseFeature}
+                        disabled={whyChoose.features.length >= 8}
+                        className="bg-brand-600 hover:bg-brand-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold py-2.5 px-4 rounded-xl flex items-center gap-2 transition-colors"
+                      >
+                        <Plus className="w-4 h-4" /> Add feature
+                      </button>
+                    </div>
+
+                    <div className="space-y-4">
+                      {whyChoose.features.length === 0 && (
+                        <p className="text-sm text-white/40 italic">No feature cards yet. Click &quot;Add feature&quot; to create one.</p>
+                      )}
+                      {whyChoose.features.map((feature, idx) => {
+                        const PreviewIcon = resolveIcon(feature.iconName);
+                        return (
+                          <div key={idx} className="bg-black/40 border border-white/10 rounded-2xl p-5 space-y-4">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3">
+                                <div className="h-10 w-10 rounded-xl bg-brand-500/15 border border-brand-500/30 flex items-center justify-center text-brand-400">
+                                  <PreviewIcon className="w-5 h-5" />
+                                </div>
+                                <span className="text-sm font-bold text-white/80">Feature {idx + 1}</span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => removeWhyChooseFeature(idx)}
+                                className="text-red-400 hover:text-red-300 hover:bg-red-500/10 p-2 rounded-lg transition-colors"
+                                aria-label="Remove feature"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                              <div>
+                                <label className="block text-xs font-medium text-white/50 mb-2">Icon</label>
+                                <select
+                                  value={feature.iconName}
+                                  onChange={(e) => updateWhyChooseFeature(idx, { iconName: e.target.value })}
+                                  className="w-full bg-black/60 border border-white/10 rounded-lg px-3 py-3 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all text-white text-sm"
+                                >
+                                  {WHY_CHOOSE_ICON_NAMES.map(name => (
+                                    <option key={name} value={name}>{name}</option>
+                                  ))}
+                                </select>
+                              </div>
+                              <div className="md:col-span-2">
+                                <label className="block text-xs font-medium text-white/50 mb-2">Title</label>
+                                <input
+                                  type="text"
+                                  value={feature.title}
+                                  onChange={(e) => updateWhyChooseFeature(idx, { title: e.target.value })}
+                                  placeholder="e.g. Safety & Trust"
+                                  className="w-full bg-black/60 border border-white/10 rounded-lg px-3 py-3 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all text-white text-sm placeholder:text-white/30"
+                                />
+                              </div>
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-white/50 mb-2">Description</label>
+                              <textarea
+                                value={feature.desc}
+                                onChange={(e) => updateWhyChooseFeature(idx, { desc: e.target.value })}
+                                placeholder="Short sentence describing this feature."
+                                className="w-full bg-black/60 border border-white/10 rounded-lg px-3 py-3 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all text-white text-sm min-h-[70px] placeholder:text-white/30"
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="pt-6 border-t border-white/10 flex justify-end">
+                    <button
+                      type="submit"
+                      disabled={isSavingWhyChoose}
+                      className="bg-brand-600 hover:bg-brand-500 disabled:opacity-50 text-white font-bold py-4 px-8 rounded-xl flex items-center justify-center gap-2 transition-all hover:scale-[1.02] active:scale-[0.98] shadow-xl"
+                    >
+                      {isSavingWhyChoose ? (
+                        <>
+                          <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                          Saving...
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle className="w-5 h-5" /> Save &quot;Why Choose Us&quot;
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {/* REGIONS TAB */}
+          {activeTab === "regions" && (
+            <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h2 className="text-3xl font-bold text-white tracking-tight">Regional Cards</h2>
+                  <p className="text-white/50 mt-1">Manage the "Himalayan Adventures" destination cards shown on the home page.</p>
+                </div>
+                <button 
+                  onClick={() => {
+                    setEditingRegion(null);
+                    setRegionFormData({ title: "", desc: "", image: "", order: 0 });
+                    setIsRegionModalOpen(true);
+                  }}
+                  className="bg-white hover:bg-gray-100 text-black font-bold py-3 px-6 rounded-xl flex items-center justify-center gap-2 transition-all hover:scale-[1.02] active:scale-[0.98] shadow-xl"
+                >
+                  <Plus className="w-5 h-5" /> Add Region
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {regions.map((region) => (
+                  <div key={region.id} className="bg-white/5 border border-white/10 rounded-[2rem] overflow-hidden group hover:border-brand-500/30 transition-colors flex flex-col relative">
+                    <div className="h-48 w-full relative overflow-hidden bg-black/50">
+                      {region.image ? (
+                        <Image src={region.image} alt={region.title} fill className="object-cover group-hover:scale-105 transition-transform duration-700" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-white/20">No Image</div>
+                      )}
+                    </div>
+                    <div className="p-6 flex flex-col flex-1">
+                      <h3 className="text-xl font-bold text-white mb-2">{region.title}</h3>
+                      <p className="text-white/60 text-sm mb-6 flex-1 line-clamp-2">{region.desc}</p>
+                      
+                      <div className="pt-4 border-t border-white/10 flex gap-2">
+                        <button 
+                          onClick={() => {
+                            setEditingRegion(region);
+                            setRegionFormData({
+                              title: region.title || "",
+                              desc: region.desc || "",
+                              image: region.image || "",
+                              order: region.order || 0
+                            });
+                            setIsRegionModalOpen(true);
+                          }}
+                          className="flex-1 bg-white/10 hover:bg-white/20 text-white font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-2 text-sm"
+                        >
+                          <Edit className="w-4 h-4" /> Edit
+                        </button>
+                        <button 
+                          onClick={() => handleDeleteRegion(region.id)}
+                          className="flex-1 bg-red-500/10 hover:bg-red-500/20 text-red-400 font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-2 text-sm"
+                        >
+                          <Trash2 className="w-4 h-4" /> Delete
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                {regions.length === 0 && (
+                  <div className="col-span-full py-20 text-center border-2 border-dashed border-white/10 rounded-[2rem]">
+                    <MapPin className="w-12 h-12 text-white/20 mx-auto mb-4" />
+                    <p className="text-white/40">No regions found. Click 'Add Region' to create one.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
         </div>
       </div>
+
+      {/* TRIP MODAL */}
+      {isTripModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => {
+            setIsTripModalOpen(false);
+            setEditingTrip(null);
+          }}></div>
+          <div className="relative z-10 w-full max-w-2xl bg-[#0a0a0a] border border-white/10 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="p-6 border-b border-white/10 flex justify-between items-center bg-white/5">
+              <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                <Map className="w-5 h-5 text-brand-500" />
+                {editingTrip ? "Edit Trip Package" : "Add New Trip Package"}
+              </h2>
+              <button 
+                onClick={() => {
+                  setIsTripModalOpen(false);
+                  setEditingTrip(null);
+                }}
+                className="text-white/50 hover:text-white transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            
+            <div className="p-6 overflow-y-auto flex-1 custom-scrollbar">
+              <form id="trip-form" onSubmit={handleSaveTrip} className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-white/70">Trip Title</label>
+                    <input
+                      type="text"
+                      required
+                      value={tripFormData.title}
+                      onChange={(e) => setTripFormData({...tripFormData, title: e.target.value})}
+                      className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-brand-500 transition-colors"
+                      placeholder="e.g. Everest Base Camp Trek"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-white/70">Region/Country</label>
+                    <select
+                      required
+                      value={tripFormData.region}
+                      onChange={(e) => setTripFormData({...tripFormData, region: e.target.value})}
+                      className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-brand-500 transition-colors appearance-none"
+                    >
+                      <option value="" disabled>Select a Region</option>
+                      {regions.map((r: any) => (
+                        <option key={r.id} value={r.title}>{r.title}</option>
+                      ))}
+                      {/* Fallbacks if DB is empty */}
+                      {regions.length === 0 && (
+                        <>
+                          <option value="Nepal">Nepal</option>
+                          <option value="Bhutan">Bhutan</option>
+                          <option value="India">India</option>
+                        </>
+                      )}
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-white/70">Duration</label>
+                    <input
+                      type="text"
+                      required
+                      value={tripFormData.duration}
+                      onChange={(e) => setTripFormData({...tripFormData, duration: e.target.value})}
+                      className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-brand-500 transition-colors"
+                      placeholder="e.g. 14 Days"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-white/70">Pay Level</label>
+                    <div className="relative">
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-white/50 font-bold">$</span>
+                      <input
+                        type="text"
+                        required
+                        value={tripFormData.price}
+                        onChange={(e) => setTripFormData({...tripFormData, price: e.target.value})}
+                        className="w-full bg-black/50 border border-white/10 rounded-xl pl-8 pr-20 py-3 text-white focus:outline-none focus:border-brand-500 transition-colors"
+                        placeholder="e.g. 250 - 400"
+                      />
+                      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-white/50 text-sm">/ person</span>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-white/70">Difficulty</label>
+                    <select
+                      required
+                      value={tripFormData.difficulty}
+                      onChange={(e) => setTripFormData({...tripFormData, difficulty: e.target.value})}
+                      className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-brand-500 transition-colors appearance-none"
+                    >
+                      <option value="easy">Easy</option>
+                      <option value="moderate">Moderate</option>
+                      <option value="hard">Hard</option>
+                      <option value="extreme">Extreme</option>
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center mb-2">
+                      <label className="block text-sm font-medium text-white/70">Rating</label>
+                      <span className="text-xs font-bold text-brand-400 bg-brand-500/20 px-2 py-0.5 rounded-full">{tripFormData.rating} Stars</span>
+                    </div>
+                    <div className="flex gap-1 items-center h-[50px] px-4 bg-black/50 border border-white/10 rounded-xl">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <div key={star} className="relative cursor-pointer w-7 h-7">
+                          <div 
+                            className="absolute left-0 top-0 bottom-0 w-1/2 z-10" 
+                            onClick={() => setTripFormData({...tripFormData, rating: star - 0.5})}
+                          />
+                          <div 
+                            className="absolute right-0 top-0 bottom-0 w-1/2 z-10" 
+                            onClick={() => setTripFormData({...tripFormData, rating: star})}
+                          />
+                          <svg className="w-full h-full text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" fill={tripFormData.rating >= star ? "currentColor" : "none"} />
+                          </svg>
+                          {tripFormData.rating === star - 0.5 && (
+                            <svg className="w-full h-full text-yellow-500 absolute top-0 left-0 pointer-events-none" style={{ clipPath: 'polygon(0 0, 50% 0, 50% 100%, 0 100%)' }} fill="currentColor" viewBox="0 0 24 24">
+                               <path d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                            </svg>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-white/70">Trip Type</label>
+                    <select
+                      required
+                      value={tripFormData.tripType}
+                      onChange={(e) => setTripFormData({...tripFormData, tripType: e.target.value})}
+                      className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-brand-500 transition-colors appearance-none"
+                    >
+                      <option value="Tour">Tour</option>
+                      <option value="Trekking">Trekking</option>
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-white/70">Group Size</label>
+                    <input
+                      type="text"
+                      value={tripFormData.groupSize}
+                      onChange={(e) => setTripFormData({...tripFormData, groupSize: e.target.value})}
+                      className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-brand-500 transition-colors"
+                      placeholder="e.g. Max 8 people"
+                    />
+                  </div>
+                  <div className="col-span-1 md:col-span-2 space-y-2">
+                    <label className="block text-sm font-medium text-white/70">Tags</label>
+                    <div className="flex flex-wrap gap-3 p-4 bg-black/30 border border-white/10 rounded-xl">
+                      {availableTags.map((tag) => (
+                        <label key={tag} className="flex items-center gap-2 cursor-pointer group">
+                          <input 
+                            type="checkbox" 
+                            className="hidden"
+                            checked={tripFormData.tags?.includes(tag) || false}
+                            onChange={(e) => {
+                              const newTags = e.target.checked 
+                                ? [...(tripFormData.tags || []), tag]
+                                : (tripFormData.tags || []).filter(t => t !== tag);
+                              setTripFormData({...tripFormData, tags: newTags});
+                            }}
+                          />
+                          <span className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${
+                            tripFormData.tags?.includes(tag) 
+                              ? 'bg-brand-500 border-brand-400 text-white shadow-lg shadow-brand-500/20' 
+                              : 'bg-black/50 border-white/10 text-white/50 hover:text-white/80 hover:border-white/30'
+                          }`}>
+                            {tag}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="col-span-1 md:col-span-2 space-y-2">
+                    <label className="block text-sm font-medium text-white/70">Image (Upload or URL)</label>
+                    <div className="flex flex-col gap-3">
+                      <div className="flex items-center gap-2">
+                        <label className="flex-1 bg-black/50 border border-white/10 hover:border-brand-500/50 rounded-xl px-4 py-3 text-white cursor-pointer transition-colors flex items-center justify-center gap-2 group">
+                          <input 
+                            type="file" 
+                            accept="image/*"
+                            className="hidden" 
+                            onChange={handleTripImageUpload}
+                            disabled={isUploadingTripImage}
+                          />
+                          {isUploadingTripImage ? (
+                            <div className="w-5 h-5 border-2 border-brand-500 border-t-transparent rounded-full animate-spin"></div>
+                          ) : (
+                            <UploadCloud className="w-5 h-5 text-white/50 group-hover:text-brand-400 transition-colors" />
+                          )}
+                          <span className="text-sm font-medium text-white/70 group-hover:text-white transition-colors">
+                            {isUploadingTripImage ? "Uploading..." : "Upload from Computer"}
+                          </span>
+                        </label>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="flex-1 h-px bg-white/10"></div>
+                        <span className="text-xs text-white/40 uppercase tracking-widest font-bold">OR</span>
+                        <div className="flex-1 h-px bg-white/10"></div>
+                      </div>
+                      <input
+                        type="text"
+                        required
+                        value={tripFormData.image}
+                        onChange={(e) => setTripFormData({...tripFormData, image: e.target.value})}
+                        className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-brand-500 transition-colors text-sm"
+                        placeholder="https://images.unsplash.com/..."
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-white/70">Description / Highlights</label>
+                  <textarea
+                    required
+                    rows={4}
+                    value={tripFormData.desc}
+                    onChange={(e) => setTripFormData({...tripFormData, desc: e.target.value})}
+                    className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-brand-500 transition-colors resize-none"
+                    placeholder="Brief description of the trip highlights..."
+                  ></textarea>
+                </div>
+
+                <div className="flex flex-col gap-4">
+                  <button 
+                    type="button" 
+                    onClick={() => setShowDetailedInfo(!showDetailedInfo)}
+                    className="w-full py-4 bg-gradient-to-r from-brand-500/10 to-transparent border border-brand-500/30 rounded-xl text-brand-400 font-bold flex justify-center items-center gap-2 hover:bg-brand-500/20 transition-colors shadow-[inset_4px_0_0_0_rgba(34,197,94,1)]"
+                  >
+                    {showDetailedInfo ? "Hide Detailed Information" : "Manage Detailed Information"}
+                  </button>
+                  
+                  {showDetailedInfo && (
+                    <div className="space-y-6 border border-white/5 bg-white/[0.02] p-6 rounded-2xl animate-in fade-in slide-in-from-top-4">
+                      <div className="flex items-center gap-2 text-white/70 font-medium pb-2 border-b border-white/10">
+                        <Map className="w-4 h-4 text-brand-400" /> Complete Trip Details
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                          <label className="block text-sm font-medium text-white/70">Custom Slug (Optional)</label>
+                          <input
+                            type="text"
+                            value={tripFormData.slug}
+                            onChange={(e) => setTripFormData({...tripFormData, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '')})}
+                            className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-brand-500 transition-colors"
+                            placeholder="e.g. everest-base-camp"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="block text-sm font-medium text-white/70">Altitude</label>
+                          <input
+                            type="text"
+                            value={tripFormData.altitude}
+                            onChange={(e) => setTripFormData({...tripFormData, altitude: e.target.value})}
+                            className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-brand-500 transition-colors"
+                            placeholder="e.g. 5,364m / 17,598ft"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="block text-sm font-medium text-white/70">Overview (Paragraphs)</label>
+                        <textarea
+                          rows={6}
+                          value={tripFormData.overview}
+                          onChange={(e) => setTripFormData({...tripFormData, overview: e.target.value})}
+                          className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-brand-500 transition-colors resize-none"
+                          placeholder="Detailed overview of the trip. Each new line will be a new paragraph."
+                        ></textarea>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-between">
+                            <label className="text-sm font-bold text-white uppercase tracking-wider">Includes (What's included)</label>
+                            <button
+                              type="button"
+                              onClick={() => setTripFormData({ ...tripFormData, includes: [...tripFormData.includes, ""] })}
+                              className="text-xs font-bold text-brand-400 bg-brand-500/10 hover:bg-brand-500/20 px-3 py-1.5 rounded-lg border border-brand-500/20 flex items-center gap-1 transition-colors"
+                            >
+                              <Plus className="w-3.5 h-3.5" /> Add Include
+                            </button>
+                          </div>
+                          <div className="space-y-3">
+                            {tripFormData.includes.map((item, index) => (
+                              <div key={index} className="flex items-start gap-3 bg-black/40 p-3 rounded-xl border border-white/5 relative group">
+                                <span className="text-green-500 mt-2 shrink-0">✓</span>
+                                <input
+                                  type="text"
+                                  value={item}
+                                  onChange={(e) => {
+                                    const newIncludes = [...tripFormData.includes];
+                                    newIncludes[index] = e.target.value;
+                                    setTripFormData({ ...tripFormData, includes: newIncludes });
+                                  }}
+                                  placeholder="e.g. Airport pickups and drops"
+                                  className="flex-1 bg-transparent border-none px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-brand-500 rounded text-white text-sm"
+                                  required
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const newIncludes = [...tripFormData.includes];
+                                    newIncludes.splice(index, 1);
+                                    setTripFormData({ ...tripFormData, includes: newIncludes });
+                                  }}
+                                  className="p-1.5 bg-red-500/10 text-red-400 hover:bg-red-500/20 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity mt-1"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                            ))}
+                            {tripFormData.includes.length === 0 && (
+                              <div className="text-center py-6 text-white/30 text-sm border border-dashed border-white/10 rounded-xl">
+                                No includes added yet. Click "+ Add Include" to start.
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-between">
+                            <label className="text-sm font-bold text-white uppercase tracking-wider">Excludes (What's not included)</label>
+                            <button
+                              type="button"
+                              onClick={() => setTripFormData({ ...tripFormData, excludes: [...tripFormData.excludes, ""] })}
+                              className="text-xs font-bold text-red-400 bg-red-500/10 hover:bg-red-500/20 px-3 py-1.5 rounded-lg border border-red-500/20 flex items-center gap-1 transition-colors"
+                            >
+                              <Plus className="w-3.5 h-3.5" /> Add Exclude
+                            </button>
+                          </div>
+                          <div className="space-y-3">
+                            {tripFormData.excludes.map((item, index) => (
+                              <div key={index} className="flex items-start gap-3 bg-black/40 p-3 rounded-xl border border-white/5 relative group">
+                                <span className="text-red-500 mt-2 shrink-0">✗</span>
+                                <input
+                                  type="text"
+                                  value={item}
+                                  onChange={(e) => {
+                                    const newExcludes = [...tripFormData.excludes];
+                                    newExcludes[index] = e.target.value;
+                                    setTripFormData({ ...tripFormData, excludes: newExcludes });
+                                  }}
+                                  placeholder="e.g. International flights"
+                                  className="flex-1 bg-transparent border-none px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-red-500 rounded text-white text-sm"
+                                  required
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const newExcludes = [...tripFormData.excludes];
+                                    newExcludes.splice(index, 1);
+                                    setTripFormData({ ...tripFormData, excludes: newExcludes });
+                                  }}
+                                  className="p-1.5 bg-red-500/10 text-red-400 hover:bg-red-500/20 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity mt-1"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                            ))}
+                            {tripFormData.excludes.length === 0 && (
+                              <div className="text-center py-6 text-white/30 text-sm border border-dashed border-white/10 rounded-xl">
+                                No excludes added yet. Click "+ Add Exclude" to start.
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-4">
+                        <div className="flex justify-between items-center border-t border-white/10 pt-6">
+                          <label className="block font-medium text-white">Itinerary Builder</label>
+                          <button 
+                            type="button" 
+                            onClick={() => setTripFormData({...tripFormData, itinerary: [...(tripFormData.itinerary || []), { day: `Day ${(tripFormData.itinerary?.length || 0) + 1}`, title: "", desc: "" }]})}
+                            className="px-3 py-1.5 bg-brand-500/20 border border-brand-500/30 text-brand-400 hover:bg-brand-500/30 rounded-lg text-xs font-bold transition-colors shadow-lg"
+                          >
+                            + Add Day
+                          </button>
+                        </div>
+                        
+                        <div className="space-y-3">
+                          {(!tripFormData.itinerary || tripFormData.itinerary.length === 0) && (
+                            <div className="p-8 bg-black/30 border border-white/5 rounded-xl text-center text-white/30 text-sm">
+                              No itinerary days added yet. Click "+ Add Day" to start building your itinerary.
+                            </div>
+                          )}
+                          {tripFormData.itinerary?.map((day, idx) => (
+                            <div key={idx} className="p-4 bg-black/40 border border-white/10 rounded-xl space-y-3 relative group transition-all hover:border-white/20">
+                              <button 
+                                type="button"
+                                onClick={() => {
+                                  const newItinerary = [...tripFormData.itinerary];
+                                  newItinerary.splice(idx, 1);
+                                  setTripFormData({...tripFormData, itinerary: newItinerary});
+                                }}
+                                className="absolute top-2 right-2 p-1.5 text-white/30 hover:text-red-400 hover:bg-red-500/10 rounded-md transition-colors opacity-0 group-hover:opacity-100"
+                                title="Remove Day"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                              
+                              <div className="grid grid-cols-1 md:grid-cols-4 gap-3 pr-8">
+                                <div className="md:col-span-1">
+                                  <input
+                                    type="text"
+                                    value={day.day}
+                                    onChange={(e) => {
+                                      const newItinerary = [...tripFormData.itinerary];
+                                      newItinerary[idx].day = e.target.value;
+                                      setTripFormData({...tripFormData, itinerary: newItinerary});
+                                    }}
+                                    className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-brand-500 text-sm"
+                                    placeholder="Day (e.g. Day 1)"
+                                  />
+                                </div>
+                                <div className="md:col-span-3">
+                                  <input
+                                    type="text"
+                                    value={day.title}
+                                    onChange={(e) => {
+                                      const newItinerary = [...tripFormData.itinerary];
+                                      newItinerary[idx].title = e.target.value;
+                                      setTripFormData({...tripFormData, itinerary: newItinerary});
+                                    }}
+                                    className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-brand-500 text-sm"
+                                    placeholder="Title (e.g. Arrival in Kathmandu)"
+                                  />
+                                </div>
+                              </div>
+                              <textarea
+                                rows={2}
+                                value={day.desc}
+                                onChange={(e) => {
+                                  const newItinerary = [...tripFormData.itinerary];
+                                  newItinerary[idx].desc = e.target.value;
+                                  setTripFormData({...tripFormData, itinerary: newItinerary});
+                                }}
+                                className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-brand-500 text-sm resize-none"
+                                placeholder="Description of the day's activities..."
+                              ></textarea>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-3 bg-white/5 border border-white/10 p-4 rounded-xl">
+                  <input
+                    type="checkbox"
+                    id="isFeatured"
+                    checked={tripFormData.isFeatured}
+                    onChange={(e) => setTripFormData({...tripFormData, isFeatured: e.target.checked})}
+                    className="w-5 h-5 rounded border-white/20 bg-black/50 text-brand-500 focus:ring-brand-500 focus:ring-offset-0"
+                  />
+                  <label htmlFor="isFeatured" className="text-white cursor-pointer font-medium flex-1">
+                    Feature on Home Page
+                    <p className="text-white/50 text-sm font-normal">Featured trips will be displayed in the Featured Tours section on the main landing page.</p>
+                  </label>
+                </div>
+              </form>
+            </div>
+            
+            <div className="p-6 border-t border-white/10 bg-white/5 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsTripModalOpen(false);
+                  setEditingTrip(null);
+                }}
+                className="px-6 py-3 rounded-xl border border-white/10 text-white font-medium hover:bg-white/5 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                form="trip-form"
+                className="px-6 py-3 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-medium flex items-center gap-2 transition-all hover:scale-105 active:scale-95 shadow-xl shadow-brand-500/20"
+              >
+                <CheckCircle className="w-5 h-5" />
+                {editingTrip ? "Save Changes" : "Create Trip"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isRegionModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-[#0f0f0f] border border-white/10 rounded-[2rem] w-full max-w-2xl overflow-hidden shadow-[0_0_100px_rgba(0,0,0,0.8)] animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between p-6 border-b border-white/10 bg-white/5">
+              <h2 className="text-2xl font-bold text-white flex items-center gap-2">
+                <MapPin className="w-6 h-6 text-brand-500" />
+                {editingRegion ? "Edit Region" : "Add New Region"}
+              </h2>
+              <button
+                onClick={() => {
+                  setIsRegionModalOpen(false);
+                  setEditingRegion(null);
+                }}
+                className="text-white/50 hover:text-white transition-colors p-2 hover:bg-white/10 rounded-full"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="p-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
+              <form id="region-form" onSubmit={handleSaveRegion} className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-white/70 mb-2">Region Title</label>
+                    <input
+                      type="text"
+                      required
+                      value={regionFormData.title}
+                      onChange={(e) => setRegionFormData({...regionFormData, title: e.target.value})}
+                      className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-brand-500 transition-colors"
+                      placeholder="e.g. Nepal"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-white/70 mb-2">Order (Sorting)</label>
+                    <input
+                      type="number"
+                      value={regionFormData.order}
+                      onChange={(e) => setRegionFormData({...regionFormData, order: parseInt(e.target.value) || 0})}
+                      className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-brand-500 transition-colors"
+                      placeholder="e.g. 1"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-white/70 mb-2">Image (Upload or URL)</label>
+                  <div className="flex flex-col gap-3">
+                    <div className="flex items-center gap-2">
+                      <label className="flex-1 bg-black/50 border border-white/10 hover:border-brand-500/50 rounded-xl px-4 py-3 text-white cursor-pointer transition-colors flex items-center justify-center gap-2 group">
+                        <input 
+                          type="file" 
+                          accept="image/*"
+                          className="hidden" 
+                          onChange={handleRegionImageUpload}
+                          disabled={isUploadingRegionImage}
+                        />
+                        {isUploadingRegionImage ? (
+                          <div className="w-5 h-5 border-2 border-brand-500 border-t-transparent rounded-full animate-spin"></div>
+                        ) : (
+                          <UploadCloud className="w-5 h-5 text-white/50 group-hover:text-brand-400 transition-colors" />
+                        )}
+                        <span className="text-sm font-medium text-white/70 group-hover:text-white transition-colors">
+                          {isUploadingRegionImage ? "Uploading..." : "Upload from Computer"}
+                        </span>
+                      </label>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="flex-1 h-px bg-white/10"></div>
+                      <span className="text-xs text-white/40 uppercase tracking-widest font-bold">OR</span>
+                      <div className="flex-1 h-px bg-white/10"></div>
+                    </div>
+                    <input
+                      type="url"
+                      required
+                      value={regionFormData.image}
+                      onChange={(e) => setRegionFormData({...regionFormData, image: e.target.value})}
+                      className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-brand-500 transition-colors text-sm"
+                      placeholder="https://images.unsplash.com/..."
+                    />
+                  </div>
+                  {regionFormData.image && (
+                    <div className="mt-3 relative h-40 w-full rounded-xl overflow-hidden bg-black/50 border border-white/10">
+                      <Image src={regionFormData.image} alt="Preview" fill className="object-cover" />
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-white/70 mb-2">Short Description</label>
+                  <textarea
+                    required
+                    rows={3}
+                    value={regionFormData.desc}
+                    onChange={(e) => setRegionFormData({...regionFormData, desc: e.target.value})}
+                    className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-brand-500 transition-colors resize-none"
+                    placeholder="Brief description of the region..."
+                  ></textarea>
+                </div>
+              </form>
+            </div>
+            
+            <div className="p-6 border-t border-white/10 bg-white/5 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsRegionModalOpen(false);
+                  setEditingRegion(null);
+                }}
+                className="px-6 py-3 rounded-xl border border-white/10 text-white font-medium hover:bg-white/5 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                form="region-form"
+                className="px-6 py-3 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-medium flex items-center gap-2 transition-all hover:scale-105 active:scale-95 shadow-xl shadow-brand-500/20"
+              >
+                <CheckCircle className="w-5 h-5" />
+                {editingRegion ? "Save Changes" : "Create Region"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

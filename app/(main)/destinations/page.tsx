@@ -15,12 +15,6 @@ const destinations = [
     tours: 45
   },
   {
-    name: "Tibet",
-    image: "/images/hero.png",
-    description: "The Roof of the World, featuring mystical monasteries, vast plateaus, and the stunning North Face of Everest.",
-    tours: 12
-  },
-  {
     name: "Bhutan",
     image: "/images/annapurna.png",
     description: "The Last Shangri-La, known for its pristine environment, traditional architecture, and Gross National Happiness.",

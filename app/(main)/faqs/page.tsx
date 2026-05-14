@@ -31,30 +31,35 @@ export default function FAQsPage() {
   ];
 
   return (
-    <div className="pt-32 pb-24 px-6 md:px-12 max-w-4xl mx-auto">
-      <div className="mb-12">
-        <h1 className="text-4xl md:text-5xl font-bold mb-6 text-slate-900 dark:text-white">Frequently Asked Questions</h1>
-        <div className="w-20 h-1.5 bg-brand-500 rounded-full" />
-        <p className="mt-6 text-lg text-slate-600 dark:text-slate-400">
-          Everything you need to know to prepare for your Himalayan adventure.
-        </p>
-      </div>
+    <div className="min-h-screen bg-slate-50 dark:bg-transparent">
+      <div className="pt-32 pb-24 px-6 md:px-12 max-w-4xl mx-auto">
+        <div className="mb-12">
+          <h1 className="text-4xl md:text-5xl font-bold mb-6 text-slate-900 dark:text-white">Frequently Asked Questions</h1>
+          <div className="w-20 h-1.5 bg-brand-500 rounded-full" />
+          <p className="mt-6 text-lg text-slate-700 dark:text-slate-400">
+            Everything you need to know to prepare for your Himalayan adventure.
+          </p>
+        </div>
 
-      <div className="space-y-8">
-        {faqs.map((faq, idx) => (
-          <section key={idx} className="bg-white dark:bg-[#0a110a] p-8 rounded-2xl border border-slate-200 dark:border-white/5 shadow-sm">
-            <h2 className="text-xl font-bold mb-4 text-slate-800 dark:text-slate-100">{faq.question}</h2>
-            <p className="leading-relaxed text-slate-600 dark:text-slate-400">{faq.answer}</p>
-          </section>
-        ))}
-      </div>
-      
-      <div className="mt-16 p-8 bg-brand-500/10 rounded-2xl border border-brand-500/20 text-center">
-        <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Still have questions?</h3>
-        <p className="text-slate-600 dark:text-slate-400 mb-6">Our travel experts are ready to assist you.</p>
-        <a href="/contact" className="inline-block px-8 py-3 bg-brand-600 hover:bg-brand-500 text-white font-medium rounded-xl transition-all">
-          Contact Us
-        </a>
+        <div className="space-y-6">
+          {faqs.map((faq, idx) => (
+            <section
+              key={idx}
+              className="bg-white dark:bg-[#0a110a] p-8 rounded-2xl border border-slate-200 dark:border-white/5 shadow-md hover:shadow-lg transition-shadow"
+            >
+              <h2 className="text-xl font-bold mb-4 text-slate-900 dark:text-slate-100">{faq.question}</h2>
+              <p className="leading-relaxed text-slate-700 dark:text-slate-400">{faq.answer}</p>
+            </section>
+          ))}
+        </div>
+
+        <div className="mt-16 p-8 bg-brand-500/10 rounded-2xl border border-brand-500/20 text-center">
+          <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Still have questions?</h3>
+          <p className="text-slate-700 dark:text-slate-400 mb-6">Our travel experts are ready to assist you.</p>
+          <a href="/contact" className="inline-block px-8 py-3 bg-brand-600 hover:bg-brand-500 text-white font-medium rounded-xl transition-all">
+            Contact Us
+          </a>
+        </div>
       </div>
     </div>
   );

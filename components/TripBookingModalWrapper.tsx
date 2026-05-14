@@ -36,13 +36,13 @@ export default function TripBookingModalWrapper({
       <div className="flex flex-wrap gap-4">
         <button 
           onClick={() => openModal("booking")} 
-          className="px-8 py-3 rounded-full bg-white text-black font-semibold transition-all hover:bg-gray-100 active:scale-95 shadow-xl"
+          className="px-8 py-3 rounded-full bg-white text-black font-semibold transition-all hover:bg-gray-100 active:scale-95 shadow-xl cursor-pointer"
         >
           Book Now
         </button>
         <button 
           onClick={() => openModal("inquiry")} 
-          className="px-8 py-3 rounded-full bg-black/40 hover:bg-black/60 active:scale-95 border border-white/20 backdrop-blur-md text-white font-semibold transition-all shadow-xl"
+          className="px-8 py-3 rounded-full bg-black/40 hover:bg-black/60 active:scale-95 border border-white/20 backdrop-blur-md text-white font-semibold transition-all shadow-xl cursor-pointer"
         >
           Customize Trip
         </button>
@@ -51,7 +51,7 @@ export default function TripBookingModalWrapper({
             href={`https://wa.me/${contactSettings.phoneWhatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(`Hi, I am interested in the ${tripTitle} trip.`)}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="px-8 py-3 rounded-full bg-[#25D366]/80 hover:bg-[#25D366] border border-[#25D366]/20 backdrop-blur-md text-white font-semibold transition-all shadow-xl flex items-center gap-2"
+            className="px-8 py-3 rounded-full bg-[#25D366]/80 hover:bg-[#25D366] border border-[#25D366]/20 backdrop-blur-md text-white font-semibold transition-all shadow-xl flex items-center gap-2 cursor-pointer"
           >
             <MessageCircle className="h-5 w-5" /> WhatsApp
           </a>

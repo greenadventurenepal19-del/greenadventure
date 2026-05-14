@@ -5,14 +5,20 @@ import Image from "next/image";
 import Link from "next/link";
 import { motion, useScroll, useTransform, AnimatePresence, useMotionValue, useSpring } from "framer-motion";
 import { 
-  Mountain, ShieldCheck, MapPin, Users, Star, 
-  ArrowRight, Search, Calendar, DollarSign, Quote,
+  Mountain, MapPin, Users, Star, 
+  ArrowRight, Search, Calendar, Quote,
   Clock, TrendingUp, Leaf, Cloud, Heart, Volume2, VolumeX,
   Globe, Plane, Compass
 } from "lucide-react";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import LiquidSlider from "@/components/LiquidSlider";
+import ReviewSubmitModal from "@/components/ReviewSubmitModal";
+import {
+  DEFAULT_WHY_CHOOSE,
+  resolveIcon,
+  type WhyChooseSettings,
+} from "@/lib/why-choose";
 
 const ParachuteIcon = ({ className }: { className?: string }) => (
   <svg viewBox="0 0 200 250" fill="none" stroke="currentColor" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -123,11 +129,18 @@ export default function HomePage() {
   const [heroSlidesText, setHeroSlidesText] = React.useState({
     slide1Title: "NEPAL",
     slide1Subtitle: "Discover the breathtaking landscapes, vibrant culture, and ancient heritage of the Himalayas. The perfect start to your unforgettable journey.",
-    slide2Title: "ANNAPURNA",
-    slide2Subtitle: "Trek through lush valleys and traditional mountain villages to the heart of the majestic Annapurna sanctuary.",
-    slide3Title: "NIGHT SKY",
-    slide3Subtitle: "Camp under a blanket of stars and witness the Milky Way in absolute clarity."
+    slide2Title: "BHUTAN",
+    slide2Subtitle: "Experience the magic of the Land of the Thunder Dragon, with its pristine landscapes and ancient monasteries.",
+    slide3Title: "INDIA",
+    slide3Subtitle: "Explore the diverse beauty of the Indian Himalayas, from spiritual journeys to thrilling treks."
   });
+
+  const [featuredTours, setFeaturedTours] = React.useState<any[]>([]);
+  const [featuredTreks, setFeaturedTreks] = React.useState<any[]>([]);
+  const [dbRegions, setDbRegions] = React.useState<any[]>([]);
+  const [approvedReviews, setApprovedReviews] = React.useState<any[]>([]);
+  const [showReviewModal, setShowReviewModal] = React.useState(false);
+  const [whyChoose, setWhyChoose] = React.useState<WhyChooseSettings>(DEFAULT_WHY_CHOOSE);
 
   React.useEffect(() => {
     async function fetchHeroSettings() {
@@ -140,24 +153,83 @@ export default function HomePage() {
         console.error("Error fetching hero settings:", error);
       }
     }
+
+    async function fetchWhyChoose() {
+      try {
+        const docSnap = await getDoc(doc(db, "settings", "why_choose_us"));
+        if (docSnap.exists()) {
+          const data = docSnap.data() as Partial<WhyChooseSettings>;
+          setWhyChoose(prev => ({
+            ...prev,
+            ...data,
+            features: Array.isArray(data.features) && data.features.length > 0 ? data.features : prev.features,
+          }));
+        }
+      } catch (error) {
+        console.error("Error fetching Why Choose Us settings:", error);
+      }
+    }
+
+    async function fetchData() {
+      try {
+        const qTrips = query(collection(db, "trips"), where("isFeatured", "==", true));
+        const tripsSnap = await getDocs(qTrips);
+        const tripsData = tripsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+        setFeaturedTours(tripsData.filter((t: any) => t.tripType === "Tour" || t.tripType === "Tours" || !t.tripType).slice(0, 3));
+        setFeaturedTreks(tripsData.filter((t: any) => t.tripType === "Trekking").slice(0, 3));
+
+        const qRegions = query(collection(db, "regions"));
+        const regionsSnap = await getDocs(qRegions);
+        const regionsData = regionsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        if (regionsData.length > 0) {
+          setDbRegions(regionsData.sort((a: any, b: any) => (a.order || 0) - (b.order || 0)));
+        }
+      } catch (error) {
+        console.error("Error fetching data:", error);
+        setFeaturedTours([]);
+        setFeaturedTreks([]);
+      }
+    }
+
+    async function fetchReviews() {
+      try {
+        const qReviews = query(collection(db, "reviews"), where("status", "==", "approved"));
+        const snap = await getDocs(qReviews);
+        const data = snap.docs
+          .map(d => ({ id: d.id, ...d.data() }))
+          .sort((a: any, b: any) => {
+            const aTime = a.createdAt?.seconds || 0;
+            const bTime = b.createdAt?.seconds || 0;
+            return bTime - aTime;
+          });
+        setApprovedReviews(data);
+      } catch (err) {
+        console.error("Error fetching reviews:", err);
+      }
+    }
+
     fetchHeroSettings();
+    fetchWhyChoose();
+    fetchData();
+    fetchReviews();
   }, []);
 
   const heroSlides = [
     {
-      title: heroSlidesText.slide1Title || "HIMALAYAS",
+      title: heroSlidesText.slide1Title || "NEPAL",
       image: "/images/hero-grass.jpg",
-      subtitle: heroSlidesText.slide1Subtitle || "Experience the majestic serenity of the high Himalayas and witness sunrise over the peaks."
+      subtitle: heroSlidesText.slide1Subtitle || "Discover the breathtaking landscapes, vibrant culture, and ancient heritage of the Himalayas. The perfect start to your unforgettable journey."
     },
     {
-      title: heroSlidesText.slide2Title || "BASE CAMP",
+      title: heroSlidesText.slide2Title || "BHUTAN",
       image: "/images/hero-snow.jpg",
-      subtitle: heroSlidesText.slide2Subtitle || "Journey to the edge of the world's highest peaks and stay in iconic mountain lodges."
+      subtitle: heroSlidesText.slide2Subtitle || "Experience the magic of the Land of the Thunder Dragon, with its pristine landscapes and ancient monasteries."
     },
     {
-      title: heroSlidesText.slide3Title || "NIGHT SKY",
+      title: heroSlidesText.slide3Title || "INDIA",
       image: "/images/hero-night.jpg",
-      subtitle: heroSlidesText.slide3Subtitle || "Camp under a blanket of stars and witness the Milky Way in absolute clarity."
+      subtitle: heroSlidesText.slide3Subtitle || "Explore the diverse beauty of the Indian Himalayas, from spiritual journeys to thrilling treks."
     }
   ];
 
@@ -336,13 +408,13 @@ export default function HomePage() {
                     {/* Action Buttons */}
                     <div className="flex items-center gap-3 flex-1 md:flex-none">
                       <Link 
-                        href="/trips" 
+                        href="/tours" 
                         className="px-6 py-3 md:px-8 md:py-4 rounded-full bg-white text-black font-bold text-xs md:text-sm hover:bg-gray-100 transition-colors shadow-[0_0_30px_rgba(255,255,255,0.2)] flex-1 text-center"
                       >
                         Discover More
                       </Link>
                       <Link 
-                        href="/trips"
+                        href="/tours"
                         className="h-12 w-12 md:h-14 md:w-14 shrink-0 rounded-full bg-white text-black flex items-center justify-center hover:bg-gray-100 transition-colors shadow-lg group"
                       >
                         <ArrowRight className="h-4 w-4 md:h-5 md:w-5 -rotate-45 group-hover:rotate-0 transition-transform" />
@@ -421,69 +493,84 @@ export default function HomePage() {
           <div className="container mx-auto px-4">
             <div className="flex flex-col md:flex-row md:items-end justify-between mb-16 gap-8">
               <div className="max-w-2xl">
-                <motion.h2 
+                <motion.h2
                   initial={{ opacity: 0, x: -20 }}
                   whileInView={{ opacity: 1, x: 0 }}
                   viewport={{ once: true }}
                   className="text-4xl md:text-5xl lg:text-6xl font-black tracking-tight mb-6 uppercase"
                 >
-                  Why Choose <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-500 to-brand-700">Us</span>
+                  {whyChoose.title}
+                  {whyChoose.titleHighlight && (
+                    <>
+                      {" "}
+                      <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-500 to-brand-700">
+                        {whyChoose.titleHighlight}
+                      </span>
+                    </>
+                  )}
                 </motion.h2>
-                <motion.p 
-                  initial={{ opacity: 0, x: -20 }}
-                  whileInView={{ opacity: 1, x: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: 0.1 }}
-                  className="text-lg md:text-xl text-muted-foreground font-medium leading-relaxed"
-                >
-                  We provide the best experiences for your Himalayan adventures with safety and reliability as our top priorities.
-                </motion.p>
+                {whyChoose.description && (
+                  <motion.p
+                    initial={{ opacity: 0, x: -20 }}
+                    whileInView={{ opacity: 1, x: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: 0.1 }}
+                    className="text-lg md:text-xl text-muted-foreground font-medium leading-relaxed"
+                  >
+                    {whyChoose.description}
+                  </motion.p>
+                )}
               </div>
-              
+
               {/* Trust Badge */}
-              <motion.div
-                initial={{ opacity: 0, scale: 0.9 }}
-                whileInView={{ opacity: 1, scale: 1 }}
-                viewport={{ once: true }}
-                className="hidden md:flex items-center gap-3 bg-brand-500/10 dark:bg-brand-500/20 border border-brand-500/20 text-brand-700 dark:text-brand-300 px-6 py-4 rounded-full font-bold shadow-lg backdrop-blur-sm"
-              >
-                <Star className="h-5 w-5 text-brand-500 fill-brand-500" />
-                Trusted by 10,000+ Explorers
-              </motion.div>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
-              {[
-                { icon: ShieldCheck, title: "Safety & Trust", desc: "Expert licensed guides and prioritizing your safety above all else." },
-                { icon: DollarSign, title: "Affordable Pricing", desc: "Best value packages without hidden costs or compromises." },
-                { icon: Mountain, title: "Adventure Experiences", desc: "Curated itineraries to deliver breathtaking memories." },
-                { icon: Users, title: "Custom Trips", desc: "Tailor-made holidays designed specifically for your group." }
-              ].map((feature, i) => (
-                <motion.div 
-                  key={i}
-                  initial={{ opacity: 0, y: 40 }}
-                  whileInView={{ opacity: 1, y: 0 }}
+              {whyChoose.trustBadge && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  whileInView={{ opacity: 1, scale: 1 }}
                   viewport={{ once: true }}
-                  transition={{ delay: i * 0.1, duration: 0.5, ease: "easeOut" }}
-                  className="group relative p-8 md:p-10 rounded-[2.5rem] bg-card/80 backdrop-blur-md border border-border/50 hover:border-brand-500/30 transition-all duration-500 overflow-hidden hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.05)] dark:hover:shadow-[0_20px_40px_-15px_rgba(var(--brand-500),0.1)]"
+                  className="hidden md:flex items-center gap-3 bg-brand-500/10 dark:bg-brand-500/20 border border-brand-500/20 text-brand-700 dark:text-brand-300 px-6 py-4 rounded-full font-bold shadow-lg backdrop-blur-sm"
                 >
-                  {/* Hover gradient background */}
-                  <div className="absolute inset-0 bg-gradient-to-br from-brand-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                  
-                  <div className="relative z-10">
-                    <div className="h-16 w-16 rounded-2xl bg-muted/50 border border-border/50 flex items-center justify-center mb-8 shadow-sm group-hover:-translate-y-2 group-hover:bg-gradient-to-br group-hover:from-brand-500 group-hover:to-brand-600 group-hover:text-white group-hover:border-transparent transition-all duration-500">
-                      <feature.icon className="h-8 w-8 text-foreground group-hover:text-white transition-colors duration-500" />
-                    </div>
-                    <h3 className="text-2xl font-black tracking-tight mb-4 group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors duration-500">
-                      {feature.title}
-                    </h3>
-                    <p className="text-muted-foreground font-medium leading-relaxed">
-                      {feature.desc}
-                    </p>
-                  </div>
+                  <Star className="h-5 w-5 text-brand-500 fill-brand-500" />
+                  {whyChoose.trustBadge}
                 </motion.div>
-              ))}
+              )}
             </div>
+
+            {whyChoose.features.length > 0 && (
+              <div
+                className={`grid gap-6 md:gap-8 grid-cols-1 md:grid-cols-2 ${
+                  whyChoose.features.length >= 4 ? "lg:grid-cols-4" : whyChoose.features.length === 3 ? "lg:grid-cols-3" : "lg:grid-cols-2"
+                }`}
+              >
+                {whyChoose.features.map((feature, i) => {
+                  const Icon = resolveIcon(feature.iconName);
+                  return (
+                    <motion.div
+                      key={i}
+                      initial={{ opacity: 0, y: 40 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      viewport={{ once: true }}
+                      transition={{ delay: i * 0.1, duration: 0.5, ease: "easeOut" }}
+                      className="group relative p-8 md:p-10 rounded-[2.5rem] bg-card/80 backdrop-blur-md border border-border/50 hover:border-brand-500/30 transition-all duration-500 overflow-hidden hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.05)] dark:hover:shadow-[0_20px_40px_-15px_rgba(var(--brand-500),0.1)]"
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-br from-brand-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+
+                      <div className="relative z-10">
+                        <div className="h-16 w-16 rounded-2xl bg-muted/50 border border-border/50 flex items-center justify-center mb-8 shadow-sm group-hover:-translate-y-2 group-hover:bg-gradient-to-br group-hover:from-brand-500 group-hover:to-brand-600 group-hover:text-white group-hover:border-transparent transition-all duration-500">
+                          <Icon className="h-8 w-8 text-foreground group-hover:text-white transition-colors duration-500" />
+                        </div>
+                        <h3 className="text-2xl font-black tracking-tight mb-4 group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors duration-500">
+                          {feature.title}
+                        </h3>
+                        <p className="text-muted-foreground font-medium leading-relaxed">
+                          {feature.desc}
+                        </p>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </section>
 
@@ -516,136 +603,327 @@ export default function HomePage() {
                 viewport={{ once: true }}
               >
                 <Link 
-                  href="/trips" 
+                  href="/tours" 
                   className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-brand-500/10 text-brand-600 dark:text-brand-400 font-bold hover:bg-brand-500 hover:text-white transition-all group border border-brand-500/20 shadow-md backdrop-blur-sm"
                 >
-                  View All Trips 
+                  View All Tours 
                   <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
                 </Link>
               </motion.div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {[
-                { 
-                  title: "Night with Nomads", 
-                  image: "/images/everest.png", 
-                  price: "$850", 
-                  duration: "7 days", 
-                  region: "Annapurna Region",
-                  groupSize: "Max 6 people",
-                  difficulty: "moderate",
-                  desc: "Our unique Indigenous Experiences in Nepal offer more than just mountain trekking. We provide an immersive journey into traditional culture...",
-                  tags: [
-                    { icon: Cloud, label: "Low-carbon" },
-                    { icon: Users, label: "Local Hire" },
-                    { icon: Heart, label: "Inclusive Growth" }
-                  ],
-                  slug: "night-with-nomads"
-                },
-                { 
-                  title: "Annapurna Circuit and Lakes", 
-                  image: "/images/annapurna.png", 
-                  price: "$1450", 
-                  duration: "14 days", 
-                  region: "Annapurna Region",
-                  groupSize: "Max 8 people",
-                  difficulty: "challenging",
-                  desc: "The Annapurna Circuit Trek is a journey full of challenges that combines the classic Annapurna routes with stunning alpine lakes...",
-                  tags: [
-                    { icon: Leaf, label: "Zero Waste" },
-                    { icon: Users, label: "Local Hire" },
-                    { icon: Heart, label: "Inclusive Growth" }
-                  ],
-                  slug: "annapurna-circuit"
-                },
-                { 
-                  title: "Manaslu Circuit Trek", 
-                  image: "/images/everest.png", 
-                  price: "$1650", 
-                  duration: "11 days", 
-                  region: "Manaslu Region",
-                  groupSize: "Max 8 people",
-                  difficulty: "challenging",
-                  desc: "The Manaslu Circuit Trek is one of Nepal's most scenic and culturally rich trekking routes, offering breathtaking views of Mt. Manaslu...",
-                  tags: [
-                    { icon: Leaf, label: "Zero Waste" },
-                    { icon: Cloud, label: "Low-carbon" },
-                    { icon: Users, label: "Local Hire" }
-                  ],
-                  slug: "manaslu-circuit"
-                }
-              ].map((tour, i) => (
-                <motion.div 
-                  key={i}
-                  initial={{ opacity: 0, y: 40 }}
+              {featuredTours.length > 0 ? (
+                featuredTours.map((tour, i) => (
+                  <motion.div 
+                    key={tour.id || i}
+                    initial={{ opacity: 0, y: 40 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: i * 0.1, duration: 0.5 }}
+                    className="group relative rounded-[2rem] overflow-hidden bg-card/80 backdrop-blur-md border border-border/50 shadow-lg hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.1)] dark:hover:shadow-[0_20px_40px_-15px_rgba(var(--brand-500),0.15)] hover:border-brand-500/30 transition-all duration-500 flex flex-col"
+                  >
+                    {/* Image Section */}
+                    <div className="relative h-56 w-full overflow-hidden">
+                      <Image
+                        src={tour.image || "/images/everest.png"}
+                        alt={tour.title}
+                        fill
+                        className="object-cover transition-transform duration-700 group-hover:scale-105"
+                      />
+                      {/* Gradient Overlay */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-80" />
+                      
+                      {/* Glassmorphic Greenish Difficulty Badge */}
+                      <div className="absolute top-4 right-4 bg-gradient-to-r from-emerald-500/40 to-brand-500/40 backdrop-blur-md px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest text-white shadow-[0_8px_32px_rgba(0,0,0,0.3)] border border-white/20">
+                        {tour.difficulty}
+                      </div>
+                    </div>
+
+                    {/* Content Section */}
+                    <div className="p-5 md:p-6 flex flex-col flex-1">
+                      <h3 className="text-2xl font-black tracking-tight mb-3 group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors line-clamp-1">
+                        {tour.title}
+                      </h3>
+                      
+                      <p className="text-sm text-muted-foreground font-medium leading-relaxed mb-6 line-clamp-2">
+                        {tour.desc}
+                      </p>
+                      
+                      {/* Details List */}
+                      <div className="space-y-3 mb-6">
+                        <div className="flex items-center gap-3 text-sm font-medium text-muted-foreground">
+                          <MapPin className="h-4 w-4" /> {tour.region}
+                        </div>
+                        <div className="flex items-center gap-3 text-sm font-medium text-muted-foreground">
+                          <Calendar className="h-4 w-4" /> {tour.duration}
+                        </div>
+                        {tour.groupSize && (
+                          <div className="flex items-center gap-3 text-sm font-medium text-muted-foreground">
+                            <Users className="h-4 w-4" /> {tour.groupSize}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Sustainability Tags */}
+                      {tour.tags && tour.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mb-8 mt-auto">
+                          {tour.tags.map((tag: any, idx: number) => {
+                            const isString = typeof tag === 'string';
+                            const label = isString ? tag : tag.label;
+                            const tagStr = label.toLowerCase();
+                            let Icon = Leaf;
+                            if (tagStr.includes('cultur') || tagStr.includes('local') || tagStr.includes('histor')) Icon = Compass;
+                            else if (tagStr.includes('spirit') || tagStr.includes('well') || tagStr.includes('honeymoon')) Icon = Heart;
+                            else if (tagStr.includes('wild') || tagStr.includes('animal')) Icon = Cloud;
+                            else if (tagStr.includes('famil') || tagStr.includes('group')) Icon = Users;
+                            else if (!isString && tag.icon) Icon = tag.icon;
+
+                            return (
+                              <span key={idx} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-background/60 backdrop-blur-md border border-border shadow-sm transition-transform hover:scale-105 cursor-default text-foreground">
+                                <Icon className="h-3.5 w-3.5 opacity-70" /> {label}
+                              </span>
+                            );
+                          })}
+                        </div>
+                      )}
+                      {(!tour.tags || tour.tags.length === 0) && (
+                        <div className="mt-auto mb-8"></div>
+                      )}
+
+                      {/* Footer (Price & Button) */}
+                      <div className="pt-5 border-t border-border/50 flex items-center justify-between mt-auto">
+                        <div>
+                          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block mb-0.5">Pay Level</span>
+                          <span className="text-xl font-black text-foreground leading-none">
+                            ${tour.price?.replace(/usd|\$|per person|\/ person/gi, '').trim()} <span className="text-[13px] font-semibold text-muted-foreground">/ person</span>
+                          </span>
+                        </div>
+                        <Link 
+                          href={`/tours/${tour.slug || tour.id}`}
+                          className="px-5 py-2.5 rounded-full bg-brand-600 text-white font-bold text-[13px] hover:bg-brand-500 hover:scale-105 active:scale-95 transition-all shadow-lg hover:shadow-brand-500/25"
+                        >
+                          View Details
+                        </Link>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))
+              ) : (
+                <div className="col-span-1 md:col-span-2 lg:col-span-3 text-center py-20 bg-brand-500/5 rounded-3xl border border-brand-500/10">
+                  <Mountain className="w-16 h-16 text-brand-500/40 mx-auto mb-4" />
+                  <h3 className="text-2xl font-bold text-foreground/70">More Adventures Coming Soon</h3>
+                  <p className="text-muted-foreground mt-2">We are currently curating the best experiences for you.</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+
+        {/* 3.5. FEATURED TREKKING */}
+        <section id="featured-trekking" className="py-24 relative z-10 border-b border-border/30">
+          <div className="container mx-auto px-4">
+            <div className="flex flex-col md:flex-row md:items-end justify-between mb-16 gap-6">
+              <div className="max-w-2xl">
+                <motion.h2 
+                  initial={{ opacity: 0, x: -20 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true }}
+                  className="text-4xl md:text-5xl lg:text-6xl font-black tracking-tight mb-6 uppercase"
+                >
+                  Featured <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-teal-500">Trekking</span>
+                </motion.h2>
+                <motion.p 
+                  initial={{ opacity: 0, x: -20 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: 0.1 }}
+                  className="text-lg md:text-xl text-muted-foreground font-medium leading-relaxed"
+                >
+                  Embark on an unforgettable journey through the majestic trails of the Himalayas.
+                </motion.p>
+              </div>
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true }}
+              >
+                <Link 
+                  href="/trekking" 
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-brand-500/10 text-brand-600 dark:text-brand-400 font-bold hover:bg-brand-500 hover:text-white transition-all group border border-brand-500/20 shadow-md backdrop-blur-sm"
+                >
+                  View All Treks 
+                  <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                </Link>
+              </motion.div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {featuredTreks.length > 0 ? (
+                featuredTreks.map((trek, i) => (
+                  <motion.div 
+                    key={trek.id || i}
+                    initial={{ opacity: 0, y: 40 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: i * 0.1, duration: 0.5 }}
+                    className="group relative rounded-[2rem] overflow-hidden bg-card/80 backdrop-blur-md border border-border/50 shadow-lg hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.1)] dark:hover:shadow-[0_20px_40px_-15px_rgba(var(--brand-500),0.15)] hover:border-brand-500/30 transition-all duration-500 flex flex-col"
+                  >
+                    {/* Image Section */}
+                    <div className="relative h-56 w-full overflow-hidden">
+                      <Image
+                        src={trek.image || "/images/everest.png"}
+                        alt={trek.title}
+                        fill
+                        className="object-cover transition-transform duration-700 group-hover:scale-105"
+                      />
+                      {/* Gradient Overlay */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-80" />
+                      
+                      {/* Glassmorphic Greenish Difficulty Badge */}
+                      <div className="absolute top-4 right-4 bg-gradient-to-r from-emerald-500/40 to-brand-500/40 backdrop-blur-md px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest text-white shadow-[0_8px_32px_rgba(0,0,0,0.3)] border border-white/20">
+                        {trek.difficulty}
+                      </div>
+                    </div>
+
+                    {/* Content Section */}
+                    <div className="p-5 md:p-6 flex flex-col flex-1">
+                      <h3 className="text-2xl font-black tracking-tight mb-3 group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors line-clamp-1">
+                        {trek.title}
+                      </h3>
+                      
+                      <p className="text-sm text-muted-foreground font-medium leading-relaxed mb-6 line-clamp-2">
+                        {trek.desc}
+                      </p>
+                      
+                      {/* Details List */}
+                      <div className="space-y-3 mb-6">
+                        <div className="flex items-center gap-3 text-sm font-medium text-muted-foreground">
+                          <MapPin className="h-4 w-4" /> {trek.region}
+                        </div>
+                        <div className="flex items-center gap-3 text-sm font-medium text-muted-foreground">
+                          <Calendar className="h-4 w-4" /> {trek.duration}
+                        </div>
+                        {trek.groupSize && (
+                          <div className="flex items-center gap-3 text-sm font-medium text-muted-foreground">
+                            <Users className="h-4 w-4" /> {trek.groupSize}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Sustainability Tags */}
+                      {trek.tags && trek.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mb-8 mt-auto">
+                          {trek.tags.map((tag: any, idx: number) => {
+                            const isString = typeof tag === 'string';
+                            const label = isString ? tag : tag.label;
+                            const tagStr = label.toLowerCase();
+                            let Icon = Leaf;
+                            if (tagStr.includes('cultur') || tagStr.includes('local') || tagStr.includes('histor')) Icon = Compass;
+                            else if (tagStr.includes('spirit') || tagStr.includes('well') || tagStr.includes('honeymoon')) Icon = Heart;
+                            else if (tagStr.includes('wild') || tagStr.includes('animal')) Icon = Cloud;
+                            else if (tagStr.includes('famil') || tagStr.includes('group')) Icon = Users;
+                            else if (!isString && tag.icon) Icon = tag.icon;
+
+                            return (
+                              <span key={idx} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-background/60 backdrop-blur-md border border-border shadow-sm transition-transform hover:scale-105 cursor-default text-foreground">
+                                <Icon className="h-3.5 w-3.5 opacity-70" /> {label}
+                              </span>
+                            );
+                          })}
+                        </div>
+                      )}
+                      {(!trek.tags || trek.tags.length === 0) && (
+                        <div className="mt-auto mb-8"></div>
+                      )}
+
+                      {/* Footer (Price & Button) */}
+                      <div className="pt-5 border-t border-border/50 flex items-center justify-between mt-auto">
+                        <div>
+                          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block mb-0.5">Pay Level</span>
+                          <span className="text-xl font-black text-foreground leading-none">
+                            ${trek.price?.replace(/usd|\$|per person|\/ person/gi, '').trim()} <span className="text-[13px] font-semibold text-muted-foreground">/ person</span>
+                          </span>
+                        </div>
+                        <Link 
+                          href={`/trekking/${trek.slug || trek.id}`}
+                          className="px-5 py-2.5 rounded-full bg-brand-600 text-white font-bold text-[13px] hover:bg-brand-500 hover:scale-105 active:scale-95 transition-all shadow-lg hover:shadow-brand-500/25"
+                        >
+                          View Details
+                        </Link>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))
+              ) : (
+                <div className="col-span-1 md:col-span-2 lg:col-span-3 text-center py-20 bg-brand-500/5 rounded-3xl border border-brand-500/10">
+                  <Mountain className="w-16 h-16 text-brand-500/40 mx-auto mb-4" />
+                  <h3 className="text-2xl font-bold text-foreground/70">More Treks Coming Soon</h3>
+                  <p className="text-muted-foreground mt-2">We are currently curating the best trekking experiences for you.</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+
+        {/* 4. TREKKING & EXPEDITIONS */}
+        <section className="py-24 relative z-10 border-b border-border/30 bg-brand-500/5">
+          <div className="container mx-auto px-4">
+            <div className="text-center mb-16 max-w-3xl mx-auto">
+              <motion.h2 
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                className="text-4xl md:text-5xl font-black tracking-tight mb-6 uppercase"
+              >
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-teal-500">HIMALAYAN</span> ADVENTURES
+              </motion.h2>
+              <motion.p 
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: 0.1 }}
+                className="text-lg md:text-xl text-muted-foreground font-medium leading-relaxed"
+              >
+                Treks, Cultural Escapes & Spiritual Journeys<br/>
+                <span className="text-foreground font-bold mt-2 inline-block">Nepal • Bhutan • India</span>
+              </motion.p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {(() => {
+                const defaults = [
+                  { key: "nepal", title: "Nepal Himalayan Treks", image: "/images/everest.png", desc: "Annapurna, Everest, Manaslu & more" },
+                  { key: "bhutan", title: "Bhutan Cultural Escapes", image: "/images/hero-snow.jpg", desc: "Tiger's Nest, Thimphu & Paro Valley" },
+                  { key: "india", title: "India Spiritual Journeys", image: "/images/hero-night.jpg", desc: "Varanasi, Kerala, Goa, Sikkim & Darjeeling" }
+                ];
+                // Always show Nepal / Bhutan / India. If admin added a region whose
+                // title contains the country name, prefer the DB entry; otherwise
+                // fall back to the default tile so all three always appear.
+                const merged = defaults.map(def => {
+                  const dbMatch = dbRegions.find((r: any) =>
+                    typeof r.title === "string" && r.title.toLowerCase().includes(def.key)
+                  );
+                  return dbMatch ? { ...dbMatch, key: def.key } : { ...def, id: def.key };
+                });
+                return merged;
+              })().map((region: any, i: number) => (
+                <motion.div
+                  key={region.key || region.id || i}
+                  initial={{ opacity: 0, y: 30 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
-                  transition={{ delay: i * 0.1, duration: 0.5 }}
-                  className="group relative rounded-[2rem] overflow-hidden bg-card/80 backdrop-blur-md border border-border/50 shadow-lg hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.1)] dark:hover:shadow-[0_20px_40px_-15px_rgba(var(--brand-500),0.15)] hover:border-brand-500/30 transition-all duration-500 flex flex-col"
+                  transition={{ delay: i * 0.1 }}
+                  className="relative h-[22rem] rounded-[2.5rem] overflow-hidden group cursor-pointer"
                 >
-                  {/* Image Section */}
-                  <div className="relative h-64 w-full overflow-hidden">
-                    <Image
-                      src={tour.image}
-                      alt={tour.title}
-                      fill
-                      className="object-cover transition-transform duration-700 group-hover:scale-105"
-                    />
-                    {/* Gradient Overlay */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-80" />
-                    
-                    {/* Glassmorphic Greenish Difficulty Badge */}
-                    <div className="absolute top-4 right-4 bg-gradient-to-r from-emerald-500/40 to-brand-500/40 backdrop-blur-md px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest text-white shadow-[0_8px_32px_rgba(0,0,0,0.3)] border border-white/20">
-                      {tour.difficulty}
-                    </div>
-                  </div>
-
-                  {/* Content Section */}
-                  <div className="p-6 md:p-8 flex flex-col flex-1">
-                    <h3 className="text-2xl font-black tracking-tight mb-3 group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors line-clamp-1">
-                      {tour.title}
-                    </h3>
-                    
-                    <p className="text-sm text-muted-foreground font-medium leading-relaxed mb-6 line-clamp-2">
-                      {tour.desc}
-                    </p>
-                    
-                    {/* Details List */}
-                    <div className="space-y-3 mb-6">
-                      <div className="flex items-center gap-3 text-sm font-medium text-muted-foreground">
-                        <MapPin className="h-4 w-4" /> {tour.region}
-                      </div>
-                      <div className="flex items-center gap-3 text-sm font-medium text-muted-foreground">
-                        <Calendar className="h-4 w-4" /> {tour.duration}
-                      </div>
-                      <div className="flex items-center gap-3 text-sm font-medium text-muted-foreground">
-                        <Users className="h-4 w-4" /> {tour.groupSize}
-                      </div>
-                    </div>
-
-                    {/* Sustainability Tags */}
-                    <div className="flex flex-wrap gap-2 mb-8 mt-auto">
-                      {tour.tags.map((tag, idx) => (
-                        <span key={idx} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-background/60 backdrop-blur-md border border-border shadow-sm transition-transform hover:scale-105 cursor-default text-foreground">
-                          <tag.icon className="h-3.5 w-3.5 opacity-70" /> {tag.label}
-                        </span>
-                      ))}
-                    </div>
-
-                    {/* Footer (Price & Button) */}
-                    <div className="pt-6 border-t border-border/50 flex items-end justify-between">
-                      <div>
-                        <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider block mb-1">From</span>
-                        <span className="text-3xl font-black text-foreground leading-none">{tour.price}</span>
-                      </div>
-                      <Link 
-                        href={`/trips/${tour.slug}`}
-                        className="px-6 py-3 rounded-full bg-brand-600 text-white font-bold text-sm hover:bg-brand-500 hover:scale-105 active:scale-95 transition-all shadow-lg hover:shadow-brand-500/25"
-                      >
-                        View Details
-                      </Link>
-                    </div>
+                  <Image src={region.image} alt={region.title} fill className="object-cover transition-transform duration-700 group-hover:scale-110" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent opacity-80 group-hover:opacity-90 transition-opacity" />
+                  <div className="absolute bottom-0 left-0 right-0 p-8">
+                    <h3 className="text-2xl font-black text-white mb-2">{region.title}</h3>
+                    <p className="text-white/80 font-medium">{region.desc}</p>
+                    <Link href={`/destinations/${region.key || region.title.toLowerCase().split(" ")[0]}`} className="inline-flex items-center gap-2 mt-6 px-6 py-3 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-full text-white text-sm font-bold transition-all border border-white/20 group/btn">
+                      Explore Region <ArrowRight className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform" />
+                    </Link>
                   </div>
                 </motion.div>
               ))}
@@ -661,36 +939,64 @@ export default function HomePage() {
               <p className="text-muted-foreground max-w-2xl mx-auto">Don&apos;t just take our word for it. Read reviews from travelers who experienced the Himalayas with us.</p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {[
-                { name: "Sarah Jenkins", role: "Adventure Traveler", text: "The Everest Base Camp trek was impeccably organized. Our guide was incredibly knowledgeable and supportive throughout the journey." },
-                { name: "David Chen", role: "Photographer", text: "Stunning landscapes and a beautifully paced itinerary. Green Adventure made sure we had enough time for acclimatization and photography." },
-                { name: "Emma Thompson", role: "Solo Backpacker", text: "As a solo female traveler, safety was my main concern. The team made me feel secure and part of a family. Highly recommended!" }
-              ].map((review, i) => (
-                <motion.div 
-                  key={i}
-                  initial={{ opacity: 0, y: 30 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: i * 0.1 }}
-                  className="bg-card/80 backdrop-blur-md p-8 rounded-3xl border border-border/50 shadow-sm relative hover:shadow-xl transition-all duration-300"
-                >
-                  <Quote className="absolute top-8 right-8 h-12 w-12 text-muted/50" />
-                  <div className="flex items-center gap-2 mb-6">
-                    {[...Array(5)].map((_, j) => <Star key={j} className="h-5 w-5 text-yellow-500 fill-yellow-500" />)}
-                  </div>
-                  <p className="text-lg text-foreground mb-8 relative z-10">&quot;{review.text}&quot;</p>
-                  <div className="flex items-center gap-4">
-                    <div className="h-12 w-12 rounded-full bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center text-white font-bold text-lg">
-                      {review.name[0]}
+            {approvedReviews.length === 0 ? (
+              <div className="max-w-2xl mx-auto text-center py-16 px-8 rounded-3xl bg-card/60 backdrop-blur-md border border-border/40">
+                <Quote className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
+                <h3 className="text-xl font-bold mb-2">Be the first to share your story</h3>
+                <p className="text-muted-foreground">
+                  Approved client reviews will appear here. Share yours below and our team will publish it after a quick check.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {approvedReviews.map((review: any, i: number) => (
+                  <motion.div
+                    key={review.id || i}
+                    initial={{ opacity: 0, y: 30 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: i * 0.1 }}
+                    className="bg-card/80 backdrop-blur-md p-8 rounded-3xl border border-border/50 shadow-sm relative hover:shadow-xl transition-all duration-300"
+                  >
+                    <Quote className="absolute top-8 right-8 h-12 w-12 text-muted/50" />
+                    <div className="flex items-center gap-2 mb-6">
+                      {[...Array(5)].map((_, j) => (
+                        <Star key={j} className={`h-5 w-5 ${j < (review.rating || 5) ? "text-yellow-500 fill-yellow-500" : "text-muted-foreground/30"}`} />
+                      ))}
                     </div>
-                    <div>
-                      <h4 className="font-bold">{review.name}</h4>
-                      <p className="text-sm text-muted-foreground">{review.role}</p>
+                    <p className="text-lg text-foreground mb-8 relative z-10">&quot;{review.message}&quot;</p>
+                    <div className="flex items-center gap-4">
+                      {review.photo ? (
+                        <div className="relative h-12 w-12 rounded-full overflow-hidden border border-border shrink-0">
+                          <Image src={review.photo} alt={review.name} fill className="object-cover" />
+                        </div>
+                      ) : (
+                        <div className="h-12 w-12 rounded-full bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center text-white font-bold text-lg shrink-0">
+                          {review.name?.[0] || "?"}
+                        </div>
+                      )}
+                      <div>
+                        <h4 className="font-bold">{review.name}</h4>
+                        {review.role && <p className="text-sm text-muted-foreground">{review.role}</p>}
+                      </div>
                     </div>
-                  </div>
-                </motion.div>
-              ))}
+                  </motion.div>
+                ))}
+              </div>
+            )}
+
+            {/* Share Your Story CTA */}
+            <div className="text-center mt-16">
+              <button
+                onClick={() => setShowReviewModal(true)}
+                className="inline-flex items-center gap-3 px-8 py-4 rounded-full bg-brand-600 text-white font-bold text-sm hover:bg-brand-500 hover:scale-105 active:scale-95 transition-all shadow-lg shadow-brand-500/25"
+              >
+                <Star className="h-4 w-4 fill-white" />
+                Share Your Story
+              </button>
+              <p className="text-xs text-muted-foreground mt-3">
+                Reviews appear after a quick check by our team.
+              </p>
             </div>
           </div>
         </section>
@@ -729,6 +1035,9 @@ export default function HomePage() {
           </div>
         </section>
       </div>
+
+      {/* Review Submission Modal */}
+      <ReviewSubmitModal open={showReviewModal} onClose={() => setShowReviewModal(false)} />
     </div>
   );
 }

@@ -34,6 +34,36 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
     
+    // Trips Collection:
+    // Anyone can read trips (for the Home Page).
+    // Only admins can write/update/delete trips.
+    match /trips/{document=**} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    
+    // Regions Collection:
+    // Anyone can read regions (for the Home Page and Destinations Page).
+    // Only admins can write/update/delete regions.
+    match /regions/{document=**} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Reviews Collection:
+    // Anyone can read reviews (the home page filters to `status == "approved"` client-side).
+    // Anyone can submit a new review (must default to status: "pending"; no admin-only fields).
+    // Only admins can update (approve/reject) or delete reviews.
+    match /reviews/{reviewId} {
+      allow read: if true;
+      allow create: if request.resource.data.status == "pending"
+                    && request.resource.data.name is string
+                    && request.resource.data.message is string
+                    && request.resource.data.name.size() <= 80
+                    && request.resource.data.message.size() <= 1000;
+      allow update, delete: if isAdmin();
+    }
+
     // Default fallback (Original rule provided by user)
     match /{document=**} {
       allow read, write: if false;

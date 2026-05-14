@@ -10,10 +10,10 @@ import { db } from "@/lib/firebase";
 
 export function Footer() {
   const [settings, setSettings] = useState({
-    locationLine1: "Thamel, Kathmandu",
-    locationLine2: "Bagmati Province, Nepal",
-    phonePrimary: "+977 1 4412345",
-    emailPrimary: "info@greenadventure.com"
+    locationLine1: "",
+    locationLine2: "",
+    phonePrimary: "",
+    emailPrimary: ""
   });
 
   useEffect(() => {
@@ -21,7 +21,8 @@ export function Footer() {
       try {
         const docSnap = await getDoc(doc(db, "settings", "contact_info"));
         if (docSnap.exists()) {
-          setSettings(docSnap.data() as any);
+          const data = docSnap.data() as Partial<typeof settings>;
+          setSettings(prev => ({ ...prev, ...data }));
         }
       } catch (error) {
         console.error("Error fetching footer settings:", error);
@@ -29,6 +30,11 @@ export function Footer() {
     }
     fetchSettings();
   }, []);
+
+  const hasLocation = !!(settings.locationLine1 || settings.locationLine2);
+  const hasPhone = !!settings.phonePrimary;
+  const hasEmail = !!settings.emailPrimary;
+  const hasAnyContact = hasLocation || hasPhone || hasEmail;
   return (
     <footer className="relative bg-[#050c05] dark:bg-[#050c05] text-slate-100 pt-24 pb-8 overflow-hidden mt-16 rounded-t-[2.5rem]">
       {/* Background Image - Dimmed */}
@@ -88,7 +94,8 @@ export function Footer() {
               {[
                 { name: "About Us", href: "/about" },
                 { name: "Destinations", href: "/destinations" },
-                { name: "Trekking Packages", href: "/trips" },
+                { name: "Trekking Packages", href: "/trekking" },
+                { name: "Tour Packages", href: "/tours" },
                 { name: "Travel Blog", href: "/blog" },
                 { name: "Contact Us", href: "/contact" }
               ].map((link) => (
@@ -128,26 +135,44 @@ export function Footer() {
             <h3 className="font-bold tracking-wide uppercase text-sm mb-6 text-white flex items-center gap-2">
               <MapPin className="w-4 h-4 text-brand-500" /> Contact
             </h3>
-            <ul className="space-y-5">
-              <li className="flex items-start gap-4 text-sm text-slate-400 font-medium group cursor-pointer">
-                <div className="p-2.5 rounded-xl bg-white/5 border border-white/10 group-hover:bg-brand-600 transition-all shrink-0">
-                  <MapPin className="h-4 w-4 text-brand-500 group-hover:text-white transition-colors" />
-                </div>
-                <span className="pt-1.5 leading-relaxed group-hover:text-brand-400 transition-colors">{settings.locationLine1}<br />{settings.locationLine2}</span>
-              </li>
-              <li className="flex items-center gap-4 text-sm text-slate-400 font-medium group cursor-pointer">
-                <div className="p-2.5 rounded-xl bg-white/5 border border-white/10 group-hover:bg-brand-600 transition-all shrink-0">
-                  <Phone className="h-4 w-4 text-brand-500 group-hover:text-white transition-colors" />
-                </div>
-                <span className="group-hover:text-brand-400 transition-colors">{settings.phonePrimary}</span>
-              </li>
-              <li className="flex items-center gap-4 text-sm text-slate-400 font-medium group cursor-pointer">
-                <div className="p-2.5 rounded-xl bg-white/5 border border-white/10 group-hover:bg-brand-600 transition-all shrink-0">
-                  <Mail className="h-4 w-4 text-brand-500 group-hover:text-white transition-colors" />
-                </div>
-                <span className="group-hover:text-brand-400 transition-colors">{settings.emailPrimary}</span>
-              </li>
-            </ul>
+            {hasAnyContact ? (
+              <ul className="space-y-5">
+                {hasLocation && (
+                  <li className="flex items-start gap-4 text-sm text-slate-400 font-medium group cursor-pointer">
+                    <div className="p-2.5 rounded-xl bg-white/5 border border-white/10 group-hover:bg-brand-600 transition-all shrink-0">
+                      <MapPin className="h-4 w-4 text-brand-500 group-hover:text-white transition-colors" />
+                    </div>
+                    <span className="pt-1.5 leading-relaxed group-hover:text-brand-400 transition-colors">
+                      {settings.locationLine1}
+                      {settings.locationLine1 && settings.locationLine2 && <br />}
+                      {settings.locationLine2}
+                    </span>
+                  </li>
+                )}
+                {hasPhone && (
+                  <li className="flex items-center gap-4 text-sm text-slate-400 font-medium group cursor-pointer">
+                    <div className="p-2.5 rounded-xl bg-white/5 border border-white/10 group-hover:bg-brand-600 transition-all shrink-0">
+                      <Phone className="h-4 w-4 text-brand-500 group-hover:text-white transition-colors" />
+                    </div>
+                    <a href={`tel:${settings.phonePrimary.replace(/[^0-9+]/g, "")}`} className="group-hover:text-brand-400 transition-colors">
+                      {settings.phonePrimary}
+                    </a>
+                  </li>
+                )}
+                {hasEmail && (
+                  <li className="flex items-center gap-4 text-sm text-slate-400 font-medium group cursor-pointer">
+                    <div className="p-2.5 rounded-xl bg-white/5 border border-white/10 group-hover:bg-brand-600 transition-all shrink-0">
+                      <Mail className="h-4 w-4 text-brand-500 group-hover:text-white transition-colors" />
+                    </div>
+                    <a href={`mailto:${settings.emailPrimary}`} className="group-hover:text-brand-400 transition-colors break-all">
+                      {settings.emailPrimary}
+                    </a>
+                  </li>
+                )}
+              </ul>
+            ) : (
+              <p className="text-sm text-slate-500 italic">Contact details coming soon.</p>
+            )}
           </div>
         </div>
 

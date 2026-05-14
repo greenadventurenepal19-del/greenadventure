@@ -174,7 +174,7 @@ export default function TripBookingWidget({
                 setError("");
                 setFormType("booking");
               }}
-              className="w-full p-4 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-lg transition-all hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-brand-500/25"
+              className="w-full p-4 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-lg transition-all hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-brand-500/25 cursor-pointer"
             >
               Book Now
             </button>
@@ -188,7 +188,7 @@ export default function TripBookingWidget({
                 setError("");
                 setFormType("inquiry");
               }}
-              className="w-full p-4 rounded-xl bg-background border border-border hover:bg-muted text-foreground font-bold transition-all"
+              className="w-full p-4 rounded-xl bg-background border border-border hover:bg-muted text-foreground font-bold transition-all cursor-pointer"
             >
               Inquire / Customize
             </button>
@@ -400,7 +400,7 @@ export default function TripBookingWidget({
           <button 
             type="submit" 
             disabled={isSubmitting}
-            className="flex-1 p-4 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold transition-all shadow-lg shadow-brand-500/25 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-1 p-4 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold transition-all shadow-lg shadow-brand-500/25 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           >
             {isSubmitting ? "Sending..." : (
               <>

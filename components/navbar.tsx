@@ -2,44 +2,118 @@
 
 import * as React from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence, useScroll, useMotionValueEvent } from "framer-motion";
-import { Menu, X, Mountain, ChevronDown, MapPin, Compass } from "lucide-react";
+import { Menu, X, ChevronDown, MapPin, Compass } from "lucide-react";
+import { collection, getDocs, query, where } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 import { ThemeToggle } from "./theme-toggle";
 
-const navLinks = [
-  { name: "Home", href: "/" },
-  { 
-    name: "Destinations", 
-    href: "/destinations",
-    dropdown: [
-      { name: "Nepal", href: "/destinations/nepal", desc: "The land of the Himalayas" },
-      { name: "Tibet", href: "/destinations/tibet", desc: "The Roof of the World" },
-      { name: "Bhutan", href: "/destinations/bhutan", desc: "The Last Shangri-La" },
-      { name: "India", href: "/destinations/india", desc: "Incredible diversity" },
-    ]
-  },
-  { 
-    name: "Trips", 
-    href: "/trips",
-    dropdown: [
-      { name: "Everest Base Camp", href: "/trips/everest-base-camp-trek", desc: "14 Days • Hard Trekking" },
-      { name: "Annapurna Base Camp", href: "/trips/annapurna-base-camp-trek", desc: "12 Days • Moderate Trekking" },
-      { name: "Langtang Valley", href: "/trips/langtang-valley-trek", desc: "8 Days • Scenic & Cultural" },
-    ]
-  },
-  { name: "About", href: "/about" },
-  { name: "Contact", href: "/contact" },
+type DropdownItem = { name: string; href: string; desc: string };
+type NavLink = {
+  name: string;
+  href: string;
+  dropdown?: DropdownItem[];
+};
+
+const STATIC_DESTINATIONS: DropdownItem[] = [
+  { name: "Nepal", href: "/destinations/nepal", desc: "The land of the Himalayas" },
+  { name: "Bhutan", href: "/destinations/bhutan", desc: "The Last Shangri-La" },
+  { name: "India", href: "/destinations/india", desc: "Incredible diversity" },
 ];
+
+const FALLBACK_TOURS: DropdownItem[] = [
+  { name: "Kathmandu Valley Tour", href: "/tours/kathmandu-valley-tour", desc: "4 Days • Cultural & Historical" },
+  { name: "Pokhara Adventure Escape", href: "/tours/pokhara-adventure-escape", desc: "4 Days • Scenic & Relaxing" },
+  { name: "Chitwan Jungle Safari", href: "/tours/chitwan-jungle-safari", desc: "3 Days • Wildlife & Nature" },
+];
+
+const FALLBACK_TREKS: DropdownItem[] = [
+  { name: "Everest Base Camp", href: "/trekking/everest-base-camp-trek", desc: "14 Days • Hard Trekking" },
+  { name: "Annapurna Base Camp", href: "/trekking/annapurna-base-camp-trek", desc: "12 Days • Moderate Trekking" },
+  { name: "Langtang Valley", href: "/trekking/langtang-valley-trek", desc: "8 Days • Scenic & Cultural" },
+];
+
+const buildDesc = (trip: any) => {
+  const parts: string[] = [];
+  if (trip.duration) parts.push(String(trip.duration));
+  if (trip.difficulty) parts.push(String(trip.difficulty));
+  return parts.join(" • ") || "View details";
+};
 
 export function Navbar() {
   const [isOpen, setIsOpen] = React.useState(false);
   const [isScrolled, setIsScrolled] = React.useState(false);
   const [hidden, setHidden] = React.useState(false);
   const [activeDropdown, setActiveDropdown] = React.useState<string | null>(null);
-  
+  const [tourItems, setTourItems] = React.useState<DropdownItem[]>(FALLBACK_TOURS);
+  const [trekItems, setTrekItems] = React.useState<DropdownItem[]>(FALLBACK_TREKS);
+
   const pathname = usePathname();
   const { scrollY } = useScroll();
+
+  React.useEffect(() => {
+    let cancelled = false;
+    async function loadDropdowns() {
+      try {
+        const tourQuery = query(
+          collection(db, "trips"),
+          where("tripType", "in", ["Tour", "Tours"]),
+        );
+        const trekQuery = query(
+          collection(db, "trips"),
+          where("tripType", "==", "Trekking"),
+        );
+        const [tourSnap, trekSnap] = await Promise.all([getDocs(tourQuery), getDocs(trekQuery)]);
+        if (cancelled) return;
+
+        const tourTrips = tourSnap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
+        const trekTrips = trekSnap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
+
+        const featuredTours = tourTrips.filter((t: any) => t.isFeatured);
+        const featuredTreks = trekTrips.filter((t: any) => t.isFeatured);
+        const tourPick = (featuredTours.length > 0 ? featuredTours : tourTrips).slice(0, 3);
+        const trekPick = (featuredTreks.length > 0 ? featuredTreks : trekTrips).slice(0, 3);
+
+        if (tourPick.length > 0) {
+          setTourItems(
+            tourPick.map((t: any) => ({
+              name: t.title || "Untitled Tour",
+              href: `/tours/${t.slug || t.id}`,
+              desc: buildDesc(t),
+            })),
+          );
+        }
+        if (trekPick.length > 0) {
+          setTrekItems(
+            trekPick.map((t: any) => ({
+              name: t.title || "Untitled Trek",
+              href: `/trekking/${t.slug || t.id}`,
+              desc: buildDesc(t),
+            })),
+          );
+        }
+      } catch (err) {
+        console.error("Error loading navbar dropdown data:", err);
+      }
+    }
+    loadDropdowns();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const navLinks: NavLink[] = React.useMemo(
+    () => [
+      { name: "Home", href: "/" },
+      { name: "Destinations", href: "/destinations", dropdown: STATIC_DESTINATIONS },
+      { name: "Tours", href: "/tours", dropdown: tourItems },
+      { name: "Trekking", href: "/trekking", dropdown: trekItems },
+      { name: "About", href: "/about" },
+    ],
+    [tourItems, trekItems],
+  );
 
   useMotionValueEvent(scrollY, "change", (latest) => {
     const previous = scrollY.getPrevious() ?? 0;
@@ -79,8 +153,10 @@ export function Navbar() {
     pathname === "/" || 
     pathname === "/about" || 
     pathname === "/contact" || 
-    pathname === "/trips" || 
-    pathname.startsWith("/trips/") ||
+    pathname === "/tours" || 
+    pathname.startsWith("/tours/") ||
+    pathname === "/trekking" || 
+    pathname.startsWith("/trekking/") ||
     pathname === "/destinations" ||
     pathname.startsWith("/destinations/");
 
@@ -110,13 +186,22 @@ export function Navbar() {
         }`}
       >
         <div className="flex-1">
-          <Link href="/" className="flex items-center gap-2 group w-fit">
-            <div className={`hidden md:flex p-2 rounded-xl transition-colors ${
-              isTransparent ? "bg-white/20 text-white group-hover:bg-white/30 backdrop-blur-md" : "bg-brand-500/10 text-brand-600 dark:text-brand-500 group-hover:bg-brand-500/20"
+          <Link href="/" className="flex items-center gap-2.5 group w-fit">
+            <div className={`relative h-11 w-11 md:h-12 md:w-12 rounded-full overflow-hidden ring-2 transition-all shrink-0 ${
+              isTransparent
+                ? "ring-white/40 group-hover:ring-white/70 shadow-lg shadow-black/20"
+                : "ring-brand-500/30 dark:ring-brand-500/40 group-hover:ring-brand-500/60 shadow-md"
             }`}>
-              <Mountain className="h-6 w-6" />
+              <Image
+                src="/images/logo.png"
+                alt="Green Adventure Nepal logo"
+                fill
+                sizes="48px"
+                className="object-cover"
+                priority
+              />
             </div>
-            <span className={`text-xl font-bold tracking-tight transition-colors ${
+            <span className={`text-lg md:text-xl font-bold tracking-tight transition-colors ${
               isTransparent ? "text-white drop-shadow-md" : "text-foreground"
             }`}>
               Green<span className={isTransparent ? "text-brand-300 drop-shadow-sm" : "text-brand-600 dark:text-brand-500"}>Adventure</span>
