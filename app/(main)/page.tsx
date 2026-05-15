@@ -13,6 +13,7 @@ import {
 import { doc, getDoc, collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import LiquidSlider from "@/components/LiquidSlider";
+import ParticleText from "@/components/ParticleText";
 import ReviewSubmitModal from "@/components/ReviewSubmitModal";
 import {
   DEFAULT_WHY_CHOOSE,
@@ -126,14 +127,12 @@ export default function HomePage() {
   const [isHovered, setIsHovered] = React.useState(false);
   const [isMouseDown, setIsMouseDown] = React.useState(false);
 
-  const [heroSlidesText, setHeroSlidesText] = React.useState({
-    slide1Title: "NEPAL",
-    slide1Subtitle: "Discover the breathtaking landscapes, vibrant culture, and ancient heritage of the Himalayas. The perfect start to your unforgettable journey.",
-    slide2Title: "BHUTAN",
-    slide2Subtitle: "Experience the magic of the Land of the Thunder Dragon, with its pristine landscapes and ancient monasteries.",
-    slide3Title: "INDIA",
-    slide3Subtitle: "Explore the diverse beauty of the Indian Himalayas, from spiritual journeys to thrilling treks."
-  });
+  const defaultHeroSlides = [
+    { title: "INDIA", subtitle: "Explore the diverse beauty of the Indian Himalayas, from spiritual journeys to thrilling treks.", image: "/images/hero-india.PNG", upperTags: ["Ladakh", "15 days", "Challenging"], lowerTags: ["Zero Waste", "Low-carbon", "Local Hire", "Inclusive Growth"] },
+    { title: "NEPAL", subtitle: "Discover the breathtaking landscapes, vibrant culture, and ancient heritage of the Himalayas.", image: "/images/hero-nepal.PNG", upperTags: ["Everest Region", "15 days", "Challenging"], lowerTags: ["Zero Waste", "Low-carbon", "Local Hire", "Inclusive Growth"] },
+    { title: "BHUTAN", subtitle: "Experience the magic of the Land of the Thunder Dragon, with its pristine landscapes and ancient monasteries.", image: "/images/hero-bhutan.PNG", upperTags: ["Paro Valley", "7 days", "Moderate"], lowerTags: ["Eco-Friendly", "Cultural Preservation", "Local Hire", "Inclusive Growth"] },
+  ];
+  const [heroSlides, setHeroSlides] = React.useState<any[]>(defaultHeroSlides);
 
   const [featuredTours, setFeaturedTours] = React.useState<any[]>([]);
   const [featuredTreks, setFeaturedTreks] = React.useState<any[]>([]);
@@ -147,7 +146,31 @@ export default function HomePage() {
       try {
         const docSnap = await getDoc(doc(db, "settings", "hero_content"));
         if (docSnap.exists()) {
-          setHeroSlidesText(docSnap.data() as any);
+          const data = docSnap.data() as any;
+          if (Array.isArray(data.slides) && data.slides.length > 0) {
+            // New array format — merge with defaults for missing images
+            const defaultImages = ["/images/hero-india.PNG", "/images/hero-nepal.PNG", "/images/hero-bhutan.PNG"];
+            setHeroSlides(data.slides.map((s: any, i: number) => ({
+              ...s,
+              image: s.image || defaultImages[i] || defaultImages[0],
+            })));
+          } else if (data.slide1Title) {
+            // Old flat format — migrate
+            const defaultImages = ["/images/hero-india.PNG", "/images/hero-nepal.PNG", "/images/hero-bhutan.PNG"];
+            const migrated = [];
+            let i = 1;
+            while (data[`slide${i}Title`]) {
+              migrated.push({
+                title: data[`slide${i}Title`] || "",
+                subtitle: data[`slide${i}Subtitle`] || "",
+                image: data[`slide${i}Image`] || defaultImages[i - 1] || defaultImages[0],
+                upperTags: data[`slide${i}UpperTags`] || [],
+                lowerTags: data[`slide${i}LowerTags`] || [],
+              });
+              i++;
+            }
+            if (migrated.length > 0) setHeroSlides(migrated);
+          }
         }
       } catch (error) {
         console.error("Error fetching hero settings:", error);
@@ -215,23 +238,7 @@ export default function HomePage() {
     fetchReviews();
   }, []);
 
-  const heroSlides = [
-    {
-      title: heroSlidesText.slide1Title || "NEPAL",
-      image: "/images/hero-grass.jpg",
-      subtitle: heroSlidesText.slide1Subtitle || "Discover the breathtaking landscapes, vibrant culture, and ancient heritage of the Himalayas. The perfect start to your unforgettable journey."
-    },
-    {
-      title: heroSlidesText.slide2Title || "BHUTAN",
-      image: "/images/hero-snow.jpg",
-      subtitle: heroSlidesText.slide2Subtitle || "Experience the magic of the Land of the Thunder Dragon, with its pristine landscapes and ancient monasteries."
-    },
-    {
-      title: heroSlidesText.slide3Title || "INDIA",
-      image: "/images/hero-night.jpg",
-      subtitle: heroSlidesText.slide3Subtitle || "Explore the diverse beauty of the Indian Himalayas, from spiritual journeys to thrilling treks."
-    }
-  ];
+
 
   React.useEffect(() => {
     // Liquid slider is now user-controlled via hover and click, 
@@ -291,41 +298,59 @@ export default function HomePage() {
         {/* HERO TAGS (Floating over Hero top) */}
         <div className="absolute top-20 md:top-28 left-0 right-0 z-40 px-4 pointer-events-none">
           <div className="container mx-auto max-w-5xl">
-            <motion.div 
-              initial={{ opacity: 0, y: -30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5, duration: 0.8 }}
-              className="flex flex-col items-center gap-2.5 md:gap-4"
-            >
-              {/* Trip Detail Tags */}
-              <div className="flex flex-wrap justify-center gap-1.5 md:gap-3">
-                <span className="flex items-center gap-1 md:gap-2 bg-black/60 backdrop-blur-md border border-white/10 text-white px-2.5 py-1 md:px-4 md:py-2 rounded-full text-[10px] md:text-xs font-medium shadow-xl pointer-events-auto transition-transform hover:scale-105 cursor-default">
-                  <MapPin className="h-2.5 w-2.5 md:h-3.5 md:w-3.5 text-white/70" /> Everest Region
-                </span>
-                <span className="flex items-center gap-1 md:gap-2 bg-black/60 backdrop-blur-md border border-white/10 text-white px-2.5 py-1 md:px-4 md:py-2 rounded-full text-[10px] md:text-xs font-medium shadow-xl pointer-events-auto transition-transform hover:scale-105 cursor-default">
-                  <Clock className="h-2.5 w-2.5 md:h-3.5 md:w-3.5 text-white/70" /> 15 days
-                </span>
-                <span className="flex items-center gap-1 md:gap-2 bg-black/60 backdrop-blur-md border border-white/10 text-white px-2.5 py-1 md:px-4 md:py-2 rounded-full text-[10px] md:text-xs font-medium shadow-xl pointer-events-auto transition-transform hover:scale-105 cursor-default">
-                  <TrendingUp className="h-2.5 w-2.5 md:h-3.5 md:w-3.5 text-white/70" /> challenging
-                </span>
-              </div>
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={`tags-${currentSlide}`}
+                initial={{ opacity: 0, y: -30 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ delay: 0.2, duration: 0.6 }}
+                className="flex flex-col items-center gap-2.5 md:gap-4"
+              >
+                {/* Trip Detail Tags (Upper) */}
+                {heroSlides[currentSlide]?.upperTags?.length > 0 && (
+                  <div className="flex flex-wrap justify-center gap-1.5 md:gap-3">
+                    {heroSlides[currentSlide].upperTags.map((tag: string, i: number) => {
+                      // Smart icon selection based on tag content
+                      const lowerTag = tag.toLowerCase();
+                      let IconComp = MapPin;
+                      if (lowerTag.includes("day")) IconComp = Clock;
+                      else if (["easy", "moderate", "challenging", "strenuous", "extreme"].some(d => lowerTag.includes(d))) IconComp = TrendingUp;
+                      else if (["trek", "adventure"].some(d => lowerTag.includes(d))) IconComp = Mountain;
+                      else if (["tour", "cultural", "pilgrimage"].some(d => lowerTag.includes(d))) IconComp = Compass;
+                      else if (["safari", "wildlife"].some(d => lowerTag.includes(d))) IconComp = Globe;
+                      else if (["spring", "summer", "autumn", "winter", "year-round"].some(d => lowerTag.includes(d))) IconComp = Calendar;
+                      
+                      return (
+                        <span key={i} className="flex items-center gap-1 md:gap-2 bg-black/60 backdrop-blur-md border border-white/10 text-white px-2.5 py-1 md:px-4 md:py-2 rounded-full text-[10px] md:text-xs font-medium shadow-xl pointer-events-auto transition-transform hover:scale-105 cursor-default">
+                          <IconComp className="h-2.5 w-2.5 md:h-3.5 md:w-3.5 text-white/70" /> {tag}
+                        </span>
+                      );
+                    })}
+                  </div>
+                )}
 
-              {/* Sustainability Tags */}
-              <div className="flex flex-wrap justify-center gap-1.5 md:gap-3">
-                <span className="flex items-center gap-1 md:gap-2 bg-white/10 backdrop-blur-md border border-white/20 text-white px-2.5 py-1 md:px-4 md:py-2 rounded-full text-[10px] md:text-xs font-medium shadow-xl pointer-events-auto transition-transform hover:scale-105 cursor-default">
-                  <Leaf className="h-2.5 w-2.5 md:h-3.5 md:w-3.5" /> Zero Waste
-                </span>
-                <span className="flex items-center gap-1 md:gap-2 bg-white/10 backdrop-blur-md border border-white/20 text-white px-2.5 py-1 md:px-4 md:py-2 rounded-full text-[10px] md:text-xs font-medium shadow-xl pointer-events-auto transition-transform hover:scale-105 cursor-default">
-                  <Cloud className="h-2.5 w-2.5 md:h-3.5 md:w-3.5" /> Low-carbon
-                </span>
-                <span className="flex items-center gap-1 md:gap-2 bg-white/10 backdrop-blur-md border border-white/20 text-white px-2.5 py-1 md:px-4 md:py-2 rounded-full text-[10px] md:text-xs font-medium shadow-xl pointer-events-auto transition-transform hover:scale-105 cursor-default">
-                  <Users className="h-2.5 w-2.5 md:h-3.5 md:w-3.5" /> Local Hire
-                </span>
-                <span className="flex items-center gap-1 md:gap-2 bg-white/10 backdrop-blur-md border border-white/20 text-white px-2.5 py-1 md:px-4 md:py-2 rounded-full text-[10px] md:text-xs font-medium shadow-xl pointer-events-auto transition-transform hover:scale-105 cursor-default">
-                  <Heart className="h-2.5 w-2.5 md:h-3.5 md:w-3.5" /> Inclusive Growth
-                </span>
-              </div>
-            </motion.div>
+                {/* Sustainability Tags (Lower) */}
+                {heroSlides[currentSlide]?.lowerTags?.length > 0 && (
+                  <div className="flex flex-wrap justify-center gap-1.5 md:gap-3">
+                    {heroSlides[currentSlide].lowerTags.map((tag: string, i: number) => {
+                      const lowerTag = tag.toLowerCase();
+                      let IconComp = Leaf;
+                      if (["carbon", "low-carbon", "carbon neutral", "renewable"].some(d => lowerTag.includes(d))) IconComp = Cloud;
+                      else if (["local", "community", "fair"].some(d => lowerTag.includes(d))) IconComp = Users;
+                      else if (["inclusive", "cultural", "responsible"].some(d => lowerTag.includes(d))) IconComp = Heart;
+                      else if (["water", "plastic"].some(d => lowerTag.includes(d))) IconComp = Globe;
+                      
+                      return (
+                        <span key={i} className="flex items-center gap-1 md:gap-2 bg-white/10 backdrop-blur-md border border-white/20 text-white px-2.5 py-1 md:px-4 md:py-2 rounded-full text-[10px] md:text-xs font-medium shadow-xl pointer-events-auto transition-transform hover:scale-105 cursor-default">
+                          <IconComp className="h-2.5 w-2.5 md:h-3.5 md:w-3.5" /> {tag}
+                        </span>
+                      );
+                    })}
+                  </div>
+                )}
+              </motion.div>
+            </AnimatePresence>
           </div>
         </div>
         {/* Layer 1: Background Liquid Slider */}
@@ -340,23 +365,12 @@ export default function HomePage() {
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-black/40 z-10 pointer-events-none" />
         </motion.div>
 
-        {/* Layer 2: Massive Typography */}
+        {/* Layer 2: Massive Particle Typography */}
         <motion.div 
           style={{ y: textY }}
-          className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none overflow-hidden pb-32 md:pb-20"
+          className="absolute inset-0 z-10 flex items-center justify-center overflow-hidden pb-32 md:pb-20"
         >
-          <AnimatePresence mode="wait">
-            <motion.h1
-              key={currentSlide}
-              initial={{ opacity: 0, scale: 0.9, filter: "blur(10px)" }}
-              animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
-              exit={{ opacity: 0, scale: 1.05, filter: "blur(10px)" }}
-              transition={{ duration: 1, ease: "easeOut" }}
-              className="text-[16vw] sm:text-[14vw] md:text-[12vw] lg:text-[10rem] font-black text-white leading-none tracking-tighter uppercase select-none opacity-95 text-center px-4"
-            >
-              {heroSlides[currentSlide].title}
-            </motion.h1>
-          </AnimatePresence>
+          <ParticleText text={heroSlides[currentSlide].title} />
         </motion.div>
 
         {/* Content (Bottom Controls & Right Content) - Top Layer */}

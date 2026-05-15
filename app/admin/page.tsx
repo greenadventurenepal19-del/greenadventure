@@ -12,6 +12,7 @@ import {
   Clock, Trash2, Plus, ShieldCheck, AlertCircle, Sparkles, User, MessageSquare, Settings, CheckCircle, LogOut, Mail, Shield, Users, Map, MapPin, Edit, Navigation, X, UploadCloud, Award
 } from "lucide-react";
 import Image from "next/image";
+import ParticleLoader from "@/components/ParticleLoader";
 import {
   WHY_CHOOSE_ICON_NAMES,
   DEFAULT_WHY_CHOOSE,
@@ -99,6 +100,7 @@ export default function AdminPage() {
 
   const [isUploadingTripImage, setIsUploadingTripImage] = useState(false);
   const [isUploadingRegionImage, setIsUploadingRegionImage] = useState(false);
+  const [uploadingHeroSlide, setUploadingHeroSlide] = useState<number | null>(null);
 
   const handleTripImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -148,15 +150,62 @@ export default function AdminPage() {
     }
   };
 
-  // Hero settings state
-  const [heroSettings, setHeroSettings] = useState({
-    slide1Title: "NEPAL",
-    slide1Subtitle: "Discover the breathtaking landscapes, vibrant culture, and ancient heritage of the Himalayas. The perfect start to your unforgettable journey.",
-    slide2Title: "BHUTAN",
-    slide2Subtitle: "Explore the capital city Thimphu, visit the iconic Tiger's Nest Monastery in Paro, and experience traditional Bhutanese culture.",
-    slide3Title: "INDIA",
-    slide3Subtitle: "Experience spiritual journeys from Varanasi to the Taj Mahal, or explore beaches, backwaters and mountain tea cultures."
-  });
+  const handleHeroImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, slideIdx: number) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 4.5 * 1024 * 1024) {
+      alert("File is too large! Please choose an image smaller than 4.5MB.");
+      return;
+    }
+
+    setUploadingHeroSlide(slideIdx);
+    try {
+      const res = await fetch(`/api/upload?filename=${encodeURIComponent(file.name)}`, {
+        method: 'POST',
+        body: file,
+      });
+      const data = await res.json();
+      if (res.ok && data.url) {
+        setHeroSlides(prev => prev.map((s, i) => i === slideIdx ? { ...s, image: data.url } : s));
+      } else {
+        throw new Error(data.error || `Failed with status ${res.status}`);
+      }
+    } catch (error: any) {
+      console.error("Error uploading hero image:", error);
+      alert("Failed to upload image to blob: " + error.message);
+    } finally {
+      setUploadingHeroSlide(null);
+    }
+  };
+
+
+  // Tag suggestion options for hero slides
+  const upperTagSuggestions = [
+    "Everest Region", "Annapurna Region", "Langtang Region", "Manaslu Region",
+    "Kanchenjunga Region", "Upper Mustang", "Dolpo Region", "Makalu Region",
+    "Paro Valley", "Punakha Valley", "Thimphu Valley", "Bumthang Valley",
+    "Ladakh", "Sikkim", "Himachal Pradesh", "Uttarakhand", "Kashmir",
+    "3 days", "5 days", "7 days", "10 days", "12 days", "14 days", "15 days", "18 days", "21 days", "28 days",
+    "Easy", "Moderate", "Challenging", "Strenuous", "Extreme",
+    "Cultural Tour", "Trekking", "Wildlife Safari", "Pilgrimage", "Adventure",
+    "Spring", "Summer", "Autumn", "Winter", "Year-round"
+  ];
+  const lowerTagSuggestions = [
+    "Zero Waste", "Low-carbon", "Local Hire", "Inclusive Growth",
+    "Eco-Friendly", "Carbon Neutral", "Community Support", "Fair Trade",
+    "Wildlife Protection", "Plastic Free", "Renewable Energy", "Water Conservation",
+    "Cultural Preservation", "Organic Food", "Tree Planting", "Responsible Tourism"
+  ];
+
+  // Hero settings state — array-based slides
+  const defaultSlides = [
+    { title: "INDIA", subtitle: "Explore the diverse beauty of the Indian Himalayas, from spiritual journeys to thrilling treks.", image: "", upperTags: ["Ladakh", "15 days", "Challenging"], lowerTags: ["Zero Waste", "Low-carbon", "Local Hire", "Inclusive Growth"] },
+    { title: "NEPAL", subtitle: "Discover the breathtaking landscapes, vibrant culture, and ancient heritage of the Himalayas.", image: "", upperTags: ["Everest Region", "15 days", "Challenging"], lowerTags: ["Zero Waste", "Low-carbon", "Local Hire", "Inclusive Growth"] },
+    { title: "BHUTAN", subtitle: "Experience the magic of the Land of the Thunder Dragon, with its pristine landscapes and ancient monasteries.", image: "", upperTags: ["Paro Valley", "7 days", "Moderate"], lowerTags: ["Eco-Friendly", "Cultural Preservation", "Local Hire", "Inclusive Growth"] },
+  ];
+  const [heroSlides, setHeroSlides] = useState<any[]>(defaultSlides);
+  const [heroTagInput, setHeroTagInput] = useState<{ [key: string]: string }>({});
   const [isSavingHero, setIsSavingHero] = useState(false);
 
   // "Why Choose Us" section state
@@ -205,7 +254,26 @@ export default function AdminPage() {
     // Listen to hero settings
     const unsubHero = onSnapshot(doc(db, "settings", "hero_content"), (docSnap) => {
       if (docSnap.exists()) {
-        setHeroSettings(docSnap.data() as any);
+        const data = docSnap.data() as any;
+        // Support new array format
+        if (Array.isArray(data.slides)) {
+          setHeroSlides(data.slides);
+        } else if (data.slide1Title) {
+          // Migrate old flat format to array
+          const migrated = [];
+          let i = 1;
+          while (data[`slide${i}Title`]) {
+            migrated.push({
+              title: data[`slide${i}Title`] || "",
+              subtitle: data[`slide${i}Subtitle`] || "",
+              image: data[`slide${i}Image`] || "",
+              upperTags: data[`slide${i}UpperTags`] || [],
+              lowerTags: data[`slide${i}LowerTags`] || [],
+            });
+            i++;
+          }
+          if (migrated.length > 0) setHeroSlides(migrated);
+        }
       }
     });
 
@@ -306,7 +374,7 @@ export default function AdminPage() {
     e.preventDefault();
     setIsSavingHero(true);
     try {
-      await setDoc(doc(db, "settings", "hero_content"), heroSettings);
+      await setDoc(doc(db, "settings", "hero_content"), { slides: heroSlides });
       alert("Hero settings saved successfully!");
     } catch (error) {
       console.error("Error saving hero settings", error);
@@ -474,14 +542,7 @@ export default function AdminPage() {
 
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-[#050505] flex items-center justify-center">
-        <div className="relative">
-          <div className="absolute inset-0 bg-brand-500 blur-xl opacity-50 rounded-full animate-pulse"></div>
-          <div className="animate-spin relative rounded-full h-16 w-16 border-t-2 border-b-2 border-white"></div>
-        </div>
-      </div>
-    );
+    return <ParticleLoader />;
   }
 
   // Not Logged In
@@ -1371,76 +1432,184 @@ export default function AdminPage() {
               <div className="bg-white/5 border border-white/10 rounded-[2rem] overflow-hidden backdrop-blur-md">
                 <form onSubmit={handleSaveHeroSettings} className="p-8 space-y-8">
                   
-                  <div className="space-y-4">
-                    <h3 className="font-bold text-xl text-white">Slide 1: Default/Nepal</h3>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-white/60 mb-2">Main Title (Massive Text)</label>
-                      <input
-                        type="text"
-                        value={heroSettings.slide1Title}
-                        onChange={(e) => setHeroSettings({ ...heroSettings, slide1Title: e.target.value })}
-                        className="w-full bg-black/60 border border-white/10 rounded-xl px-5 py-4 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all text-white font-bold"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-white/60 mb-2">Subtitle / Description</label>
-                      <textarea
-                        value={heroSettings.slide1Subtitle}
-                        onChange={(e) => setHeroSettings({ ...heroSettings, slide1Subtitle: e.target.value })}
-                        className="w-full bg-black/60 border border-white/10 rounded-xl px-5 py-4 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all text-white min-h-[100px]"
-                        required
-                      />
-                    </div>
-                  </div>
+                  {heroSlides.map((slide: any, idx: number) => {
+                    const updateSlide = (field: string, value: any) => {
+                      setHeroSlides(prev => prev.map((s, i) => i === idx ? { ...s, [field]: value } : s));
+                    };
+                    const removeTag = (field: string, tag: string) => {
+                      updateSlide(field, (slide[field] || []).filter((t: string) => t !== tag));
+                    };
+                    const addTag = (field: string, inputKey: string) => {
+                      const val = (heroTagInput[inputKey] || "").trim();
+                      if (!val) return;
+                      const current = slide[field] || [];
+                      if (!current.includes(val)) {
+                        updateSlide(field, [...current, val]);
+                      }
+                      setHeroTagInput(prev => ({ ...prev, [inputKey]: "" }));
+                    };
+                    const addSuggestionTag = (field: string, tag: string) => {
+                      const current = slide[field] || [];
+                      if (!current.includes(tag)) {
+                        updateSlide(field, [...current, tag]);
+                      }
+                    };
 
-                  <div className="space-y-4 pt-6 border-t border-white/10">
-                    <h3 className="font-bold text-xl text-white">Slide 2: Annapurna</h3>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-white/60 mb-2">Main Title (Massive Text)</label>
-                      <input
-                        type="text"
-                        value={heroSettings.slide2Title}
-                        onChange={(e) => setHeroSettings({ ...heroSettings, slide2Title: e.target.value })}
-                        className="w-full bg-black/60 border border-white/10 rounded-xl px-5 py-4 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all text-white font-bold"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-white/60 mb-2">Subtitle / Description</label>
-                      <textarea
-                        value={heroSettings.slide2Subtitle}
-                        onChange={(e) => setHeroSettings({ ...heroSettings, slide2Subtitle: e.target.value })}
-                        className="w-full bg-black/60 border border-white/10 rounded-xl px-5 py-4 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all text-white min-h-[100px]"
-                        required
-                      />
-                    </div>
-                  </div>
+                    return (
+                      <div key={idx} className={`space-y-4 ${idx > 0 ? "pt-6 border-t border-white/10" : ""}`}>
+                        <div className="flex items-center justify-between">
+                          <h3 className="font-bold text-xl text-white">Slide {idx + 1}{slide.title ? `: ${slide.title}` : ""}</h3>
+                          {heroSlides.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => setHeroSlides(prev => prev.filter((_, i) => i !== idx))}
+                              className="text-red-400/60 hover:text-red-400 transition-colors p-1.5 rounded-lg hover:bg-red-500/10"
+                              title="Remove slide"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
+                        
+                        {/* Background Image Upload */}
+                        <div>
+                          <label className="block text-sm font-medium text-white/60 mb-2">Background Image</label>
+                          <div className="flex items-center gap-4">
+                            {slide.image && (
+                              <div className="w-24 h-16 relative rounded-xl overflow-hidden shrink-0 border border-white/10">
+                                <Image src={slide.image} alt={`Slide ${idx + 1} preview`} fill className="object-cover" />
+                              </div>
+                            )}
+                            <label className="flex items-center gap-2 px-4 py-3 bg-black/60 border border-white/10 rounded-xl cursor-pointer hover:bg-white/5 transition-colors text-sm font-medium text-white/80 w-full sm:w-auto">
+                              <UploadCloud className="w-4 h-4" />
+                              {uploadingHeroSlide === idx ? "Uploading..." : "Upload Photo"}
+                              <input type="file" className="hidden" accept="image/*" onChange={(e) => handleHeroImageUpload(e, idx)} disabled={uploadingHeroSlide === idx} />
+                            </label>
+                          </div>
+                        </div>
 
-                  <div className="space-y-4 pt-6 border-t border-white/10">
-                    <h3 className="font-bold text-xl text-white">Slide 3: India</h3>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-white/60 mb-2">Main Title (Massive Text)</label>
-                      <input
-                        type="text"
-                        value={heroSettings.slide3Title || ""}
-                        onChange={(e) => setHeroSettings({ ...heroSettings, slide3Title: e.target.value })}
-                        className="w-full bg-black/60 border border-white/10 rounded-xl px-5 py-4 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all text-white font-bold"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-white/60 mb-2">Subtitle / Description</label>
-                      <textarea
-                        value={heroSettings.slide3Subtitle || ""}
-                        onChange={(e) => setHeroSettings({ ...heroSettings, slide3Subtitle: e.target.value })}
-                        className="w-full bg-black/60 border border-white/10 rounded-xl px-5 py-4 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all text-white min-h-[100px]"
-                        required
-                      />
-                    </div>
+                        {/* Title */}
+                        <div>
+                          <label className="block text-sm font-medium text-white/60 mb-2">Main Title (Massive Text)</label>
+                          <input
+                            type="text"
+                            value={slide.title || ""}
+                            onChange={(e) => updateSlide("title", e.target.value)}
+                            className="w-full bg-black/60 border border-white/10 rounded-xl px-5 py-4 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all text-white font-bold"
+                            placeholder="e.g. NEPAL"
+                            required
+                          />
+                        </div>
+
+                        {/* Subtitle */}
+                        <div>
+                          <label className="block text-sm font-medium text-white/60 mb-2">Subtitle / Description</label>
+                          <textarea
+                            value={slide.subtitle || ""}
+                            onChange={(e) => updateSlide("subtitle", e.target.value)}
+                            className="w-full bg-black/60 border border-white/10 rounded-xl px-5 py-4 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all text-white min-h-[100px]"
+                            placeholder="Describe this destination..."
+                            required
+                          />
+                        </div>
+
+                        {/* Upper Tags (Trip Details) — Editable */}
+                        <div>
+                          <label className="block text-sm font-medium text-white/60 mb-2">
+                            Upper Tags — Trip Details
+                            <span className="text-white/30 ml-2">({(slide.upperTags || []).length} tags)</span>
+                          </label>
+                          {/* Selected tags with X */}
+                          <div className="flex flex-wrap gap-2 mb-3">
+                            {(slide.upperTags || []).map((tag: string, ti: number) => (
+                              <span key={ti} className="flex items-center gap-1.5 bg-brand-600 border border-brand-500 text-white px-3 py-1.5 rounded-full text-xs font-medium shadow-lg shadow-brand-600/20">
+                                {tag}
+                                <button type="button" onClick={() => removeTag("upperTags", tag)} className="hover:bg-white/20 rounded-full p-0.5 transition-colors">
+                                  <X className="w-3 h-3" />
+                                </button>
+                              </span>
+                            ))}
+                          </div>
+                          {/* Custom input */}
+                          <div className="flex gap-2 mb-3">
+                            <input
+                              type="text"
+                              value={heroTagInput[`upper-${idx}`] || ""}
+                              onChange={(e) => setHeroTagInput(prev => ({ ...prev, [`upper-${idx}`]: e.target.value }))}
+                              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addTag("upperTags", `upper-${idx}`); } }}
+                              placeholder="Type a custom tag..."
+                              className="flex-1 bg-black/60 border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand-500 text-white placeholder:text-white/30"
+                            />
+                            <button type="button" onClick={() => addTag("upperTags", `upper-${idx}`)} className="bg-brand-600 hover:bg-brand-500 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors">
+                              <Plus className="w-4 h-4" />
+                            </button>
+                          </div>
+                          {/* Suggestions */}
+                          <div className="flex flex-wrap gap-1.5">
+                            {upperTagSuggestions.filter(t => !(slide.upperTags || []).includes(t)).slice(0, 12).map((tag) => (
+                              <button key={tag} type="button" onClick={() => addSuggestionTag("upperTags", tag)}
+                                className="px-2.5 py-1 rounded-full text-[10px] font-medium border bg-black/40 border-white/10 text-white/40 hover:border-white/30 hover:text-white/70 transition-all cursor-pointer">
+                                + {tag}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Lower Tags (Sustainability) — Editable */}
+                        <div>
+                          <label className="block text-sm font-medium text-white/60 mb-2">
+                            Lower Tags — Sustainability
+                            <span className="text-white/30 ml-2">({(slide.lowerTags || []).length} tags)</span>
+                          </label>
+                          {/* Selected tags with X */}
+                          <div className="flex flex-wrap gap-2 mb-3">
+                            {(slide.lowerTags || []).map((tag: string, ti: number) => (
+                              <span key={ti} className="flex items-center gap-1.5 bg-emerald-600 border border-emerald-500 text-white px-3 py-1.5 rounded-full text-xs font-medium shadow-lg shadow-emerald-600/20">
+                                {tag}
+                                <button type="button" onClick={() => removeTag("lowerTags", tag)} className="hover:bg-white/20 rounded-full p-0.5 transition-colors">
+                                  <X className="w-3 h-3" />
+                                </button>
+                              </span>
+                            ))}
+                          </div>
+                          {/* Custom input */}
+                          <div className="flex gap-2 mb-3">
+                            <input
+                              type="text"
+                              value={heroTagInput[`lower-${idx}`] || ""}
+                              onChange={(e) => setHeroTagInput(prev => ({ ...prev, [`lower-${idx}`]: e.target.value }))}
+                              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addTag("lowerTags", `lower-${idx}`); } }}
+                              placeholder="Type a custom tag..."
+                              className="flex-1 bg-black/60 border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand-500 text-white placeholder:text-white/30"
+                            />
+                            <button type="button" onClick={() => addTag("lowerTags", `lower-${idx}`)} className="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors">
+                              <Plus className="w-4 h-4" />
+                            </button>
+                          </div>
+                          {/* Suggestions */}
+                          <div className="flex flex-wrap gap-1.5">
+                            {lowerTagSuggestions.filter(t => !(slide.lowerTags || []).includes(t)).slice(0, 10).map((tag) => (
+                              <button key={tag} type="button" onClick={() => addSuggestionTag("lowerTags", tag)}
+                                className="px-2.5 py-1 rounded-full text-[10px] font-medium border bg-black/40 border-white/10 text-white/40 hover:border-white/30 hover:text-white/70 transition-all cursor-pointer">
+                                + {tag}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {/* Add New Slide Button */}
+                  <div className="pt-6 border-t border-white/10">
+                    <button
+                      type="button"
+                      onClick={() => setHeroSlides(prev => [...prev, { title: "", subtitle: "", image: "", upperTags: [], lowerTags: [] }])}
+                      className="w-full py-4 border-2 border-dashed border-white/15 hover:border-brand-500/50 rounded-2xl text-white/40 hover:text-brand-400 font-medium flex items-center justify-center gap-2 transition-all hover:bg-brand-500/5"
+                    >
+                      <Plus className="w-5 h-5" />
+                      Add New Slide
+                    </button>
                   </div>
 
                   <div className="pt-6 border-t border-white/10 flex justify-end">

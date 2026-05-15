@@ -1,11 +1,17 @@
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
+import { Inter, Nunito } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 
 const inter = Inter({
   variable: "--font-inter",
   subsets: ["latin"],
+});
+
+const nunito = Nunito({
+  variable: "--font-nunito",
+  subsets: ["latin"],
+  weight: ["400", "600", "700", "800", "900"],
 });
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://greenadventurenepal.com";
@@ -211,7 +217,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning className="overscroll-none">
-      <body className={`${inter.variable} antialiased min-h-screen flex flex-col font-sans transition-colors duration-300 overscroll-none`}>
+      <body className={`${inter.variable} ${nunito.variable} antialiased min-h-screen flex flex-col font-sans transition-colors duration-300 overscroll-none`}>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
