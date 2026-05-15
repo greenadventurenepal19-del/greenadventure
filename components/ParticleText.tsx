@@ -41,9 +41,13 @@ const ParticleText: React.FC<ParticleTextProps> = ({ text, className }) => {
       const tempCtx = tempCanvas.getContext("2d")!;
       tempCtx.scale(dpr, dpr);
 
-      // Bigger, bolder font — responsive with higher multiplier
-      const baseFontSize = Math.min(w * 0.32, 200);
-      const fontSize = Math.max(baseFontSize, 56);
+      // Responsive font size — smaller on mobile
+      const baseFontSize = w < 480
+        ? Math.min(w * 0.18, 80)   // mobile: max ~80px
+        : w < 768
+        ? Math.min(w * 0.22, 130)  // tablet: max ~130px
+        : Math.min(w * 0.32, 200); // desktop: max 200px
+      const fontSize = Math.max(baseFontSize, w < 480 ? 36 : 48);
 
       tempCtx.fillStyle = "#ffffff";
       tempCtx.font = `900 ${fontSize}px "Nunito", "Quicksand", "Varela Round", sans-serif`;
@@ -54,7 +58,7 @@ const ParticleText: React.FC<ParticleTextProps> = ({ text, className }) => {
       const imageData = tempCtx.getImageData(0, 0, canvas.width, canvas.height);
       const pixels = imageData.data;
       const points: { x: number; y: number }[] = [];
-      const gap = w > 900 ? 3 : w > 600 ? 4 : 5;
+      const gap = w > 900 ? 3 : w > 600 ? 4 : w > 400 ? 4 : 3;
 
       for (let y = 0; y < canvas.height; y += gap) {
         for (let x = 0; x < canvas.width; x += gap) {
@@ -74,9 +78,6 @@ const ParticleText: React.FC<ParticleTextProps> = ({ text, className }) => {
       const newPoints = sampleTextParticles(canvas, newText);
       const oldParticles = particlesRef.current;
       const newParticles: Particle[] = [];
-      const dpr = window.devicePixelRatio || 1;
-      const w = canvas.width / dpr;
-      const h = canvas.height / dpr;
 
       for (let i = 0; i < newPoints.length; i++) {
         const target = newPoints[i];
@@ -85,17 +86,17 @@ const ParticleText: React.FC<ParticleTextProps> = ({ text, className }) => {
           p.originX = target.x;
           p.originY = target.y;
           p.targetLife = 1;
-          p.vx += (Math.random() - 0.5) * 6;
-          p.vy += (Math.random() - 0.5) * 6;
+          // No velocity kick — just glide smoothly
           newParticles.push(p);
         } else {
+          // New particles appear at their target position directly
           newParticles.push({
-            x: Math.random() * w,
-            y: Math.random() * h,
+            x: target.x,
+            y: target.y,
             originX: target.x,
             originY: target.y,
-            vx: (Math.random() - 0.5) * 10,
-            vy: (Math.random() - 0.5) * 10,
+            vx: 0,
+            vy: 0,
             size: Math.random() * 1.2 + 0.6,
             opacity: Math.random() * 0.4 + 0.6,
             life: 0,
@@ -104,14 +105,10 @@ const ParticleText: React.FC<ParticleTextProps> = ({ text, className }) => {
         }
       }
 
+      // Excess particles just fade out in place
       for (let i = newPoints.length; i < oldParticles.length; i++) {
         const p = oldParticles[i];
         p.targetLife = 0;
-        const cx = w / 2;
-        const cy = h / 2;
-        const angle = Math.atan2(p.y - cy, p.x - cx);
-        p.vx += Math.cos(angle) * (8 + Math.random() * 12);
-        p.vy += Math.sin(angle) * (8 + Math.random() * 12);
         newParticles.push(p);
       }
 
@@ -143,8 +140,8 @@ const ParticleText: React.FC<ParticleTextProps> = ({ text, className }) => {
       const points = sampleTextParticles(canvas, text);
 
       particlesRef.current = points.map((pt) => ({
-        x: pt.x + (Math.random() - 0.5) * 500,
-        y: pt.y + (Math.random() - 0.5) * 500,
+        x: pt.x,
+        y: pt.y,
         originX: pt.x,
         originY: pt.y,
         vx: 0,
@@ -316,13 +313,6 @@ const ParticleText: React.FC<ParticleTextProps> = ({ text, className }) => {
     };
   }, []);
 
-  // Handle text changes — morph particles
-  useEffect(() => {
-    if (!canvasRef.current || !fontReadyRef.current) return;
-    if (currentTextRef.current === text) return;
-    currentTextRef.current = text;
-    morphToText(canvasRef.current, text);
-  }, [text, morphToText]);
 
   return (
     <canvas

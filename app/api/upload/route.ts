@@ -1,4 +1,4 @@
-import { put } from '@vercel/blob';
+import { put, del } from '@vercel/blob';
 import { NextResponse } from 'next/server';
 
 // Increase the body size limit for file uploads
@@ -22,6 +22,7 @@ export async function POST(request: Request): Promise<NextResponse> {
 
     const blob = await put(filename, Buffer.from(buffer), {
       access: 'public',
+      addRandomSuffix: true,
     });
 
     return NextResponse.json(blob);
@@ -29,6 +30,26 @@ export async function POST(request: Request): Promise<NextResponse> {
     console.error("Error uploading to blob:", error?.message || error);
     return NextResponse.json(
       { error: error?.message || 'Error uploading file' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(request: Request): Promise<NextResponse> {
+  const { searchParams } = new URL(request.url);
+  const url = searchParams.get('url');
+
+  if (!url) {
+    return NextResponse.json({ error: 'Blob URL is required' }, { status: 400 });
+  }
+
+  try {
+    await del(url);
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
+    console.error("Error deleting blob:", error?.message || error);
+    return NextResponse.json(
+      { error: error?.message || 'Error deleting file' },
       { status: 500 }
     );
   }

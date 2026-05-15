@@ -15,6 +15,7 @@ import { db } from "@/lib/firebase";
 import LiquidSlider from "@/components/LiquidSlider";
 import ParticleText from "@/components/ParticleText";
 import ReviewSubmitModal from "@/components/ReviewSubmitModal";
+import PageLoader from "@/components/PageLoader";
 import {
   DEFAULT_WHY_CHOOSE,
   resolveIcon,
@@ -128,11 +129,14 @@ export default function HomePage() {
   const [isMouseDown, setIsMouseDown] = React.useState(false);
 
   const defaultHeroSlides = [
-    { title: "INDIA", subtitle: "Explore the diverse beauty of the Indian Himalayas, from spiritual journeys to thrilling treks.", image: "/images/hero-india.PNG", upperTags: ["Ladakh", "15 days", "Challenging"], lowerTags: ["Zero Waste", "Low-carbon", "Local Hire", "Inclusive Growth"] },
-    { title: "NEPAL", subtitle: "Discover the breathtaking landscapes, vibrant culture, and ancient heritage of the Himalayas.", image: "/images/hero-nepal.PNG", upperTags: ["Everest Region", "15 days", "Challenging"], lowerTags: ["Zero Waste", "Low-carbon", "Local Hire", "Inclusive Growth"] },
-    { title: "BHUTAN", subtitle: "Experience the magic of the Land of the Thunder Dragon, with its pristine landscapes and ancient monasteries.", image: "/images/hero-bhutan.PNG", upperTags: ["Paro Valley", "7 days", "Moderate"], lowerTags: ["Eco-Friendly", "Cultural Preservation", "Local Hire", "Inclusive Growth"] },
+    { title: "INDIA", subtitle: "Explore the diverse beauty of the Indian Himalayas, from spiritual journeys to thrilling treks.", image: "/images/hero-india.PNG", mobileImage: "", tabletImage: "", upperTags: ["Ladakh", "15 days", "Challenging"], lowerTags: ["Zero Waste", "Low-carbon", "Local Hire", "Inclusive Growth"] },
+    { title: "NEPAL", subtitle: "Discover the breathtaking landscapes, vibrant culture, and ancient heritage of the Himalayas.", image: "/images/hero-nepal.PNG", mobileImage: "", tabletImage: "", upperTags: ["Everest Region", "15 days", "Challenging"], lowerTags: ["Zero Waste", "Low-carbon", "Local Hire", "Inclusive Growth"] },
+    { title: "BHUTAN", subtitle: "Experience the magic of the Land of the Thunder Dragon, with its pristine landscapes and ancient monasteries.", image: "/images/hero-bhutan.PNG", mobileImage: "", tabletImage: "", upperTags: ["Paro Valley", "7 days", "Moderate"], lowerTags: ["Eco-Friendly", "Cultural Preservation", "Local Hire", "Inclusive Growth"] },
   ];
   const [heroSlides, setHeroSlides] = React.useState<any[]>(defaultHeroSlides);
+
+  // Device type detection for responsive hero images
+  const [deviceType, setDeviceType] = React.useState<"mobile" | "tablet" | "desktop">("desktop");
 
   const [featuredTours, setFeaturedTours] = React.useState<any[]>([]);
   const [featuredTreks, setFeaturedTreks] = React.useState<any[]>([]);
@@ -140,6 +144,12 @@ export default function HomePage() {
   const [approvedReviews, setApprovedReviews] = React.useState<any[]>([]);
   const [showReviewModal, setShowReviewModal] = React.useState(false);
   const [whyChoose, setWhyChoose] = React.useState<WhyChooseSettings>(DEFAULT_WHY_CHOOSE);
+  const [pageLoaded, setPageLoaded] = React.useState(false);
+  const loadFlags = React.useRef({ hero: false, why: false, data: false, reviews: false });
+  const markLoaded = React.useCallback((key: keyof typeof loadFlags.current) => {
+    loadFlags.current[key] = true;
+    if (Object.values(loadFlags.current).every(Boolean)) setPageLoaded(true);
+  }, []);
 
   React.useEffect(() => {
     async function fetchHeroSettings() {
@@ -174,6 +184,8 @@ export default function HomePage() {
         }
       } catch (error) {
         console.error("Error fetching hero settings:", error);
+      } finally {
+        markLoaded("hero");
       }
     }
 
@@ -190,6 +202,8 @@ export default function HomePage() {
         }
       } catch (error) {
         console.error("Error fetching Why Choose Us settings:", error);
+      } finally {
+        markLoaded("why");
       }
     }
 
@@ -212,6 +226,8 @@ export default function HomePage() {
         console.error("Error fetching data:", error);
         setFeaturedTours([]);
         setFeaturedTreks([]);
+      } finally {
+        markLoaded("data");
       }
     }
 
@@ -229,6 +245,8 @@ export default function HomePage() {
         setApprovedReviews(data);
       } catch (err) {
         console.error("Error fetching reviews:", err);
+      } finally {
+        markLoaded("reviews");
       }
     }
 
@@ -239,6 +257,26 @@ export default function HomePage() {
   }, []);
 
 
+
+  // Detect device type on mount and resize for responsive hero images
+  React.useEffect(() => {
+    const checkDevice = () => {
+      const w = window.innerWidth;
+      if (w < 768) setDeviceType("mobile");
+      else if (w < 1024) setDeviceType("tablet");
+      else setDeviceType("desktop");
+    };
+    checkDevice();
+    window.addEventListener("resize", checkDevice);
+    return () => window.removeEventListener("resize", checkDevice);
+  }, []);
+
+  // Helper to pick the right image per slide based on device
+  const getResponsiveImage = React.useCallback((slide: any) => {
+    if (deviceType === "mobile" && slide.mobileImage) return slide.mobileImage;
+    if (deviceType === "tablet" && slide.tabletImage) return slide.tabletImage;
+    return slide.image;
+  }, [deviceType]);
 
   React.useEffect(() => {
     // Liquid slider is now user-controlled via hover and click, 
@@ -262,6 +300,7 @@ export default function HomePage() {
 
   return (
     <div className="flex flex-col min-h-screen">
+      <PageLoader isLoading={!pageLoaded} />
       {/* 3D Scrolling Parachute */}
       <motion.div
         className="fixed z-[60] pointer-events-none drop-shadow-2xl"
@@ -356,7 +395,7 @@ export default function HomePage() {
         {/* Layer 1: Background Liquid Slider */}
         <motion.div style={{ y: bgY }} className="absolute -inset-[10%] z-0 pointer-events-none">
           <LiquidSlider 
-            slides={heroSlides.map(s => s.image)}
+            slides={heroSlides.map(s => getResponsiveImage(s))}
             currentIndex={currentSlide}
             nextIndex={(currentSlide + 1) % heroSlides.length}
             isHovered={isHovered}
@@ -370,7 +409,18 @@ export default function HomePage() {
           style={{ y: textY }}
           className="absolute inset-0 z-10 flex items-center justify-center overflow-hidden pb-32 md:pb-20"
         >
-          <ParticleText text={heroSlides[currentSlide].title} />
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={currentSlide}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.4 }}
+              className="w-full h-full"
+            >
+              <ParticleText text={heroSlides[currentSlide].title} />
+            </motion.div>
+          </AnimatePresence>
         </motion.div>
 
         {/* Content (Bottom Controls & Right Content) - Top Layer */}
@@ -911,16 +961,19 @@ export default function HomePage() {
                   { key: "bhutan", title: "Bhutan Cultural Escapes", image: "/images/hero-snow.jpg", desc: "Tiger's Nest, Thimphu & Paro Valley" },
                   { key: "india", title: "India Spiritual Journeys", image: "/images/hero-night.jpg", desc: "Varanasi, Kerala, Goa, Sikkim & Darjeeling" }
                 ];
-                // Always show Nepal / Bhutan / India. If admin added a region whose
-                // title contains the country name, prefer the DB entry; otherwise
-                // fall back to the default tile so all three always appear.
+                // Merge defaults with DB regions, respecting `featured` flag
                 const merged = defaults.map(def => {
                   const dbMatch = dbRegions.find((r: any) =>
                     typeof r.title === "string" && r.title.toLowerCase().includes(def.key)
                   );
                   return dbMatch ? { ...dbMatch, key: def.key } : { ...def, id: def.key };
                 });
-                return merged;
+                // Filter to only featured regions (if at least one has featured set)
+                const hasFeaturedFlag = merged.some((r: any) => r.featured === true || r.featured === false);
+                const filtered = hasFeaturedFlag
+                  ? merged.filter((r: any) => r.featured !== false)
+                  : merged;
+                return filtered.length > 0 ? filtered : merged;
               })().map((region: any, i: number) => (
                 <motion.div
                   key={region.key || region.id || i}

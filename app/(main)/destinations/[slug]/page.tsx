@@ -149,9 +149,9 @@ export default function DestinationDynamicPage() {
         const baseInfo: DestinationFallback = matchedRegion
           ? {
               name: matchedRegion.title,
-              image: matchedRegion.image || fallback?.image || "/images/everest.png",
-              subtitle: fallback?.subtitle || matchedRegion.desc || "",
-              overview: matchedRegion.desc || fallback?.overview || "",
+              image: matchedRegion.heroImage || matchedRegion.image || fallback?.image || "/images/everest.png",
+              subtitle: matchedRegion.subtitle || fallback?.subtitle || matchedRegion.desc || "",
+              overview: matchedRegion.overview || matchedRegion.desc || fallback?.overview || "",
               highlights: fallback?.highlights || [],
             }
           : fallback || {

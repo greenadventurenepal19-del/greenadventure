@@ -77,6 +77,11 @@ export default function AdminPage() {
     title: "",
     desc: "",
     image: "",
+    heroImage: "",
+    subtitle: "",
+    overview: "",
+    tours: 0,
+    featured: true,
     order: 0,
   });
 
@@ -100,57 +105,25 @@ export default function AdminPage() {
 
   const [isUploadingTripImage, setIsUploadingTripImage] = useState(false);
   const [isUploadingRegionImage, setIsUploadingRegionImage] = useState(false);
+  const [isUploadingRegionHeroImage, setIsUploadingRegionHeroImage] = useState(false);
   const [uploadingHeroSlide, setUploadingHeroSlide] = useState<number | null>(null);
+  const [uploadingHeroMobile, setUploadingHeroMobile] = useState<number | null>(null);
+  const [uploadingHeroTablet, setUploadingHeroTablet] = useState<number | null>(null);
+
+  // Delete an image from Vercel Blob and clear the field
+  const deleteBlobImage = async (blobUrl: string) => {
+    if (!blobUrl) return;
+    // Only delete blobs hosted on Vercel (skip local /images/ paths)
+    if (blobUrl.includes('vercel-storage.com') || blobUrl.includes('blob.vercel-storage.com')) {
+      try {
+        await fetch(`/api/upload?url=${encodeURIComponent(blobUrl)}`, { method: 'DELETE' });
+      } catch (err) {
+        console.error('Failed to delete blob:', err);
+      }
+    }
+  };
 
   const handleTripImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setIsUploadingTripImage(true);
-    try {
-      const res = await fetch(`/api/upload?filename=${encodeURIComponent(file.name)}`, {
-        method: 'POST',
-        body: file,
-      });
-      const data = await res.json();
-      if (data.url) {
-        setTripFormData({ ...tripFormData, image: data.url });
-      } else {
-        throw new Error(data.error || "Failed to upload image");
-      }
-    } catch (error) {
-      console.error("Error uploading image:", error);
-      alert("Failed to upload image to blob");
-    } finally {
-      setIsUploadingTripImage(false);
-    }
-  };
-
-  const handleRegionImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setIsUploadingRegionImage(true);
-    try {
-      const res = await fetch(`/api/upload?filename=${encodeURIComponent(file.name)}`, {
-        method: 'POST',
-        body: file,
-      });
-      const data = await res.json();
-      if (data.url) {
-        setRegionFormData({ ...regionFormData, image: data.url });
-      } else {
-        throw new Error(data.error || "Failed to upload image");
-      }
-    } catch (error) {
-      console.error("Error uploading image:", error);
-      alert("Failed to upload image to blob");
-    } finally {
-      setIsUploadingRegionImage(false);
-    }
-  };
-
-  const handleHeroImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, slideIdx: number) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -159,7 +132,7 @@ export default function AdminPage() {
       return;
     }
 
-    setUploadingHeroSlide(slideIdx);
+    setIsUploadingTripImage(true);
     try {
       const res = await fetch(`/api/upload?filename=${encodeURIComponent(file.name)}`, {
         method: 'POST',
@@ -167,7 +140,77 @@ export default function AdminPage() {
       });
       const data = await res.json();
       if (res.ok && data.url) {
-        setHeroSlides(prev => prev.map((s, i) => i === slideIdx ? { ...s, image: data.url } : s));
+        // Delete old blob if replacing
+        if (tripFormData.image) await deleteBlobImage(tripFormData.image);
+        setTripFormData({ ...tripFormData, image: data.url });
+      } else {
+        throw new Error(data.error || `Failed with status ${res.status}`);
+      }
+    } catch (error: any) {
+      console.error("Error uploading image:", error);
+      alert("Failed to upload image to blob: " + error.message);
+    } finally {
+      setIsUploadingTripImage(false);
+    }
+  };
+
+  const handleRegionImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, field: "image" | "heroImage" = "image") => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 4.5 * 1024 * 1024) {
+      alert("File is too large! Please choose an image smaller than 4.5MB.");
+      return;
+    }
+
+    if (field === "heroImage") setIsUploadingRegionHeroImage(true);
+    else setIsUploadingRegionImage(true);
+    try {
+      const res = await fetch(`/api/upload?filename=${encodeURIComponent(file.name)}`, {
+        method: 'POST',
+        body: file,
+      });
+      const data = await res.json();
+      if (res.ok && data.url) {
+        // Delete old blob if replacing
+        if (regionFormData[field]) await deleteBlobImage(regionFormData[field]);
+        setRegionFormData({ ...regionFormData, [field]: data.url });
+      } else {
+        throw new Error(data.error || `Failed with status ${res.status}`);
+      }
+    } catch (error: any) {
+      console.error("Error uploading image:", error);
+      alert("Failed to upload image to blob: " + error.message);
+    } finally {
+      if (field === "heroImage") setIsUploadingRegionHeroImage(false);
+      else setIsUploadingRegionImage(false);
+    }
+  };
+
+  const handleHeroImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, slideIdx: number, field: string = "image") => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 4.5 * 1024 * 1024) {
+      alert("File is too large! Please choose an image smaller than 4.5MB.");
+      return;
+    }
+
+    if (field === "mobileImage") setUploadingHeroMobile(slideIdx);
+    else if (field === "tabletImage") setUploadingHeroTablet(slideIdx);
+    else setUploadingHeroSlide(slideIdx);
+
+    try {
+      const res = await fetch(`/api/upload?filename=${encodeURIComponent(file.name)}`, {
+        method: 'POST',
+        body: file,
+      });
+      const data = await res.json();
+      if (res.ok && data.url) {
+        // Delete old blob if replacing
+        const oldUrl = heroSlides[slideIdx]?.[field];
+        if (oldUrl) await deleteBlobImage(oldUrl);
+        setHeroSlides(prev => prev.map((s, i) => i === slideIdx ? { ...s, [field]: data.url } : s));
       } else {
         throw new Error(data.error || `Failed with status ${res.status}`);
       }
@@ -175,7 +218,9 @@ export default function AdminPage() {
       console.error("Error uploading hero image:", error);
       alert("Failed to upload image to blob: " + error.message);
     } finally {
-      setUploadingHeroSlide(null);
+      if (field === "mobileImage") setUploadingHeroMobile(null);
+      else if (field === "tabletImage") setUploadingHeroTablet(null);
+      else setUploadingHeroSlide(null);
     }
   };
 
@@ -290,9 +335,28 @@ export default function AdminPage() {
     });
 
     // Listen to regions
-    const unsubRegions = onSnapshot(collection(db, "regions"), (snapshot) => {
+    const unsubRegions = onSnapshot(collection(db, "regions"), async (snapshot) => {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       data.sort((a: any, b: any) => (a.order || 0) - (b.order || 0));
+      
+      // Auto-seed Nepal/Bhutan/India if missing
+      const defaultRegions = [
+        { title: "Nepal", desc: "Home to eight of the world's ten tallest mountains, Nepal is a trekker's paradise with rich cultural heritage.", image: "/images/everest.png", subtitle: "The land of the Himalayas", tours: 45, featured: true, order: 1 },
+        { title: "Bhutan", desc: "A unique kingdom where tradition and natural beauty reign supreme with untouched landscapes.", image: "/images/annapurna.png", subtitle: "The Last Shangri-La", tours: 8, featured: true, order: 2 },
+        { title: "India", desc: "The Indian Himalayas offer breathtaking treks, spiritual retreats, and thrilling adventure sports.", image: "/images/everest.png", subtitle: "Incredible diversity from Himalayas to coasts", tours: 24, featured: true, order: 3 },
+      ];
+      const existingTitles = data.map((r: any) => r.title?.toLowerCase());
+      for (const def of defaultRegions) {
+        if (!existingTitles.includes(def.title.toLowerCase())) {
+          try {
+            const newRef = doc(collection(db, "regions"));
+            await setDoc(newRef, { ...def, heroImage: "", overview: "", createdAt: serverTimestamp() });
+          } catch (err) {
+            console.error("Failed to seed region:", def.title, err);
+          }
+        }
+      }
+      
       setRegions(data);
     });
 
@@ -514,7 +578,7 @@ export default function AdminPage() {
       }
       setIsRegionModalOpen(false);
       setEditingRegion(null);
-      setRegionFormData({ title: "", desc: "", image: "", order: 0 });
+      setRegionFormData({ title: "", desc: "", image: "", heroImage: "", subtitle: "", overview: "", tours: 0, featured: true, order: 0 });
     } catch (error) {
       console.error("Error saving region", error);
       alert("Failed to save region.");
@@ -684,6 +748,18 @@ export default function AdminPage() {
           >
             <Users className="w-5 h-5" /> 
             Admin Access
+          </button>
+          
+          <button 
+            onClick={() => setActiveTab("regions")}
+            className={`w-full flex items-center gap-4 px-5 py-4 rounded-2xl font-medium transition-all ${
+              activeTab === "regions" 
+                ? "bg-gradient-to-r from-brand-500/20 to-transparent text-brand-400 border border-brand-500/30 shadow-[inset_4px_0_0_0_rgba(34,197,94,1)]" 
+                : "text-white/60 hover:bg-white/5 hover:text-white border border-transparent"
+            }`}
+          >
+            <Navigation className="w-5 h-5" /> 
+            Destinations
           </button>
           
           <button 
@@ -1471,20 +1547,82 @@ export default function AdminPage() {
                           )}
                         </div>
                         
-                        {/* Background Image Upload */}
+                        {/* Background Image Upload — Desktop */}
                         <div>
-                          <label className="block text-sm font-medium text-white/60 mb-2">Background Image</label>
+                          <label className="block text-sm font-medium text-white/60 mb-2">🖥️ Desktop Image</label>
                           <div className="flex items-center gap-4">
                             {slide.image && (
-                              <div className="w-24 h-16 relative rounded-xl overflow-hidden shrink-0 border border-white/10">
-                                <Image src={slide.image} alt={`Slide ${idx + 1} preview`} fill className="object-cover" />
+                              <div className="relative group shrink-0">
+                                <div className="w-24 h-16 relative rounded-xl overflow-hidden border border-white/10">
+                                  <Image src={slide.image} alt={`Slide ${idx + 1} desktop preview`} fill className="object-cover" />
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={async () => { await deleteBlobImage(slide.image); updateSlide("image", ""); }}
+                                  className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 hover:bg-red-400 text-white rounded-full flex items-center justify-center text-xs font-bold shadow-lg opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                                  title="Remove image"
+                                >✕</button>
                               </div>
                             )}
                             <label className="flex items-center gap-2 px-4 py-3 bg-black/60 border border-white/10 rounded-xl cursor-pointer hover:bg-white/5 transition-colors text-sm font-medium text-white/80 w-full sm:w-auto">
                               <UploadCloud className="w-4 h-4" />
-                              {uploadingHeroSlide === idx ? "Uploading..." : "Upload Photo"}
-                              <input type="file" className="hidden" accept="image/*" onChange={(e) => handleHeroImageUpload(e, idx)} disabled={uploadingHeroSlide === idx} />
+                              {uploadingHeroSlide === idx ? "Uploading..." : "Upload Desktop"}
+                              <input type="file" className="hidden" accept="image/*" onChange={(e) => handleHeroImageUpload(e, idx, "image")} disabled={uploadingHeroSlide === idx} />
                             </label>
+                          </div>
+                        </div>
+
+                        {/* Background Image Upload — Mobile & Tablet */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {/* Mobile */}
+                          <div>
+                            <label className="block text-sm font-medium text-white/60 mb-2">📱 Mobile Image</label>
+                            <div className="flex items-center gap-4">
+                              {slide.mobileImage && (
+                                <div className="relative group shrink-0">
+                                  <div className="w-16 h-24 relative rounded-xl overflow-hidden border border-white/10">
+                                    <Image src={slide.mobileImage} alt={`Slide ${idx + 1} mobile preview`} fill className="object-cover" />
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={async () => { await deleteBlobImage(slide.mobileImage); updateSlide("mobileImage", ""); }}
+                                    className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 hover:bg-red-400 text-white rounded-full flex items-center justify-center text-xs font-bold shadow-lg opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                                    title="Remove image"
+                                  >✕</button>
+                                </div>
+                              )}
+                              <label className="flex items-center gap-2 px-4 py-3 bg-black/60 border border-white/10 rounded-xl cursor-pointer hover:bg-white/5 transition-colors text-sm font-medium text-white/80 w-full">
+                                <UploadCloud className="w-4 h-4" />
+                                {uploadingHeroMobile === idx ? "Uploading..." : (slide.mobileImage ? "Change" : "Upload Mobile")}
+                                <input type="file" className="hidden" accept="image/*" onChange={(e) => handleHeroImageUpload(e, idx, "mobileImage")} disabled={uploadingHeroMobile === idx} />
+                              </label>
+                            </div>
+                            {!slide.mobileImage && <p className="text-xs text-white/30 mt-1">Falls back to desktop image if empty.</p>}
+                          </div>
+                          {/* Tablet */}
+                          <div>
+                            <label className="block text-sm font-medium text-white/60 mb-2">📟 Tablet Image</label>
+                            <div className="flex items-center gap-4">
+                              {slide.tabletImage && (
+                                <div className="relative group shrink-0">
+                                  <div className="w-20 h-16 relative rounded-xl overflow-hidden border border-white/10">
+                                    <Image src={slide.tabletImage} alt={`Slide ${idx + 1} tablet preview`} fill className="object-cover" />
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={async () => { await deleteBlobImage(slide.tabletImage); updateSlide("tabletImage", ""); }}
+                                    className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 hover:bg-red-400 text-white rounded-full flex items-center justify-center text-xs font-bold shadow-lg opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                                    title="Remove image"
+                                  >✕</button>
+                                </div>
+                              )}
+                              <label className="flex items-center gap-2 px-4 py-3 bg-black/60 border border-white/10 rounded-xl cursor-pointer hover:bg-white/5 transition-colors text-sm font-medium text-white/80 w-full">
+                                <UploadCloud className="w-4 h-4" />
+                                {uploadingHeroTablet === idx ? "Uploading..." : (slide.tabletImage ? "Change" : "Upload Tablet")}
+                                <input type="file" className="hidden" accept="image/*" onChange={(e) => handleHeroImageUpload(e, idx, "tabletImage")} disabled={uploadingHeroTablet === idx} />
+                              </label>
+                            </div>
+                            {!slide.tabletImage && <p className="text-xs text-white/30 mt-1">Falls back to desktop image if empty.</p>}
                           </div>
                         </div>
 
@@ -1604,7 +1742,7 @@ export default function AdminPage() {
                   <div className="pt-6 border-t border-white/10">
                     <button
                       type="button"
-                      onClick={() => setHeroSlides(prev => [...prev, { title: "", subtitle: "", image: "", upperTags: [], lowerTags: [] }])}
+                      onClick={() => setHeroSlides(prev => [...prev, { title: "", subtitle: "", image: "", mobileImage: "", tabletImage: "", upperTags: [], lowerTags: [] }])}
                       className="w-full py-4 border-2 border-dashed border-white/15 hover:border-brand-500/50 rounded-2xl text-white/40 hover:text-brand-400 font-medium flex items-center justify-center gap-2 transition-all hover:bg-brand-500/5"
                     >
                       <Plus className="w-5 h-5" />
@@ -1811,7 +1949,7 @@ export default function AdminPage() {
                 <button 
                   onClick={() => {
                     setEditingRegion(null);
-                    setRegionFormData({ title: "", desc: "", image: "", order: 0 });
+                    setRegionFormData({ title: "", desc: "", image: "", heroImage: "", subtitle: "", overview: "", tours: 0, featured: true, order: 0 });
                     setIsRegionModalOpen(true);
                   }}
                   className="bg-white hover:bg-gray-100 text-black font-bold py-3 px-6 rounded-xl flex items-center justify-center gap-2 transition-all hover:scale-[1.02] active:scale-[0.98] shadow-xl"
@@ -1829,9 +1967,22 @@ export default function AdminPage() {
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-white/20">No Image</div>
                       )}
+                      {/* Badges */}
+                      <div className="absolute top-3 left-3 flex gap-2 z-10">
+                        {region.featured !== false && (
+                          <span className="bg-brand-500/90 text-white text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider backdrop-blur-sm">Featured</span>
+                        )}
+                        {region.tours > 0 && (
+                          <span className="bg-white/20 text-white text-[10px] font-bold px-2.5 py-1 rounded-full backdrop-blur-sm">{region.tours} Packages</span>
+                        )}
+                      </div>
+                      {region.heroImage && (
+                        <span className="absolute top-3 right-3 bg-blue-500/80 text-white text-[10px] font-bold px-2.5 py-1 rounded-full backdrop-blur-sm z-10">Hero ✓</span>
+                      )}
                     </div>
                     <div className="p-6 flex flex-col flex-1">
-                      <h3 className="text-xl font-bold text-white mb-2">{region.title}</h3>
+                      <h3 className="text-xl font-bold text-white mb-1">{region.title}</h3>
+                      {region.subtitle && <p className="text-brand-400 text-xs font-medium mb-2">{region.subtitle}</p>}
                       <p className="text-white/60 text-sm mb-6 flex-1 line-clamp-2">{region.desc}</p>
                       
                       <div className="pt-4 border-t border-white/10 flex gap-2">
@@ -1842,6 +1993,11 @@ export default function AdminPage() {
                               title: region.title || "",
                               desc: region.desc || "",
                               image: region.image || "",
+                              heroImage: region.heroImage || "",
+                              subtitle: region.subtitle || "",
+                              overview: region.overview || "",
+                              tours: region.tours || 0,
+                              featured: region.featured !== false,
                               order: region.order || 0
                             });
                             setIsRegionModalOpen(true);
@@ -1920,17 +2076,17 @@ export default function AdminPage() {
                       className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-brand-500 transition-colors appearance-none"
                     >
                       <option value="" disabled>Select a Region</option>
-                      {regions.map((r: any) => (
-                        <option key={r.id} value={r.title}>{r.title}</option>
+                      {/* Always show core regions */}
+                      {["Nepal", "Bhutan", "India"].map((name) => (
+                        <option key={name} value={name}>{name}</option>
                       ))}
-                      {/* Fallbacks if DB is empty */}
-                      {regions.length === 0 && (
-                        <>
-                          <option value="Nepal">Nepal</option>
-                          <option value="Bhutan">Bhutan</option>
-                          <option value="India">India</option>
-                        </>
-                      )}
+                      {/* Show any additional regions from DB that aren't already listed */}
+                      {regions
+                        .filter((r: any) => !["Nepal", "Bhutan", "India"].includes(r.title))
+                        .map((r: any) => (
+                          <option key={r.id} value={r.title}>{r.title}</option>
+                        ))
+                      }
                     </select>
                   </div>
                   <div className="space-y-2">
@@ -2077,15 +2233,36 @@ export default function AdminPage() {
                         <span className="text-xs text-white/40 uppercase tracking-widest font-bold">OR</span>
                         <div className="flex-1 h-px bg-white/10"></div>
                       </div>
-                      <input
-                        type="text"
-                        required
-                        value={tripFormData.image}
-                        onChange={(e) => setTripFormData({...tripFormData, image: e.target.value})}
-                        className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-brand-500 transition-colors text-sm"
-                        placeholder="https://images.unsplash.com/..."
-                      />
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="text"
+                          required
+                          value={tripFormData.image}
+                          onChange={(e) => setTripFormData({...tripFormData, image: e.target.value})}
+                          className="flex-1 bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-brand-500 transition-colors text-sm"
+                          placeholder="https://images.unsplash.com/..."
+                        />
+                        {tripFormData.image && (
+                          <button
+                            type="button"
+                            onClick={async () => { await deleteBlobImage(tripFormData.image); setTripFormData({...tripFormData, image: ""}); }}
+                            className="w-9 h-9 bg-red-500/20 hover:bg-red-500/40 text-red-400 hover:text-red-300 rounded-xl flex items-center justify-center transition-colors border border-red-500/20 shrink-0"
+                            title="Remove image"
+                          >✕</button>
+                        )}
+                      </div>
                     </div>
+                    {tripFormData.image && (
+                      <div className="mt-3 relative h-40 w-full rounded-xl overflow-hidden bg-black/50 border border-white/10 group">
+                        <Image src={tripFormData.image} alt="Preview" fill className="object-cover" />
+                        <button
+                          type="button"
+                          onClick={async () => { await deleteBlobImage(tripFormData.image); setTripFormData({...tripFormData, image: ""}); }}
+                          className="absolute top-2 right-2 w-8 h-8 bg-red-500/80 hover:bg-red-500 text-white rounded-full flex items-center justify-center text-sm font-bold shadow-lg opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                          title="Remove image"
+                        >✕</button>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -2390,7 +2567,8 @@ export default function AdminPage() {
             
             <div className="p-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
               <form id="region-form" onSubmit={handleSaveRegion} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Row 1: Title, Order, Tours */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-white/70 mb-2">Region Title</label>
                     <input
@@ -2403,7 +2581,7 @@ export default function AdminPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-white/70 mb-2">Order (Sorting)</label>
+                    <label className="block text-sm font-medium text-white/70 mb-2">Order</label>
                     <input
                       type="number"
                       value={regionFormData.order}
@@ -2412,10 +2590,50 @@ export default function AdminPage() {
                       placeholder="e.g. 1"
                     />
                   </div>
+                  <div>
+                    <label className="block text-sm font-medium text-white/70 mb-2">Tour Packages Count</label>
+                    <input
+                      type="number"
+                      value={regionFormData.tours}
+                      onChange={(e) => setRegionFormData({...regionFormData, tours: parseInt(e.target.value) || 0})}
+                      className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-brand-500 transition-colors"
+                      placeholder="e.g. 45"
+                    />
+                  </div>
                 </div>
 
+                {/* Subtitle */}
                 <div>
-                  <label className="block text-sm font-medium text-white/70 mb-2">Image (Upload or URL)</label>
+                  <label className="block text-sm font-medium text-white/70 mb-2">Subtitle / Tagline</label>
+                  <input
+                    type="text"
+                    value={regionFormData.subtitle}
+                    onChange={(e) => setRegionFormData({...regionFormData, subtitle: e.target.value})}
+                    className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-brand-500 transition-colors"
+                    placeholder="e.g. The land of the Himalayas, offering spectacular trekking routes..."
+                  />
+                </div>
+
+                {/* Featured Toggle */}
+                <div className="flex items-center gap-4 p-4 bg-brand-500/5 border border-brand-500/20 rounded-xl">
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={regionFormData.featured}
+                      onChange={(e) => setRegionFormData({...regionFormData, featured: e.target.checked})}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-500"></div>
+                  </label>
+                  <div>
+                    <span className="text-sm font-bold text-white">Show on Home Page</span>
+                    <p className="text-xs text-white/50 mt-0.5">Display this region in the &ldquo;Himalayan Adventures&rdquo; section</p>
+                  </div>
+                </div>
+
+                {/* Card Image */}
+                <div>
+                  <label className="block text-sm font-medium text-white/70 mb-2">Card Image <span className="text-white/30">(shown in cards)</span></label>
                   <div className="flex flex-col gap-3">
                     <div className="flex items-center gap-2">
                       <label className="flex-1 bg-black/50 border border-white/10 hover:border-brand-500/50 rounded-xl px-4 py-3 text-white cursor-pointer transition-colors flex items-center justify-center gap-2 group">
@@ -2423,7 +2641,7 @@ export default function AdminPage() {
                           type="file" 
                           accept="image/*"
                           className="hidden" 
-                          onChange={handleRegionImageUpload}
+                          onChange={(e) => handleRegionImageUpload(e, "image")}
                           disabled={isUploadingRegionImage}
                         />
                         {isUploadingRegionImage ? (
@@ -2432,40 +2650,117 @@ export default function AdminPage() {
                           <UploadCloud className="w-5 h-5 text-white/50 group-hover:text-brand-400 transition-colors" />
                         )}
                         <span className="text-sm font-medium text-white/70 group-hover:text-white transition-colors">
-                          {isUploadingRegionImage ? "Uploading..." : "Upload from Computer"}
+                          {isUploadingRegionImage ? "Uploading..." : "Upload Card Image"}
                         </span>
                       </label>
                     </div>
                     <div className="flex items-center gap-3">
-                      <div className="flex-1 h-px bg-white/10"></div>
-                      <span className="text-xs text-white/40 uppercase tracking-widest font-bold">OR</span>
-                      <div className="flex-1 h-px bg-white/10"></div>
+                      <input
+                        type="url"
+                        value={regionFormData.image}
+                        onChange={(e) => setRegionFormData({...regionFormData, image: e.target.value})}
+                        className="flex-1 bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-brand-500 transition-colors text-sm"
+                        placeholder="Or paste image URL..."
+                      />
+                      {regionFormData.image && (
+                        <button
+                          type="button"
+                          onClick={async () => { await deleteBlobImage(regionFormData.image); setRegionFormData({...regionFormData, image: ""}); }}
+                          className="w-9 h-9 bg-red-500/20 hover:bg-red-500/40 text-red-400 hover:text-red-300 rounded-xl flex items-center justify-center transition-colors border border-red-500/20 shrink-0"
+                          title="Remove image"
+                        >✕</button>
+                      )}
                     </div>
-                    <input
-                      type="url"
-                      required
-                      value={regionFormData.image}
-                      onChange={(e) => setRegionFormData({...regionFormData, image: e.target.value})}
-                      className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-brand-500 transition-colors text-sm"
-                      placeholder="https://images.unsplash.com/..."
-                    />
                   </div>
                   {regionFormData.image && (
-                    <div className="mt-3 relative h-40 w-full rounded-xl overflow-hidden bg-black/50 border border-white/10">
+                    <div className="mt-3 relative h-36 w-full rounded-xl overflow-hidden bg-black/50 border border-white/10 group">
                       <Image src={regionFormData.image} alt="Preview" fill className="object-cover" />
+                      <button
+                        type="button"
+                        onClick={async () => { await deleteBlobImage(regionFormData.image); setRegionFormData({...regionFormData, image: ""}); }}
+                        className="absolute top-2 right-2 w-8 h-8 bg-red-500/80 hover:bg-red-500 text-white rounded-full flex items-center justify-center text-sm font-bold shadow-lg opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                        title="Remove image"
+                      >✕</button>
                     </div>
                   )}
                 </div>
 
+                {/* Hero Background Image */}
                 <div>
-                  <label className="block text-sm font-medium text-white/70 mb-2">Short Description</label>
+                  <label className="block text-sm font-medium text-white/70 mb-2">Hero Background Image <span className="text-white/30">(destination page hero)</span></label>
+                  <div className="flex flex-col gap-3">
+                    <div className="flex items-center gap-2">
+                      <label className="flex-1 bg-black/50 border border-white/10 hover:border-blue-500/50 rounded-xl px-4 py-3 text-white cursor-pointer transition-colors flex items-center justify-center gap-2 group">
+                        <input 
+                          type="file" 
+                          accept="image/*"
+                          className="hidden" 
+                          onChange={(e) => handleRegionImageUpload(e, "heroImage")}
+                          disabled={isUploadingRegionHeroImage}
+                        />
+                        {isUploadingRegionHeroImage ? (
+                          <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                        ) : (
+                          <UploadCloud className="w-5 h-5 text-white/50 group-hover:text-blue-400 transition-colors" />
+                        )}
+                        <span className="text-sm font-medium text-white/70 group-hover:text-white transition-colors">
+                          {isUploadingRegionHeroImage ? "Uploading..." : "Upload Hero Image"}
+                        </span>
+                      </label>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="url"
+                        value={regionFormData.heroImage}
+                        onChange={(e) => setRegionFormData({...regionFormData, heroImage: e.target.value})}
+                        className="flex-1 bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-brand-500 transition-colors text-sm"
+                        placeholder="Or paste hero image URL..."
+                      />
+                      {regionFormData.heroImage && (
+                        <button
+                          type="button"
+                          onClick={async () => { await deleteBlobImage(regionFormData.heroImage); setRegionFormData({...regionFormData, heroImage: ""}); }}
+                          className="w-9 h-9 bg-red-500/20 hover:bg-red-500/40 text-red-400 hover:text-red-300 rounded-xl flex items-center justify-center transition-colors border border-red-500/20 shrink-0"
+                          title="Remove hero image"
+                        >✕</button>
+                      )}
+                    </div>
+                  </div>
+                  {regionFormData.heroImage && (
+                    <div className="mt-3 relative h-36 w-full rounded-xl overflow-hidden bg-black/50 border border-white/10 group">
+                      <Image src={regionFormData.heroImage} alt="Hero Preview" fill className="object-cover" />
+                      <button
+                        type="button"
+                        onClick={async () => { await deleteBlobImage(regionFormData.heroImage); setRegionFormData({...regionFormData, heroImage: ""}); }}
+                        className="absolute top-2 right-2 w-8 h-8 bg-red-500/80 hover:bg-red-500 text-white rounded-full flex items-center justify-center text-sm font-bold shadow-lg opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                        title="Remove hero image"
+                      >✕</button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Short Description */}
+                <div>
+                  <label className="block text-sm font-medium text-white/70 mb-2">Short Description <span className="text-white/30">(card text)</span></label>
                   <textarea
                     required
-                    rows={3}
+                    rows={2}
                     value={regionFormData.desc}
                     onChange={(e) => setRegionFormData({...regionFormData, desc: e.target.value})}
                     className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-brand-500 transition-colors resize-none"
-                    placeholder="Brief description of the region..."
+                    placeholder="Brief description for cards..."
+                  ></textarea>
+                </div>
+
+                {/* Full Overview */}
+                <div>
+                  <label className="block text-sm font-medium text-white/70 mb-2">Full Overview <span className="text-white/30">(destination detail page)</span></label>
+                  <textarea
+                    rows={4}
+                    value={regionFormData.overview}
+                    onChange={(e) => setRegionFormData({...regionFormData, overview: e.target.value})}
+                    className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-brand-500 transition-colors resize-none"
+                    placeholder="Detailed overview of the destination..."
                   ></textarea>
                 </div>
               </form>
