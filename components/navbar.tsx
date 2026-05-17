@@ -149,16 +149,7 @@ export function Navbar() {
   }, [pathname]);
 
   // Define routes that have a dark hero image at the top
-  const hasHeroImage = 
-    pathname === "/" || 
-    pathname === "/about" || 
-    pathname === "/contact" || 
-    pathname === "/tours" || 
-    pathname.startsWith("/tours/") ||
-    pathname === "/trekking" || 
-    pathname.startsWith("/trekking/") ||
-    pathname === "/destinations" ||
-    pathname.startsWith("/destinations/");
+  const hasHeroImage = pathname === "/";
 
   const isTransparent = !isScrolled && !isOpen && hasHeroImage;
 
@@ -311,73 +302,122 @@ export function Navbar() {
             className="p-2 transition-colors text-foreground"
             aria-label="Toggle menu"
           >
-            {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+            <Menu className="h-6 w-6" />
           </button>
         </div>
       </div>
 
+      {/* Mobile Sidebar Backdrop */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            initial={{ opacity: 0, y: -20, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -20, scale: 0.95 }}
+            key="backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="absolute top-[80px] left-4 right-4 bg-background border border-border shadow-2xl rounded-3xl md:hidden flex flex-col p-4 gap-2 pointer-events-auto z-40 overflow-hidden origin-top max-h-[80vh] overflow-y-auto"
-          >
-            {navLinks.map((link) => {
-              const isActive = pathname === link.href || (link.dropdown && pathname.startsWith(link.href));
-              const hasDropdown = !!link.dropdown;
-              const isDropdownOpen = activeDropdown === link.name;
-              
-              return (
-                <div key={link.name} className="flex flex-col">
-                  <div className="flex items-center justify-between">
-                    <Link
-                      href={link.href}
-                      className={`flex-1 p-4 rounded-2xl text-lg font-bold transition-colors ${
-                        isActive
-                          ? "bg-brand-500/10 text-brand-600 dark:text-brand-500"
-                          : "hover:bg-muted text-foreground"
-                      }`}
-                    >
-                      {link.name}
-                    </Link>
-                    {hasDropdown && (
-                      <button 
-                        onClick={() => setActiveDropdown(isDropdownOpen ? null : link.name)}
-                        className="p-4 rounded-xl ml-2 bg-muted/50 text-muted-foreground"
-                      >
-                        <ChevronDown className={`h-5 w-5 transition-transform ${isDropdownOpen ? "rotate-180" : ""}`} />
-                      </button>
-                    )}
-                  </div>
-                  
-                  {hasDropdown && isDropdownOpen && (
-                    <div className="flex flex-col gap-2 pl-4 pr-2 py-2 border-l-2 border-brand-500/20 ml-6 mt-1">
-                      {link.dropdown?.map(item => (
-                        <Link 
-                          key={item.name} 
-                          href={item.href}
-                          className="p-3 rounded-xl text-muted-foreground hover:text-brand-600 hover:bg-brand-500/5 transition-colors font-medium flex items-center justify-between"
-                        >
-                          {item.name}
-                        </Link>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-            <Link
-              href="/contact"
-              className="mt-4 p-4 text-center rounded-2xl bg-brand-600 text-white font-bold hover:bg-brand-700 transition-colors shadow-lg shadow-brand-500/20"
-            >
-              Start Project
-            </Link>
-          </motion.div>
+            className="fixed inset-0 z-[55] bg-black/60 backdrop-blur-sm md:hidden pointer-events-auto"
+            onClick={() => setIsOpen(false)}
+          />
         )}
       </AnimatePresence>
+
+      {/* Mobile Slide-in Sidebar */}
+      <motion.div
+        key="mobile-sidebar"
+        initial={false}
+        animate={isOpen ? { x: 0 } : { x: "-100%" }}
+        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+        className="fixed top-0 left-0 h-full w-[85vw] max-w-[320px] z-[60] md:hidden pointer-events-auto flex flex-col bg-background border-r border-border shadow-2xl"
+      >
+        {/* Sidebar Top Bar */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border/60">
+          <Link href="/" onClick={() => setIsOpen(false)} className="flex items-center gap-2.5">
+            <div className="relative h-9 w-9 rounded-full overflow-hidden ring-2 ring-brand-500/30 shadow-md">
+              <Image src="/images/logo.png" alt="Green Adventure Nepal" fill sizes="36px" className="object-cover" />
+            </div>
+            <span className="text-base font-bold tracking-tight text-foreground">
+              Green<span className="text-brand-600 dark:text-brand-500">Adventure</span>
+            </span>
+          </Link>
+          <button
+            onClick={() => setIsOpen(false)}
+            className="w-9 h-9 rounded-xl bg-muted/60 hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground transition-all"
+            aria-label="Close menu"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        {/* Sidebar Nav Links */}
+        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-1">
+          {navLinks.map((link) => {
+            const isActive = pathname === link.href || (link.dropdown && pathname.startsWith(link.href));
+            const hasDropdown = !!link.dropdown;
+            const isDropdownOpen = activeDropdown === link.name;
+
+            return (
+              <div key={link.name} className="flex flex-col">
+                <div className="flex items-center justify-between">
+                  <Link
+                    href={link.href}
+                    onClick={() => { if (!hasDropdown) setIsOpen(false); }}
+                    className={`flex-1 py-3 px-4 rounded-2xl text-base font-bold transition-colors ${
+                      isActive
+                        ? "bg-brand-500/10 text-brand-600 dark:text-brand-500"
+                        : "hover:bg-muted text-foreground"
+                    }`}
+                  >
+                    {link.name}
+                  </Link>
+                  {hasDropdown && (
+                    <button
+                      onClick={() => setActiveDropdown(isDropdownOpen ? null : link.name)}
+                      className="p-3 rounded-xl ml-2 bg-muted/50 text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      <ChevronDown className={`h-5 w-5 transition-transform ${isDropdownOpen ? "rotate-180" : ""}`} />
+                    </button>
+                  )}
+                </div>
+
+                {hasDropdown && isDropdownOpen && (
+                  <div className="flex flex-col gap-1 pl-3 pr-2 py-2 border-l-2 border-brand-500/20 ml-4 mt-1">
+                    {link.dropdown?.map(item => (
+                      <Link
+                        key={item.name}
+                        href={item.href}
+                        onClick={() => setIsOpen(false)}
+                        className="py-2.5 px-3 rounded-xl text-foreground/70 hover:text-brand-600 hover:bg-brand-500/5 transition-colors font-medium text-sm flex flex-col gap-0.5"
+                      >
+                        <span className="font-semibold text-foreground/90">{item.name}</span>
+                        {item.desc && <span className="text-xs text-muted-foreground">{item.desc}</span>}
+                      </Link>
+                    ))}
+                    <Link
+                      href={link.href}
+                      onClick={() => setIsOpen(false)}
+                      className="mt-1 py-2 px-3 rounded-xl text-brand-600 dark:text-brand-400 font-bold text-xs uppercase tracking-wider hover:bg-brand-500/5 transition-colors"
+                    >
+                      View all {link.name} →
+                    </Link>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Sidebar Footer CTA */}
+        <div className="p-4 border-t border-border/60">
+          <Link
+            href="/contact"
+            onClick={() => setIsOpen(false)}
+            className="block p-4 text-center rounded-2xl bg-brand-600 text-white font-bold hover:bg-brand-700 transition-colors shadow-lg shadow-brand-500/20 text-sm tracking-wide"
+          >
+            Book Now
+          </Link>
+        </div>
+      </motion.div>
     </motion.header>
   );
 }

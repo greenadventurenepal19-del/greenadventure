@@ -8,7 +8,7 @@ import {
   Mountain, MapPin, Users, Star, 
   ArrowRight, Search, Calendar, Quote,
   Clock, TrendingUp, Leaf, Cloud, Heart, Volume2, VolumeX,
-  Globe, Plane, Compass
+  Globe, Plane, Compass, BookOpen, Tag
 } from "lucide-react";
 import { doc, getDoc, collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -140,6 +140,7 @@ export default function HomePage() {
 
   const [featuredTours, setFeaturedTours] = React.useState<any[]>([]);
   const [featuredTreks, setFeaturedTreks] = React.useState<any[]>([]);
+  const [featuredBlogs, setFeaturedBlogs] = React.useState<any[]>([]);
   const [dbRegions, setDbRegions] = React.useState<any[]>([]);
   const [approvedReviews, setApprovedReviews] = React.useState<any[]>([]);
   const [showReviewModal, setShowReviewModal] = React.useState(false);
@@ -254,8 +255,23 @@ export default function HomePage() {
     fetchWhyChoose();
     fetchData();
     fetchReviews();
+    fetchFeaturedBlogs();
   }, []);
 
+  async function fetchFeaturedBlogs() {
+    try {
+      const q = query(
+        collection(db, "blogs"),
+        where("isFeatured", "==", true),
+        where("status", "==", "published")
+      );
+      const snap = await getDocs(q);
+      const data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      setFeaturedBlogs(data.slice(0, 3));
+    } catch {
+      setFeaturedBlogs([]);
+    }
+  }
 
 
   // Detect device type on mount and resize for responsive hero images
@@ -795,7 +811,7 @@ export default function HomePage() {
                   viewport={{ once: true }}
                   className="text-4xl md:text-5xl lg:text-6xl font-black tracking-tight mb-6 uppercase"
                 >
-                  Featured <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-teal-500">Trekking</span>
+                  Featured <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-500 to-brand-700">Trekking</span>
                 </motion.h2>
                 <motion.p 
                   initial={{ opacity: 0, x: -20 }}
@@ -940,7 +956,7 @@ export default function HomePage() {
                 viewport={{ once: true }}
                 className="text-4xl md:text-5xl font-black tracking-tight mb-6 uppercase"
               >
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-teal-500">HIMALAYAN</span> ADVENTURES
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-500 to-brand-700">HIMALAYAN</span> ADVENTURES
               </motion.h2>
               <motion.p 
                 initial={{ opacity: 0, y: 20 }}
@@ -998,7 +1014,136 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* 5. TESTIMONIALS PREVIEW */}
+        {/* 5. FEATURED BLOG POSTS */}
+        {featuredBlogs.length > 0 && (
+          <section className="py-24 relative z-10 overflow-hidden">
+            {/* Background glow */}
+            <div className="absolute inset-0 -z-10">
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[900px] h-[500px] bg-brand-500/5 rounded-full blur-3xl" />
+            </div>
+            <div className="container mx-auto px-4">
+              {/* Section Header */}
+              <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-14">
+                <div>
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-brand-500/10 border border-brand-500/20 text-brand-500 text-xs font-bold uppercase tracking-[0.3em] mb-4"
+                  >
+                    <BookOpen className="w-3.5 h-3.5" /> From Our Blog
+                  </motion.div>
+                  <motion.h2
+                    initial={{ opacity: 0, y: 30 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: 0.1 }}
+                    className="text-4xl md:text-5xl font-black tracking-tight uppercase"
+                  >
+                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-500 to-brand-700">TRAVEL</span> STORIES
+                  </motion.h2>
+                </div>
+                <motion.div
+                  initial={{ opacity: 0, x: 20 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true }}
+                >
+                  <Link
+                    href="/blog"
+                    className="inline-flex items-center gap-2 px-6 py-3 rounded-full border border-brand-500/40 text-brand-500 font-bold text-sm hover:bg-brand-500/10 transition-all group"
+                  >
+                    View All Articles <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                  </Link>
+                </motion.div>
+              </div>
+
+              {/* Blog Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                {featuredBlogs.map((post: any, i: number) => (
+                  <motion.article
+                    key={post.id}
+                    initial={{ opacity: 0, y: 40 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: i * 0.12 }}
+                    className="group flex flex-col bg-card rounded-[2rem] overflow-hidden border border-border/60 hover:border-brand-500/40 transition-all duration-300 hover:shadow-2xl hover:shadow-brand-500/10 hover:-translate-y-2"
+                  >
+                    {/* Image */}
+                    <Link href={`/blog/${post.slug || post.id}`} className="block">
+                      <div className="relative h-56 overflow-hidden">
+                        <Image
+                          src={post.image || "/images/hero.png"}
+                          alt={post.title}
+                          fill
+                          className="object-cover transition-transform duration-700 group-hover:scale-110"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+                        <span className="absolute top-4 left-4 bg-brand-500 text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider shadow-lg">
+                          {post.category || "Blog"}
+                        </span>
+                        {post.readTime && (
+                          <span className="absolute bottom-4 right-4 flex items-center gap-1.5 bg-black/60 backdrop-blur-sm text-white text-xs px-3 py-1 rounded-full font-medium">
+                            <Clock className="w-3 h-3" /> {post.readTime}
+                          </span>
+                        )}
+                      </div>
+                    </Link>
+
+                    {/* Body */}
+                    <div className="p-6 flex flex-col flex-1">
+                      {/* Tags */}
+                      {post.tags?.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 mb-3">
+                          {post.tags.slice(0, 2).map((tag: string) => (
+                            <span key={tag} className="inline-flex items-center gap-1 text-[10px] font-semibold bg-brand-500/10 text-brand-600 dark:text-brand-400 px-2.5 py-0.5 rounded-full border border-brand-500/20">
+                              <Tag className="w-2.5 h-2.5" />{tag}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
+                      <Link href={`/blog/${post.slug || post.id}`}>
+                        <h3 className="text-base font-black text-foreground mb-3 line-clamp-2 group-hover:text-brand-500 transition-colors leading-snug">
+                          {post.title}
+                        </h3>
+                      </Link>
+                      <p className="text-muted-foreground text-sm line-clamp-3 mb-5 flex-1 leading-relaxed">
+                        {post.excerpt}
+                      </p>
+
+                      <Link
+                        href={`/blog/${post.slug || post.id}`}
+                        className="mt-auto inline-flex items-center gap-2 text-brand-500 font-bold text-sm hover:gap-3 transition-all"
+                      >
+                        Read Article <ArrowRight className="w-4 h-4" />
+                      </Link>
+                    </div>
+                  </motion.article>
+                ))}
+              </div>
+
+              {/* Share Your Story CTA */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: 0.3 }}
+                className="mt-14 flex justify-center"
+              >
+                <Link href="/blog#write-for-us"
+                  className="group inline-flex items-center gap-3 px-8 py-4 rounded-2xl bg-gradient-to-r from-brand-600 to-brand-700 text-white font-black text-sm shadow-lg shadow-brand-500/30 hover:shadow-brand-500/50 hover:-translate-y-1 transition-all duration-300"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 112.828 2.828L11.828 15.828A2 2 0 0110 16.414V18h1.586a2 2 0 001.414-.586l6.586-6.586" /></svg>
+                  Share Your Story
+                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                </Link>
+              </motion.div>
+            </div>
+          </section>
+        )}
+
+        {/* 6. TESTIMONIALS PREVIEW */}
+
         <section className="py-24 relative z-10">
           <div className="container mx-auto px-4">
             <div className="text-center mb-16">

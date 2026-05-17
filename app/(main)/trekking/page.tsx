@@ -3,15 +3,43 @@
 import * as React from "react";
 import Image from "next/image";
 import { motion } from "framer-motion";
-import { collection, getDocs, query, where } from "firebase/firestore";
+import { collection, getDocs, query, where, doc, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import TripCard, { EmptyTripsState, type TripCardData } from "@/components/TripCard";
 import { Loader2 } from "lucide-react";
+
+const DEFAULT_HERO = {
+  title: "Himalayan Trekking",
+  subtitle:
+    "From the iconic trails of Everest to the hidden valleys of Annapurna — every trek below is curated and added by our team of local guides.",
+  bgImage: "/images/hero-snow.jpg",
+  tags: [],
+  tabs: [],
+};
 
 export default function TrekkingPage() {
   const [treks, setTreks] = React.useState<TripCardData[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [activeCategory, setActiveCategory] = React.useState<string>("All");
+  const [hero, setHero] = React.useState(DEFAULT_HERO);
+
+  React.useEffect(() => {
+    const unsub = onSnapshot(doc(db, "settings", "pages_hero"), (snap) => {
+      if (snap.exists()) {
+        const data = snap.data() as any;
+        if (data?.trekking) {
+          setHero((prev) => ({
+            title: data.trekking.title || prev.title,
+            subtitle: data.trekking.subtitle || prev.subtitle,
+            bgImage: data.trekking.bgImage || prev.bgImage,
+            tags: Array.isArray(data.trekking.tags) && data.trekking.tags.length > 0 ? data.trekking.tags : prev.tags,
+            tabs: Array.isArray(data.trekking.tabs) && data.trekking.tabs.length > 0 ? data.trekking.tabs : prev.tabs,
+          }));
+        }
+      }
+    });
+    return () => unsub();
+  }, []);
 
   React.useEffect(() => {
     async function load() {
@@ -31,6 +59,9 @@ export default function TrekkingPage() {
   }, []);
 
   const categories = React.useMemo(() => {
+    if (hero.tabs && hero.tabs.length > 0) {
+      return ["All", ...hero.tabs];
+    }
     const set = new Set<string>();
     treks.forEach((t) => {
       (t.tags || []).forEach((tag) => {
@@ -39,7 +70,7 @@ export default function TrekkingPage() {
       });
     });
     return ["All", ...Array.from(set).slice(0, 8)];
-  }, [treks]);
+  }, [treks, hero.tabs]);
 
   const visibleTreks = React.useMemo(() => {
     if (activeCategory === "All") return treks;
@@ -52,12 +83,12 @@ export default function TrekkingPage() {
   }, [treks, activeCategory]);
 
   return (
-    <div className="pb-24">
+    <div className="pb-24 overflow-hidden">
       {/* Header */}
       <section className="relative h-[60vh] min-h-[400px] flex items-center justify-center overflow-hidden text-center">
         <div className="absolute inset-0 bg-black/60 z-10" />
         <Image
-          src="/images/hero-snow.jpg"
+          src={hero.bgImage}
           alt="Trekking in the Himalayas"
           fill
           className="object-cover"
@@ -70,19 +101,33 @@ export default function TrekkingPage() {
             transition={{ duration: 0.6 }}
             className="text-4xl md:text-6xl font-black tracking-tight mb-6 uppercase"
           >
-            Himalayan{" "}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-300 to-teal-300">
-              Trekking
+            {hero.title.split(" ").slice(0, -1).join(" ")}{" "}
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-500 to-brand-700">
+              {hero.title.split(" ").slice(-1)[0]}
             </span>
           </motion.h1>
+          
+          {hero.tags && hero.tags.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+              className="flex flex-wrap justify-center gap-2 mb-6"
+            >
+              {hero.tags.map((tag: string, idx: number) => (
+                <span key={idx} className="px-4 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-white text-xs font-bold uppercase tracking-wider">
+                  {tag}
+                </span>
+              ))}
+            </motion.div>
+          )}
           <motion.p
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.1 }}
             className="text-lg max-w-2xl mx-auto mb-10 text-gray-200 font-medium"
           >
-            From the iconic trails of Everest to the hidden valleys of Annapurna — every trek
-            below is curated and added by our team of local guides.
+            {hero.subtitle}
           </motion.p>
 
           {categories.length > 1 && (
@@ -112,7 +157,7 @@ export default function TrekkingPage() {
 
       {/* Grid */}
       <section className="py-20 relative">
-        <div className="absolute inset-0 z-0 pointer-events-none">
+        <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
           <div className="absolute top-0 left-0 w-[600px] h-[600px] bg-emerald-500/10 dark:bg-emerald-500/20 blur-[120px] rounded-full" />
           <div className="absolute bottom-0 right-0 w-[800px] h-[800px] bg-teal-500/10 dark:bg-teal-500/15 blur-[150px] rounded-full" />
         </div>

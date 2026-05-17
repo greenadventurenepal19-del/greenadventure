@@ -6,7 +6,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { ArrowRight, MapPin, Mountain, Loader2, Compass, Globe } from "lucide-react";
 import { db } from "@/lib/firebase";
-import { collection, query, orderBy, onSnapshot } from "firebase/firestore";
+import { collection, query, orderBy, onSnapshot, doc } from "firebase/firestore";
 
 const defaultDestinations = [
   {
@@ -44,11 +44,34 @@ const defaultDestinations = [
   },
 ];
 
+const DEFAULT_DEST_HERO = {
+  title: "Our Destinations",
+  subtitle: "Choose your next adventure from our carefully curated destinations across the majestic Himalayas and beyond.",
+  bgImage: "/images/hero.png",
+  tags: [],
+  tabs: [],
+};
+
 export default function DestinationsPage() {
   const [destinations, setDestinations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [destHero, setDestHero] = useState(DEFAULT_DEST_HERO);
 
   useEffect(() => {
+    const unsub2 = onSnapshot(doc(db, "settings", "pages_hero"), (snap) => {
+      if (snap.exists()) {
+        const data = snap.data() as any;
+        if (data?.destinations) {
+          setDestHero((prev) => ({
+            title: data.destinations.title || prev.title,
+            subtitle: data.destinations.subtitle || prev.subtitle,
+            bgImage: data.destinations.bgImage || prev.bgImage,
+            tags: Array.isArray(data.destinations.tags) && data.destinations.tags.length > 0 ? data.destinations.tags : prev.tags,
+            tabs: Array.isArray(data.destinations.tabs) && data.destinations.tabs.length > 0 ? data.destinations.tabs : prev.tabs,
+          }));
+        }
+      }
+    });
     const q = query(collection(db, "regions"), orderBy("order", "asc"));
     const unsub = onSnapshot(q, (snap) => {
       const dbRegions = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
@@ -72,7 +95,7 @@ export default function DestinationsPage() {
       }
       setLoading(false);
     });
-    return () => unsub();
+    return () => { unsub(); unsub2(); };
   }, []);
 
   if (loading) {
@@ -84,12 +107,12 @@ export default function DestinationsPage() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-background selection:bg-brand-500/30">
+    <div className="flex flex-col min-h-screen bg-background selection:bg-brand-500/30 overflow-hidden">
       {/* Hero */}
       <section className="relative h-[70vh] min-h-[500px] flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0 z-0">
           <Image
-            src="/images/hero.png"
+            src={destHero.bgImage}
             alt="Himalayan Destinations"
             fill
             className="object-cover scale-105"
@@ -99,17 +122,32 @@ export default function DestinationsPage() {
         </div>
 
         <div className="container relative z-10 px-4 text-center text-white flex flex-col items-center">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.8 }}
-            className="inline-flex items-center gap-3 px-6 py-2.5 rounded-full bg-white/10 backdrop-blur-md mb-8 border border-white/20 shadow-2xl"
-          >
-            <Globe className="h-5 w-5 text-brand-400" />
-            <span className="text-white font-black uppercase tracking-[0.3em] text-xs">
-              Destinations
-            </span>
-          </motion.div>
+          {destHero.tags && destHero.tags.length > 0 ? (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.8 }}
+              className="flex flex-wrap items-center justify-center gap-2 mb-8"
+            >
+              {destHero.tags.map((tag: string, idx: number) => (
+                <span key={idx} className="px-4 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-white text-xs font-bold uppercase tracking-wider">
+                  {tag}
+                </span>
+              ))}
+            </motion.div>
+          ) : (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.8 }}
+              className="inline-flex items-center gap-3 px-6 py-2.5 rounded-full bg-white/10 backdrop-blur-md mb-8 border border-white/20 shadow-2xl"
+            >
+              <Globe className="h-5 w-5 text-brand-400" />
+              <span className="text-white font-black uppercase tracking-[0.3em] text-xs">
+                Destinations
+              </span>
+            </motion.div>
+          )}
 
           <motion.h1
             initial={{ opacity: 0, y: 40 }}
@@ -117,7 +155,10 @@ export default function DestinationsPage() {
             transition={{ delay: 0.2, duration: 0.8 }}
             className="text-5xl md:text-7xl lg:text-8xl font-black uppercase tracking-tighter leading-none mb-6 drop-shadow-2xl"
           >
-            Our <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-400 to-emerald-400">Destinations</span>
+            {destHero.title.split(" ").slice(0, -1).join(" ")}{" "}
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-500 to-brand-700">
+              {destHero.title.split(" ").slice(-1)[0]}
+            </span>
           </motion.h1>
 
           <motion.p
@@ -126,7 +167,7 @@ export default function DestinationsPage() {
             transition={{ delay: 0.4, duration: 0.8 }}
             className="text-lg md:text-xl max-w-3xl mx-auto text-white/80 font-medium leading-relaxed"
           >
-            Choose your next adventure from our carefully curated destinations across the majestic Himalayas and beyond.
+            {destHero.subtitle}
           </motion.p>
 
           <motion.div

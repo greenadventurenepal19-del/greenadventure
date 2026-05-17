@@ -323,6 +323,15 @@ export default async function TripDetailPage({ params }: { params: Promise<{ slu
               </div>
             </div>
 
+            {/* Flexible Itinerary Note */}
+            <div className="flex items-start gap-3 bg-brand-50 dark:bg-brand-950/20 border border-brand-200 dark:border-brand-800/40 rounded-2xl px-5 py-4">
+              <span className="text-2xl mt-0.5">🧭</span>
+              <div>
+                <span className="font-bold text-brand-700 dark:text-brand-400">Flexible Itinerary: </span>
+                <span className="text-muted-foreground">The itinerary can be adjusted flexibly according to your travel preferences and schedule.</span>
+              </div>
+            </div>
+
             {/* Includes / Excludes */}
             <div id="includes" className="scroll-mt-32">
               <h2 className="text-3xl font-bold mb-6">Cost Includes & Excludes</h2>
@@ -352,18 +361,6 @@ export default async function TripDetailPage({ params }: { params: Promise<{ slu
                       </li>
                     ))}
                   </ul>
-                </div>
-              </div>
-            </div>
-
-            {/* Route Map Placeholder */}
-            <div id="map" className="scroll-mt-32">
-              <h2 className="text-3xl font-bold mb-6">Route Map</h2>
-              <div className="bg-muted h-[400px] rounded-3xl border border-border flex flex-col items-center justify-center text-muted-foreground relative overflow-hidden">
-                <Map className="h-16 w-16 mb-4 opacity-50" />
-                <p>Interactive Map Component</p>
-                <div className="absolute inset-0 bg-black/5 flex items-center justify-center backdrop-blur-[2px]">
-                   <span className="bg-background px-6 py-3 rounded-full font-bold border border-border shadow-lg">Map integration pending</span>
                 </div>
               </div>
             </div>

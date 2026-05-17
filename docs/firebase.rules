@@ -64,9 +64,29 @@ service cloud.firestore {
       allow update, delete: if isAdmin();
     }
 
+
+    // Blogs Collection:
+    // Anyone can read published blogs.
+    // Anyone can submit a story (status must be "pending_review" with required fields).
+    // Only admins can update, delete, or create admin posts.
+    match /blogs/{blogId} {
+      allow read: if true;
+      allow create: if (
+        request.resource.data.status == "pending_review"
+        && request.resource.data.title is string
+        && request.resource.data.title.size() > 0
+        && request.resource.data.submittedBy is map
+        && request.resource.data.submittedBy.name is string
+        && request.resource.data.submittedBy.email is string
+      ) || isAdmin();
+      allow update, delete: if isAdmin();
+    }
+
+
     // Default fallback (Original rule provided by user)
     match /{document=**} {
       allow read, write: if false;
     }
+
   }
 }

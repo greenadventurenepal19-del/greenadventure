@@ -3,17 +3,45 @@
 import * as React from "react";
 import Image from "next/image";
 import { motion } from "framer-motion";
-import { collection, getDocs, query, where } from "firebase/firestore";
+import { collection, getDocs, query, where, doc, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import TripCard, { EmptyTripsState, type TripCardData } from "@/components/TripCard";
 import { Loader2 } from "lucide-react";
 
 const TOUR_TYPES = ["Tour", "Tours"];
 
+const DEFAULT_HERO = {
+  title: "Our Tours",
+  subtitle:
+    "Curated cultural, wildlife and scenic tour packages — handpicked by our team to give you the perfect Himalayan experience.",
+  bgImage: "/images/hero.png",
+  tags: [] as string[],
+  tabs: [] as string[],
+};
+
 export default function ToursPage() {
   const [tours, setTours] = React.useState<TripCardData[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [activeCategory, setActiveCategory] = React.useState<string>("All");
+  const [hero, setHero] = React.useState(DEFAULT_HERO);
+
+  React.useEffect(() => {
+    const unsub = onSnapshot(doc(db, "settings", "pages_hero"), (snap) => {
+      if (snap.exists()) {
+        const data = snap.data() as any;
+        if (data?.tours) {
+          setHero((prev) => ({
+            title: data.tours.title || prev.title,
+            subtitle: data.tours.subtitle || prev.subtitle,
+            bgImage: data.tours.bgImage || prev.bgImage,
+            tags: data.tours.tags || prev.tags,
+            tabs: data.tours.tabs || prev.tabs,
+          }));
+        }
+      }
+    });
+    return () => unsub();
+  }, []);
 
   React.useEffect(() => {
     async function load() {
@@ -59,7 +87,7 @@ export default function ToursPage() {
       <section className="relative h-[60vh] min-h-[400px] flex items-center justify-center overflow-hidden text-center">
         <div className="absolute inset-0 bg-black/60 z-10" />
         <Image
-          src="/images/hero.png"
+          src={hero.bgImage}
           alt="Our Tours"
           fill
           className="object-cover"
@@ -72,7 +100,10 @@ export default function ToursPage() {
             transition={{ duration: 0.6 }}
             className="text-4xl md:text-6xl font-black tracking-tight mb-6 uppercase"
           >
-            Our <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-300 to-emerald-300">Tours</span>
+            {hero.title.split(" ").slice(0, -1).join(" ")}{" "}
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-500 to-brand-700">
+              {hero.title.split(" ").slice(-1)[0]}
+            </span>
           </motion.h1>
           <motion.p
             initial={{ opacity: 0, y: 20 }}
@@ -80,8 +111,7 @@ export default function ToursPage() {
             transition={{ duration: 0.6, delay: 0.1 }}
             className="text-lg max-w-2xl mx-auto mb-10 text-gray-200 font-medium"
           >
-            Curated cultural, wildlife and scenic tour packages — handpicked by our team to give
-            you the perfect Himalayan experience.
+            {hero.subtitle}
           </motion.p>
 
           {/* Categories (built from real tags in DB) */}
@@ -112,7 +142,7 @@ export default function ToursPage() {
 
       {/* Grid */}
       <section className="py-20 relative">
-        <div className="absolute inset-0 z-0 pointer-events-none">
+        <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
           <div className="absolute top-0 left-0 w-[600px] h-[600px] bg-brand-500/10 dark:bg-brand-500/20 blur-[120px] rounded-full" />
           <div className="absolute bottom-0 right-0 w-[800px] h-[800px] bg-emerald-500/10 dark:bg-emerald-500/15 blur-[150px] rounded-full" />
         </div>

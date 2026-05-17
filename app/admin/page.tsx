@@ -9,7 +9,7 @@ import {
 } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { 
-  Clock, Trash2, Plus, ShieldCheck, AlertCircle, Sparkles, User, MessageSquare, Settings, CheckCircle, LogOut, Mail, Shield, Users, Map, MapPin, Edit, Navigation, X, UploadCloud, Award
+  Clock, Trash2, Plus, ShieldCheck, AlertCircle, Sparkles, User, MessageSquare, Settings, CheckCircle, LogOut, Mail, Shield, Users, Map, MapPin, Edit, Navigation, X, UploadCloud, Award, Upload, BookOpen
 } from "lucide-react";
 import Image from "next/image";
 import ParticleLoader from "@/components/ParticleLoader";
@@ -23,7 +23,8 @@ import {
 
 export default function AdminPage() {
   const { user, isAdmin, isSuperAdmin, loading, loginWithGoogle, logout } = useAdminAuth();
-  const [activeTab, setActiveTab] = useState<"contacts" | "access" | "settings" | "hero" | "trips" | "regions" | "reviews" | "whyChoose">("contacts");
+  const [activeTab, setActiveTab] = useState<"contacts" | "access" | "settings" | "hero" | "trips" | "regions" | "reviews" | "whyChoose" | "pagesHero" | "aboutPage" | "blog">("contacts");
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [contactFilter, setContactFilter] = useState<"all" | "booking" | "inquiry">("all");
   
   // Data states
@@ -67,6 +68,38 @@ export default function AdminPage() {
 
   // Reviews State
   const [reviews, setReviews] = useState<any[]>([]);
+
+  // Blog State
+  const [blogs, setBlogs] = useState<any[]>([]);
+  const [pendingBlogs, setPendingBlogs] = useState<any[]>([]);
+  const [blogTab, setBlogTab] = useState<"published" | "pending">("published");
+  const [isBlogModalOpen, setIsBlogModalOpen] = useState(false);
+  const [editingBlog, setEditingBlog] = useState<any>(null);
+  const [blogTagInput, setBlogTagInput] = useState("");
+  const [isDeletingBlog, setIsDeletingBlog] = useState<string | null>(null);
+  const [isSavingBlog, setIsSavingBlog] = useState(false);
+  const [uploadingBlogImage, setUploadingBlogImage] = useState(false);
+  const BLOG_CATEGORIES = ["Trekking Guides", "Destination Guides", "Preparation", "Eco-Tourism", "Safety", "Culture", "News"];
+  const DEFAULT_BLOG_FORM = {
+    title: "",
+    slug: "",
+    excerpt: "",
+    content: "",       // legacy fallback, kept for reading old posts
+    image: "",
+    category: "Trekking Guides",
+    author: "Green Adventure Team",
+    tags: [] as string[],
+    isFeatured: false,
+    status: "published",
+    readTime: "",
+    sections: [] as { heading: string; body: string }[],
+  };
+  const [blogFormData, setBlogFormData] = useState(DEFAULT_BLOG_FORM);
+
+
+  // Featured Testimonial (About Page)
+  const [showPickTestimonialModal, setShowPickTestimonialModal] = useState(false);
+  const [selectedTestimonialId, setSelectedTestimonialId] = useState<string>("");
   const [reviewFilter, setReviewFilter] = useState<"all" | "pending" | "approved" | "rejected">("pending");
 
   // Region Modal State
@@ -257,6 +290,66 @@ export default function AdminPage() {
   const [whyChoose, setWhyChoose] = useState<WhyChooseSettings>(DEFAULT_WHY_CHOOSE);
   const [isSavingWhyChoose, setIsSavingWhyChoose] = useState(false);
 
+  // Pages Hero state (for Destinations, Tours, Trekking pages)
+  const DEFAULT_PAGES_HERO = {
+    destinations: { title: "Our Destinations", subtitle: "Choose your next adventure from our carefully curated destinations.", bgImage: "", tags: ["Nepal", "Bhutan", "India"], tabs: ["Nepal", "Bhutan", "India"] },
+    tours: { title: "Our Tours", subtitle: "Curated cultural, wildlife and scenic tour packages — handpicked by our team.", bgImage: "", tags: ["Cultural", "Adventure", "Family"], tabs: ["Cultural", "Adventure", "Family", "Wildlife", "Day Trips"] },
+    trekking: { title: "Himalayan Trekking", subtitle: "From the iconic trails of Everest to the hidden valleys of Annapurna.", bgImage: "", tags: ["Everest Region", "Annapurna"], tabs: ["Everest Region", "Annapurna", "Langtang", "Manaslu"] },
+    blog: { title: "Travel Stories", subtitle: "Inspiring adventures, honest guides, and tales from the trail — told by explorers like you.", bgImage: "", tags: ["Featured", "Community", "Trekking"], tabs: ["All", "Featured", "Trekking", "Culture", "Wildlife"] },
+  };
+
+  // Suggested tags/tabs palette per section
+  const PAGES_HERO_TAG_SUGGESTIONS: Record<string, string[]> = {
+    destinations: ["Nepal", "Bhutan", "India", "Himalayas", "Cultural", "Adventure", "Eco-Tourism", "Popular"],
+    tours: ["Cultural", "Adventure", "Family", "Wildlife", "Day Trips", "Popular", "Scenic", "Historical", "Featured", "Budget"],
+    trekking: ["Everest Region", "Annapurna", "Langtang", "Manaslu", "Upper Mustang", "Easy", "Moderate", "Hard", "Popular", "Off-beat"],
+    blog: ["Featured", "Community", "Trekking", "Culture", "Wildlife", "Adventure", "Tips", "Guides"],
+  };
+  const PAGES_HERO_TAB_SUGGESTIONS: Record<string, string[]> = {
+    destinations: ["Nepal", "Bhutan", "India", "Himalayas", "All"],
+    tours: ["Cultural", "Adventure", "Family", "Wildlife", "Day Trips", "Budget", "Luxury"],
+    trekking: ["Everest Region", "Annapurna", "Langtang", "Manaslu", "Upper Mustang", "Dolpo"],
+    blog: ["All", "Featured", "Trekking", "Culture", "Wildlife", "Adventure", "Tips"],
+  };
+  const [pagesHero, setPagesHero] = useState(DEFAULT_PAGES_HERO);
+  const [isSavingPagesHero, setIsSavingPagesHero] = useState(false);
+  const [uploadingPagesHeroImage, setUploadingPagesHeroImage] = useState<string | null>(null);
+  const [activePagesHeroSection, setActivePagesHeroSection] = useState<"destinations" | "tours" | "trekking" | "blog" | "footer">("destinations");
+
+  // Footer Settings state
+  const DEFAULT_FOOTER_SETTINGS = {
+    tagline: "Ready to embark on the adventure of a lifetime?",
+    description: "Experience the breathtaking landscapes and vibrant cultures of the Himalayas. We craft sustainable and unforgettable mountain expeditions tailored for the true explorer.",
+    facebook: "",
+    twitter: "",
+    instagram: "",
+    youtube: "",
+    tiktok: "",
+  };
+  const [footerSettings, setFooterSettings] = useState(DEFAULT_FOOTER_SETTINGS);
+  const [isSavingFooter, setIsSavingFooter] = useState(false);
+
+  // About Page admin state
+  const DEFAULT_ABOUT_PAGE = {
+    heroTitle: "About Green Adventure",
+    heroSubtitle: "We are passionate about sharing the breathtaking beauty of the Himalayas while promoting responsible and sustainable tourism.",
+    heroImage: "",
+    storyTitle: "Our Story",
+    storyText1: "Founded in 2010 by a group of passionate local guides, Green Adventure started with a simple mission: to provide authentic, safe, and unforgettable Himalayan experiences while giving back to the local communities.",
+    storyText2: "Over the years, we have grown from a small team organizing local hikes to one of Nepal's most trusted adventure travel companies.",
+    storyImage: "",
+    features: [
+      "Licensed by Government of Nepal",
+      "Members of TAAN & NMA",
+      "100% Local Expert Guides",
+      "Committed to Eco-Tourism",
+    ] as string[],
+  };
+  const [aboutPage, setAboutPage] = useState(DEFAULT_ABOUT_PAGE);
+  const [isSavingAbout, setIsSavingAbout] = useState(false);
+  const [uploadingAboutImage, setUploadingAboutImage] = useState<string | null>(null);
+  const [newAboutFeature, setNewAboutFeature] = useState("");
+
   // Subscriptions
   useEffect(() => {
     if (!isAdmin) return;
@@ -334,6 +427,30 @@ export default function AdminPage() {
       }
     });
 
+    // Listen to Pages Hero settings
+    const unsubPagesHero = onSnapshot(doc(db, "settings", "pages_hero"), (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data() as any;
+        setPagesHero(prev => ({ ...prev, ...data }));
+      }
+    });
+
+    // Listen to Footer settings
+    const unsubFooter = onSnapshot(doc(db, "settings", "footer_settings"), (docSnap) => {
+      if (docSnap.exists()) {
+        setFooterSettings(prev => ({ ...prev, ...docSnap.data() }));
+      }
+    });
+
+    // Listen to About Page settings
+    const unsubAboutPage = onSnapshot(doc(db, "settings", "about_page"), (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data() as any;
+        setAboutPage(prev => ({ ...prev, ...data, features: Array.isArray(data.features) && data.features.length > 0 ? data.features : prev.features }));
+        if (data.featuredTestimonialId) setSelectedTestimonialId(data.featuredTestimonialId);
+      }
+    });
+
     // Listen to regions
     const unsubRegions = onSnapshot(collection(db, "regions"), async (snapshot) => {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -371,6 +488,14 @@ export default function AdminPage() {
       setReviews(data);
     });
 
+    // Listen to blogs — split published vs pending
+    const unsubBlogs = onSnapshot(collection(db, "blogs"), (snapshot) => {
+      const data = snapshot.docs.map(d => ({ id: d.id, ...d.data() })) as any[];
+      data.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+      setBlogs(data.filter(b => b.status !== "pending_review"));
+      setPendingBlogs(data.filter(b => b.status === "pending_review"));
+    });
+
     return () => {
       unsubContacts();
       unsubAdmins();
@@ -378,8 +503,12 @@ export default function AdminPage() {
       unsubSettings();
       unsubHero();
       unsubWhyChoose();
+      unsubPagesHero();
+      unsubFooter();
+      unsubAboutPage();
       unsubRegions();
       unsubReviews();
+      unsubBlogs();
     };
   }, [isAdmin]);
 
@@ -401,6 +530,165 @@ export default function AdminPage() {
       alert("Failed to delete review.");
     }
   };
+
+  // ── Blog helpers ────────────────────────────────────────────────
+  const slugify = (text: string) =>
+    text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+
+  const openBlogModal = (blog?: any) => {
+    if (blog) {
+      setEditingBlog(blog);
+      setBlogFormData({
+        ...DEFAULT_BLOG_FORM,
+        ...blog,
+        tags: Array.isArray(blog.tags) ? blog.tags : [],
+        sections: Array.isArray(blog.sections) ? blog.sections : [],
+      });
+    } else {
+      setEditingBlog(null);
+      setBlogFormData(DEFAULT_BLOG_FORM);
+    }
+    setBlogTagInput("");
+    setIsBlogModalOpen(true);
+  };
+
+  const handleSaveBlog = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSavingBlog(true);
+    try {
+      const slug = blogFormData.slug || slugify(blogFormData.title);
+      // Filter out empty sections
+      const cleanSections = (blogFormData.sections || []).filter(
+        (s) => s.heading.trim() || s.body.trim()
+      );
+      const payload = {
+        ...blogFormData,
+        slug,
+        sections: cleanSections,
+        updatedAt: serverTimestamp(),
+      };
+      if (editingBlog) {
+        await setDoc(doc(db, "blogs", editingBlog.id), payload, { merge: true });
+      } else {
+        const newRef = doc(collection(db, "blogs"));
+        await setDoc(newRef, { ...payload, createdAt: serverTimestamp() });
+      }
+      setIsBlogModalOpen(false);
+    } catch (err) {
+      console.error("Error saving blog:", err);
+      alert("Failed to save blog post.");
+    } finally {
+      setIsSavingBlog(false);
+    }
+  };
+
+
+  const handleSeedDemoPosts = async () => {
+    if (!confirm("This will add 3 demo blog posts to Firestore. Continue?")) return;
+    const DEMO_POSTS = [
+      {
+        title: "Top 5 Reasons to Trek the Annapurna Circuit",
+        slug: "annapurna-circuit-top-5-reasons",
+        excerpt: "The Annapurna Circuit is consistently ranked among the world's greatest treks. Spanning 160–230 km, it takes trekkers through extraordinary landscapes from subtropical lowlands to high alpine deserts.",
+        image: "/images/hero-nepal.PNG",
+        category: "Trekking Guides",
+        author: "Green Adventure Team",
+        tags: ["Nepal", "Trekking", "Annapurna"],
+        readTime: "6 min read",
+        isFeatured: true,
+        status: "published",
+        sections: [
+          { heading: "Unparalleled Landscape Diversity", body: "No other trek in Nepal offers such a dramatic shift in scenery. In a single journey you pass through lush rhododendron forests, terraced rice paddies, arid Mustang-like plateaus, and glaciated high passes. The sheer variety means every day on trail feels completely different from the last." },
+          { heading: "The Iconic Thorong La Pass (5,416 m)", body: "Crossing Thorong La is a milestone moment — the highest point on the circuit. The sunrise views from the pass over a sea of peaks are genuinely life-altering. Standing above the clouds with prayer flags snapping in the wind, you'll understand why trekkers return to Nepal again and again." },
+          { heading: "Rich Cultural Encounters", body: "The circuit passes through Gurung, Manangi, and Tibetan Buddhist communities. From prayer wheels to yak herders, every village offers authentic cultural immersion. The town of Manang is a high-altitude settlement where locals have lived for centuries." },
+          { heading: "Excellent Tea House Infrastructure", body: "The trail is well-serviced with tea houses offering hot meals, warm lodges, and friendly hosts at every stop. You don't need to carry a tent or cooking equipment — just your personal gear, making it accessible for less experienced trekkers too." },
+          { heading: "Now Is the Best Time to Go", body: "After years of variable weather, the classic October–November and March–April windows are producing reliably clear skies. New infrastructure and responsible tourism initiatives mean the experience is better than ever." },
+        ],
+      },
+      {
+        title: "Altitude Sickness: Prevention, Symptoms & Treatment",
+        slug: "altitude-sickness-prevention-guide",
+        excerpt: "High altitude trekking is one of the most rewarding experiences in the world — but it comes with real risks. Altitude sickness affects thousands of trekkers every year in the Himalayas.",
+        image: "/images/hero-nepal.PNG",
+        category: "Safety",
+        author: "Green Adventure Team",
+        tags: ["Safety", "Health", "High Altitude"],
+        readTime: "7 min read",
+        isFeatured: true,
+        status: "published",
+        sections: [
+          { heading: "What Is Altitude Sickness?", body: "Acute Mountain Sickness (AMS) occurs when you ascend too quickly and your body doesn't have enough time to acclimatize. It can affect anyone — regardless of fitness level or age. The key trigger is speed of ascent, not physical ability." },
+          { heading: "Recognizing the Symptoms", body: "Early symptoms include headache, fatigue, loss of appetite, dizziness, and nausea, appearing within 6–12 hours of arriving at altitude. If symptoms worsen — especially confusion or extreme breathlessness at rest — this is a medical emergency requiring immediate descent." },
+          { heading: "The Golden Rule: Ascend Slowly", body: "The most effective prevention is a slow, gradual ascent. Above 3,000 m, follow the 300 m rule — don't increase your sleeping altitude by more than 300 m per day. Build in acclimatization days every 3 days, where you hike high but sleep low." },
+          { heading: "Hydration and Medications", body: "Drink 3–4 litres of water per day at altitude. Avoid alcohol and sleeping pills during the first few days. Many trekkers take Diamox (acetazolamide) as a preventive measure — consult your doctor before your trip." },
+          { heading: "When to Descend", body: "Never ignore worsening symptoms. If your headache doesn't respond to ibuprofen or you feel confused or unsteady, descend immediately — even at night. A descent of just 300–500 m can make a dramatic difference." },
+        ],
+      },
+      {
+        title: "Bhutan: The Kingdom of Happiness — A Complete Travel Guide",
+        slug: "bhutan-kingdom-happiness-travel-guide",
+        excerpt: "Bhutan, the only carbon-negative country on Earth, offers a travel experience unlike anywhere else. With its high-value, low-impact tourism policy, ancient dzongs, and the majestic Tiger's Nest monastery, every moment here is unforgettable.",
+        image: "/images/hero-bhutan.PNG",
+        category: "Destination Guides",
+        author: "Green Adventure Team",
+        tags: ["Bhutan", "Culture", "Monastery"],
+        readTime: "8 min read",
+        isFeatured: true,
+        status: "published",
+        sections: [
+          { heading: "Why Bhutan Is Unlike Any Other Destination", body: "Bhutan measures success not in GDP, but in Gross National Happiness. This philosophy permeates every aspect of life — from its pristine forests (70% of the country is forested by law) to its preserved traditional architecture that keeps the country visually stunning." },
+          { heading: "The Tiger's Nest Monastery", body: "Paro Taktsang, or Tiger's Nest, is Bhutan's most iconic landmark. Perched 3,120 metres above sea level on a sheer cliff face, this 17th-century monastery seems to defy gravity. The 2–3 hour hike winds through pine forests and past prayer flags — the view is extraordinary." },
+          { heading: "The Sustainable Daily Fee", body: "Bhutan charges a Sustainable Development Fee of $100 USD per person per day. This funds free education, healthcare, and environmental conservation. It's the world's most intelligent tourism model and includes your guide, accommodation, and meals." },
+          { heading: "Best Time to Visit", body: "Spring (March–May) brings rhododendron blooms and clear mountain views. Autumn (September–November) offers the best trekking conditions and famous festivals (tsechus). Avoid the monsoon season (June–August) when trails can be muddy." },
+          { heading: "Essential Cultural Etiquette", body: "Dress modestly when visiting monasteries and dzongs — no shorts or sleeveless tops. Always walk clockwise around stupas and mani walls. Photography inside religious sites is generally prohibited. Bhutanese people are warm and welcoming." },
+        ],
+      },
+    ];
+    try {
+      for (const post of DEMO_POSTS) {
+        const newRef = doc(collection(db, "blogs"));
+        await setDoc(newRef, { ...post, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
+      }
+      alert("✅ 3 demo blog posts added successfully!");
+    } catch (err) {
+      console.error(err);
+      alert("Failed to seed posts. Make sure you are logged in.");
+    }
+  };
+
+  const handleDeleteBlog = async (id: string) => {
+
+
+    if (!confirm("Permanently delete this blog post?")) return;
+    setIsDeletingBlog(id);
+    try {
+      await deleteDoc(doc(db, "blogs", id));
+    } catch (err) {
+      console.error("Error deleting blog:", err);
+      alert("Failed to delete blog post.");
+    } finally {
+      setIsDeletingBlog(null);
+    }
+  };
+
+  const handleBlogImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingBlogImage(true);
+    try {
+      const storageRef = ref(storage, `blogs/${Date.now()}_${file.name}`);
+      const snap = await uploadBytes(storageRef, file);
+      const url = await getDownloadURL(snap.ref);
+      setBlogFormData((prev) => ({ ...prev, image: url }));
+    } catch (err) {
+      console.error("Error uploading blog image:", err);
+      alert("Image upload failed.");
+    } finally {
+      setUploadingBlogImage(false);
+    }
+  };
+
+
 
   const handleAddAdmin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -497,6 +785,88 @@ export default function AdminPage() {
       ...prev,
       features: prev.features.filter((_, i) => i !== index),
     }));
+  };
+
+  const handleSavePagesHero = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSavingPagesHero(true);
+    try {
+      await setDoc(doc(db, "settings", "pages_hero"), pagesHero);
+      alert("Pages Hero saved successfully!");
+    } catch (error) {
+      console.error("Error saving pages hero", error);
+      alert("Failed to save. Make sure you have admin permission.");
+    } finally {
+      setIsSavingPagesHero(false);
+    }
+  };
+
+  const handleSaveFooter = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSavingFooter(true);
+    try {
+      await setDoc(doc(db, "settings", "footer_settings"), footerSettings);
+      alert("Footer settings saved!");
+    } catch (error) {
+      console.error("Error saving footer settings", error);
+      alert("Failed to save. Check admin permissions.");
+    } finally {
+      setIsSavingFooter(false);
+    }
+  };
+
+  const handlePagesHeroImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, section: "destinations" | "tours" | "trekking" | "blog") => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 4.5 * 1024 * 1024) { alert("File too large! Max 4.5MB."); return; }
+    setUploadingPagesHeroImage(section);
+    try {
+      const res = await fetch(`/api/upload?filename=${encodeURIComponent(file.name)}`, { method: 'POST', body: file });
+      const data = await res.json();
+      if (res.ok && data.url) {
+        const oldUrl = (pagesHero as any)[section]?.bgImage;
+        if (oldUrl) await deleteBlobImage(oldUrl);
+        setPagesHero(prev => ({ ...prev, [section]: { ...(prev as any)[section], bgImage: data.url } }));
+      } else throw new Error(data.error || `Status ${res.status}`);
+    } catch (err: any) {
+      alert("Upload failed: " + err.message);
+    } finally {
+      setUploadingPagesHeroImage(null);
+    }
+  };
+
+  const handleSaveAboutPage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSavingAbout(true);
+    try {
+      await setDoc(doc(db, "settings", "about_page"), { ...aboutPage, featuredTestimonialId: selectedTestimonialId }, { merge: true });
+      alert("About Page saved successfully!");
+    } catch (error) {
+      console.error("Error saving about page", error);
+      alert("Failed to save. Make sure you have admin permission.");
+    } finally {
+      setIsSavingAbout(false);
+    }
+  };
+
+  const handleAboutImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, field: "heroImage" | "storyImage") => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 4.5 * 1024 * 1024) { alert("File too large! Max 4.5MB."); return; }
+    setUploadingAboutImage(field);
+    try {
+      const res = await fetch(`/api/upload?filename=${encodeURIComponent(file.name)}`, { method: 'POST', body: file });
+      const data = await res.json();
+      if (res.ok && data.url) {
+        const oldUrl = (aboutPage as any)[field];
+        if (oldUrl) await deleteBlobImage(oldUrl);
+        setAboutPage(prev => ({ ...prev, [field]: data.url }));
+      } else throw new Error(data.error || `Status ${res.status}`);
+    } catch (err: any) {
+      alert("Upload failed: " + err.message);
+    } finally {
+      setUploadingAboutImage(null);
+    }
   };
 
   const handleRemoveAdmin = async (email: string) => {
@@ -670,10 +1040,83 @@ export default function AdminPage() {
       <div className="fixed top-[-10%] left-[-10%] w-[40%] h-[40%] bg-brand-600/20 rounded-full blur-[120px] pointer-events-none"></div>
       <div className="fixed bottom-[-10%] right-[-10%] w-[30%] h-[30%] bg-blue-600/10 rounded-full blur-[100px] pointer-events-none"></div>
 
+      {/* Mobile Sidebar Overlay */}
+      {mobileSidebarOpen && (
+        <div
+          className="fixed inset-0 z-[60] bg-black/70 backdrop-blur-sm lg:hidden"
+          onClick={() => setMobileSidebarOpen(false)}
+        />
+      )}
+
+      {/* Mobile Slide-in Sidebar */}
+      <div className={`fixed top-0 left-0 h-full w-72 z-[70] bg-[#0a1a0a] border-r border-white/10 shadow-2xl transform transition-transform duration-300 ease-in-out lg:hidden flex flex-col ${
+        mobileSidebarOpen ? "translate-x-0" : "-translate-x-full"
+      }`}>
+        {/* Sidebar Header */}
+        <div className="flex items-center justify-between p-5 border-b border-white/10">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 bg-gradient-to-br from-brand-400 to-brand-600 rounded-xl flex items-center justify-center">
+              <ShieldCheck className="text-white w-4 h-4" />
+            </div>
+            <span className="font-bold text-white text-sm">Admin Console</span>
+          </div>
+          <button onClick={() => setMobileSidebarOpen(false)} className="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center text-white/60 hover:text-white transition-all">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+        {/* Sidebar Nav Items */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-1">
+          {([
+            { id: "contacts", icon: <Mail className="w-4 h-4" />, label: "Contact Requests", badge: contacts.filter(c => c.status !== "processed").length || 0 },
+            { id: "access", icon: <Users className="w-4 h-4" />, label: "Admin Access" },
+            { id: "regions", icon: <Navigation className="w-4 h-4" />, label: "Destinations" },
+            { id: "trips", icon: <Map className="w-4 h-4" />, label: "Destinations & Trips" },
+            { id: "settings", icon: <Settings className="w-4 h-4" />, label: "Contact Info" },
+            { id: "reviews", icon: <MessageSquare className="w-4 h-4" />, label: "Client Reviews", badge: reviews.filter(r => r.status === "pending").length || 0 },
+            { id: "hero", icon: <Sparkles className="w-4 h-4" />, label: "Hero Settings" },
+            { id: "whyChoose", icon: <Award className="w-4 h-4" />, label: "Why Choose Us" },
+            { id: "pagesHero", icon: <MapPin className="w-4 h-4" />, label: "Pages Hero" },
+            { id: "aboutPage", icon: <User className="w-4 h-4" />, label: "About Page" },
+            { id: "blog", icon: <BookOpen className="w-4 h-4" />, label: "Blog Posts", badge: blogs.length || 0 },
+          ] as { id: string; icon: React.ReactNode; label: string; badge?: number }[]).map(item => (
+            <button
+              key={item.id}
+              onClick={() => { setActiveTab(item.id as any); setMobileSidebarOpen(false); }}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all text-sm ${
+                activeTab === item.id
+                  ? "bg-gradient-to-r from-brand-500/20 to-transparent text-brand-400 border border-brand-500/30"
+                  : "text-white/60 hover:bg-white/5 hover:text-white border border-transparent"
+              }`}
+            >
+              {item.icon}
+              {item.label}
+              {!!(item.badge && item.badge > 0) && (
+                <span className="ml-auto bg-brand-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">{item.badge}</span>
+              )}
+            </button>
+          ))}
+        </div>
+        <div className="p-4 border-t border-white/10">
+          <button onClick={logout} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm text-red-400 hover:bg-red-500/10 border border-transparent hover:border-red-500/20 transition-all">
+            <LogOut className="w-4 h-4" /> Logout
+          </button>
+        </div>
+      </div>
+
       {/* Header */}
       <header className="border-b border-white/5 bg-black/40 backdrop-blur-2xl sticky top-0 z-50">
         <div className="container mx-auto px-6 h-24 flex items-center justify-between">
           <div className="flex items-center gap-4">
+            {/* Mobile hamburger */}
+            <button
+              onClick={() => setMobileSidebarOpen(true)}
+              className="lg:hidden w-10 h-10 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl flex items-center justify-center text-white/70 hover:text-white transition-all"
+              aria-label="Open navigation"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
             <div className="w-12 h-12 bg-gradient-to-br from-brand-400 to-brand-600 rounded-2xl flex items-center justify-center shadow-lg shadow-brand-500/20">
               <ShieldCheck className="text-white w-6 h-6" />
             </div>
@@ -719,8 +1162,8 @@ export default function AdminPage() {
       {/* Main Layout */}
       <div className="flex-1 container mx-auto px-6 py-10 flex flex-col lg:flex-row gap-10 relative z-10">
         
-        {/* Sidebar Nav */}
-        <div className="w-full lg:w-72 shrink-0 flex flex-col gap-3">
+        {/* Sidebar Nav — desktop only; mobile uses the slide-in drawer */}
+        <div className="hidden lg:flex w-full lg:w-72 shrink-0 flex-col gap-3">
           <button 
             onClick={() => setActiveTab("contacts")}
             className={`w-full flex items-center gap-4 px-5 py-4 rounded-2xl font-medium transition-all ${
@@ -825,6 +1268,47 @@ export default function AdminPage() {
           >
             <Award className="w-5 h-5" />
             Why Choose Us
+          </button>
+
+          <button
+            onClick={() => setActiveTab("pagesHero")}
+            className={`w-full flex items-center gap-4 px-5 py-4 rounded-2xl font-medium transition-all ${
+              activeTab === "pagesHero"
+                ? "bg-gradient-to-r from-brand-500/20 to-transparent text-brand-400 border border-brand-500/30 shadow-[inset_4px_0_0_0_rgba(34,197,94,1)]"
+                : "text-white/60 hover:bg-white/5 hover:text-white border border-transparent"
+            }`}
+          >
+            <MapPin className="w-5 h-5" />
+            Pages Hero
+          </button>
+
+          <button
+            onClick={() => setActiveTab("aboutPage")}
+            className={`w-full flex items-center gap-4 px-5 py-4 rounded-2xl font-medium transition-all ${
+              activeTab === "aboutPage"
+                ? "bg-gradient-to-r from-brand-500/20 to-transparent text-brand-400 border border-brand-500/30 shadow-[inset_4px_0_0_0_rgba(34,197,94,1)]"
+                : "text-white/60 hover:bg-white/5 hover:text-white border border-transparent"
+            }`}
+          >
+            <User className="w-5 h-5" />
+            About Page
+          </button>
+
+          <button
+            onClick={() => setActiveTab("blog")}
+            className={`w-full flex items-center gap-4 px-5 py-4 rounded-2xl font-medium transition-all ${
+              activeTab === "blog"
+                ? "bg-gradient-to-r from-brand-500/20 to-transparent text-brand-400 border border-brand-500/30 shadow-[inset_4px_0_0_0_rgba(34,197,94,1)]"
+                : "text-white/60 hover:bg-white/5 hover:text-white border border-transparent"
+            }`}
+          >
+            <BookOpen className="w-5 h-5" />
+            Blog Posts
+            {blogs.length > 0 && (
+              <span className="ml-auto bg-white/10 text-white/60 text-xs font-bold px-2 py-0.5 rounded-full">
+                {blogs.length}
+              </span>
+            )}
           </button>
         </div>
 
@@ -1938,7 +2422,825 @@ export default function AdminPage() {
             </div>
           )}
 
+          {/* PAGES HERO TAB */}
+          {activeTab === "pagesHero" && (
+            <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div>
+                <h2 className="text-3xl font-bold text-white tracking-tight">Pages Hero</h2>
+                <p className="text-white/50 mt-1">Manage the hero content and backgrounds for Destinations, Tours, Trekking, and Blog pages.</p>
+              </div>
+
+              <div className="flex items-center gap-2 bg-white/5 border border-white/10 p-1 rounded-xl w-fit flex-wrap">
+                {(["destinations", "tours", "trekking", "blog", "footer"] as const).map(section => (
+                  <button
+                    key={section}
+                    onClick={() => setActivePagesHeroSection(section)}
+                    className={`px-6 py-3 rounded-lg text-sm font-bold transition-colors capitalize ${
+                      activePagesHeroSection === section ? "bg-brand-500 text-white shadow-lg" : "text-white/50 hover:text-white/80"
+                    }`}
+                  >
+                    {section === "footer" ? "🔗 Footer" : section}
+                  </button>
+                ))}
+              </div>
+
+              {/* Footer Settings sub-tab */}
+              {activePagesHeroSection === "footer" ? (
+                <div className="bg-white/5 border border-white/10 rounded-[2rem] overflow-hidden backdrop-blur-md">
+                  <form onSubmit={handleSaveFooter} className="p-8 space-y-8">
+                    <div className="space-y-6">
+                      <div>
+                        <label className="block text-sm font-medium text-white/60 mb-2">Tagline (large heading)</label>
+                        <input
+                          type="text"
+                          value={footerSettings.tagline}
+                          onChange={e => setFooterSettings(p => ({ ...p, tagline: e.target.value }))}
+                          className="w-full bg-black/60 border border-white/10 rounded-xl px-5 py-4 text-white focus:outline-none focus:border-brand-500"
+                          placeholder="Ready to embark on the adventure of a lifetime?"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-white/60 mb-2">Short Description</label>
+                        <textarea
+                          rows={3}
+                          value={footerSettings.description}
+                          onChange={e => setFooterSettings(p => ({ ...p, description: e.target.value }))}
+                          className="w-full bg-black/60 border border-white/10 rounded-xl px-5 py-4 text-white focus:outline-none focus:border-brand-500 resize-none"
+                          placeholder="A short paragraph about your company…"
+                        />
+                      </div>
+
+                      <div className="pt-2">
+                        <label className="block text-sm font-bold text-white/70 mb-1 uppercase tracking-widest">Social Media Links</label>
+                        <p className="text-xs text-white/40 mb-4">Paste the full URL for each platform. Leave blank to use the default # placeholder.</p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          {([
+                            { key: "facebook", label: "Facebook", placeholder: "https://facebook.com/yourpage" },
+                            { key: "twitter", label: "Twitter / X", placeholder: "https://twitter.com/yourhandle" },
+                            { key: "instagram", label: "Instagram", placeholder: "https://instagram.com/yourhandle" },
+                            { key: "youtube", label: "YouTube", placeholder: "https://youtube.com/@yourchannel" },
+                            { key: "tiktok", label: "TikTok (optional)", placeholder: "https://tiktok.com/@yourhandle" },
+                          ] as { key: keyof typeof footerSettings; label: string; placeholder: string }[]).map(({ key, label, placeholder }) => (
+                            <div key={key}>
+                              <label className="block text-xs font-semibold text-white/50 mb-1">{label}</label>
+                              <input
+                                type="url"
+                                value={(footerSettings as any)[key]}
+                                onChange={e => setFooterSettings(p => ({ ...p, [key]: e.target.value }))}
+                                placeholder={placeholder}
+                                className="w-full bg-black/60 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-brand-500 placeholder:text-white/20"
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="pt-6 border-t border-white/10 flex justify-end">
+                      <button
+                        type="submit"
+                        disabled={isSavingFooter}
+                        className="bg-brand-600 hover:bg-brand-500 disabled:opacity-50 text-white font-bold py-4 px-8 rounded-xl flex items-center justify-center gap-2 transition-all hover:scale-[1.02] active:scale-[0.98] shadow-xl"
+                      >
+                        {isSavingFooter ? (
+                          <><div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Saving...</>
+                        ) : (
+                          <><CheckCircle className="w-5 h-5" /> Save Footer Settings</>
+                        )}
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              ) : (
+              <div className="bg-white/5 border border-white/10 rounded-[2rem] overflow-hidden backdrop-blur-md">
+                <form onSubmit={handleSavePagesHero} className="p-8 space-y-8">
+                  <div className="space-y-6">
+                    <div>
+                      <label className="block text-sm font-medium text-white/60 mb-2 capitalize">{activePagesHeroSection} Title</label>
+                      <input
+                        type="text"
+                        value={(pagesHero as any)[activePagesHeroSection]?.title || ""}
+                        onChange={(e) => setPagesHero(prev => ({ ...prev, [activePagesHeroSection]: { ...(prev as any)[activePagesHeroSection], title: e.target.value } }))}
+                        className="w-full bg-black/60 border border-white/10 rounded-xl px-5 py-4 text-white focus:outline-none focus:border-brand-500"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-white/60 mb-2 capitalize">{activePagesHeroSection} Subtitle</label>
+                      <textarea
+                        value={(pagesHero as any)[activePagesHeroSection]?.subtitle || ""}
+                        onChange={(e) => setPagesHero(prev => ({ ...prev, [activePagesHeroSection]: { ...(prev as any)[activePagesHeroSection], subtitle: e.target.value } }))}
+                        className="w-full bg-black/60 border border-white/10 rounded-xl px-5 py-4 text-white focus:outline-none focus:border-brand-500 min-h-[100px]"
+                        required
+                      />
+                    </div>
+                    
+                    {/* ── Hero Tags Chip Selector ── */}
+                    <div>
+                      <label className="block text-sm font-bold text-white/70 mb-1 uppercase tracking-widest">
+                        Hero Tags
+                      </label>
+                      <p className="text-xs text-white/40 mb-3">Tags that appear floating on the hero image. Click to toggle.</p>
+                      <div className="bg-black/40 border border-white/10 rounded-2xl p-5 space-y-4">
+                        {/* Suggestion pills */}
+                        <div className="flex flex-wrap gap-2">
+                          {(PAGES_HERO_TAG_SUGGESTIONS[activePagesHeroSection] || []).map((suggestion) => {
+                            const currentTags: string[] = (pagesHero as any)[activePagesHeroSection]?.tags || [];
+                            const isSelected = currentTags.includes(suggestion);
+                            return isSelected ? (
+                              <span key={suggestion} className="inline-flex items-center gap-1 pl-4 pr-2 py-1.5 rounded-full text-xs font-bold bg-brand-500 border border-brand-400 text-white shadow-lg shadow-brand-500/30">
+                                {suggestion}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const arr = currentTags.filter((t) => t !== suggestion);
+                                    setPagesHero(prev => ({ ...prev, [activePagesHeroSection]: { ...(prev as any)[activePagesHeroSection], tags: arr } }));
+                                  }}
+                                  className="ml-0.5 w-4 h-4 rounded-full bg-white/20 hover:bg-red-500/80 flex items-center justify-center transition-colors"
+                                >
+                                  <X className="w-2.5 h-2.5" />
+                                </button>
+                              </span>
+                            ) : (
+                              <button
+                                key={suggestion}
+                                type="button"
+                                onClick={() => {
+                                  const arr = [...currentTags, suggestion];
+                                  setPagesHero(prev => ({ ...prev, [activePagesHeroSection]: { ...(prev as any)[activePagesHeroSection], tags: arr } }));
+                                }}
+                                className="px-4 py-1.5 rounded-full text-xs font-bold transition-all duration-200 border bg-white/5 border-white/15 text-white/50 hover:border-white/30 hover:text-white/80 hover:bg-white/10"
+                              >
+                                + {suggestion}
+                              </button>
+                            );
+                          })}
+                        </div>
+                        {/* Custom tags (those not in suggestions) */}
+                        {((pagesHero as any)[activePagesHeroSection]?.tags || []).filter((t: string) => !(PAGES_HERO_TAG_SUGGESTIONS[activePagesHeroSection] || []).includes(t)).length > 0 && (
+                          <div className="flex flex-wrap gap-2 pt-2 border-t border-white/10">
+                            <span className="text-white/30 text-xs self-center">Custom:</span>
+                            {((pagesHero as any)[activePagesHeroSection]?.tags || []).filter((t: string) => !(PAGES_HERO_TAG_SUGGESTIONS[activePagesHeroSection] || []).includes(t)).map((tag: string) => (
+                              <span key={tag} className="inline-flex items-center gap-1 pl-3 pr-2 py-1 rounded-full bg-brand-500/20 border border-brand-500/40 text-brand-300 text-xs font-semibold">
+                                {tag}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const arr = ((pagesHero as any)[activePagesHeroSection]?.tags || []).filter((t2: string) => t2 !== tag);
+                                    setPagesHero(prev => ({ ...prev, [activePagesHeroSection]: { ...(prev as any)[activePagesHeroSection], tags: arr } }));
+                                  }}
+                                  className="ml-0.5 w-4 h-4 rounded-full bg-white/20 hover:bg-red-500/80 flex items-center justify-center transition-colors"
+                                >
+                                  <X className="w-2.5 h-2.5" />
+                                </button>
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                        {/* Custom tag input */}
+                        <div className="flex items-center gap-2 pt-2 border-t border-white/10">
+                          <input
+                            type="text"
+                            placeholder="Add a custom tag…"
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                e.preventDefault();
+                                const val = (e.target as HTMLInputElement).value.trim();
+                                if (!val) return;
+                                const currentTags: string[] = (pagesHero as any)[activePagesHeroSection]?.tags || [];
+                                if (!currentTags.includes(val)) {
+                                  setPagesHero(prev => ({ ...prev, [activePagesHeroSection]: { ...(prev as any)[activePagesHeroSection], tags: [...currentTags, val] } }));
+                                }
+                                (e.target as HTMLInputElement).value = "";
+                              }
+                            }}
+                            className="flex-1 bg-black/60 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-brand-500 placeholder:text-white/30"
+                          />
+                          <span className="text-white/30 text-xs">Press Enter</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* ── Category Tabs Chip Selector ── */}
+                    <div>
+                      <label className="block text-sm font-bold text-white/70 mb-1 uppercase tracking-widest">
+                        Category Tabs
+                      </label>
+                      <p className="text-xs text-white/40 mb-3">These override the auto-generated filter tabs on the page. Click to toggle.</p>
+                      <div className="bg-black/40 border border-white/10 rounded-2xl p-5 space-y-4">
+                        {/* Suggestion pills */}
+                        <div className="flex flex-wrap gap-2">
+                          {(PAGES_HERO_TAB_SUGGESTIONS[activePagesHeroSection] || []).map((suggestion) => {
+                            const currentTabs: string[] = (pagesHero as any)[activePagesHeroSection]?.tabs || [];
+                            const isSelected = currentTabs.includes(suggestion);
+                            return isSelected ? (
+                              <span key={suggestion} className="inline-flex items-center gap-1 pl-4 pr-2 py-1.5 rounded-full text-xs font-bold bg-emerald-500 border border-emerald-400 text-white shadow-lg shadow-emerald-500/30">
+                                {suggestion}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const arr = currentTabs.filter((t) => t !== suggestion);
+                                    setPagesHero(prev => ({ ...prev, [activePagesHeroSection]: { ...(prev as any)[activePagesHeroSection], tabs: arr } }));
+                                  }}
+                                  className="ml-0.5 w-4 h-4 rounded-full bg-white/20 hover:bg-red-500/80 flex items-center justify-center transition-colors"
+                                >
+                                  <X className="w-2.5 h-2.5" />
+                                </button>
+                              </span>
+                            ) : (
+                              <button
+                                key={suggestion}
+                                type="button"
+                                onClick={() => {
+                                  const arr = [...currentTabs, suggestion];
+                                  setPagesHero(prev => ({ ...prev, [activePagesHeroSection]: { ...(prev as any)[activePagesHeroSection], tabs: arr } }));
+                                }}
+                                className="px-4 py-1.5 rounded-full text-xs font-bold transition-all duration-200 border bg-white/5 border-white/15 text-white/50 hover:border-white/30 hover:text-white/80 hover:bg-white/10"
+                              >
+                                + {suggestion}
+                              </button>
+                            );
+                          })}
+                        </div>
+                        {/* Custom tabs (those not in suggestions) */}
+                        {((pagesHero as any)[activePagesHeroSection]?.tabs || []).filter((t: string) => !(PAGES_HERO_TAB_SUGGESTIONS[activePagesHeroSection] || []).includes(t)).length > 0 && (
+                          <div className="flex flex-wrap gap-2 pt-2 border-t border-white/10">
+                            <span className="text-white/30 text-xs self-center">Custom:</span>
+                            {((pagesHero as any)[activePagesHeroSection]?.tabs || []).filter((t: string) => !(PAGES_HERO_TAB_SUGGESTIONS[activePagesHeroSection] || []).includes(t)).map((tab: string) => (
+                              <span key={tab} className="inline-flex items-center gap-1 pl-3 pr-2 py-1 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-semibold">
+                                {tab}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const arr = ((pagesHero as any)[activePagesHeroSection]?.tabs || []).filter((t2: string) => t2 !== tab);
+                                    setPagesHero(prev => ({ ...prev, [activePagesHeroSection]: { ...(prev as any)[activePagesHeroSection], tabs: arr } }));
+                                  }}
+                                  className="ml-0.5 w-4 h-4 rounded-full bg-white/20 hover:bg-red-500/80 flex items-center justify-center transition-colors"
+                                >
+                                  <X className="w-2.5 h-2.5" />
+                                </button>
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                        {/* Custom tab input */}
+                        <div className="flex items-center gap-2 pt-2 border-t border-white/10">
+                          <input
+                            type="text"
+                            placeholder="Add a custom tab…"
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                e.preventDefault();
+                                const val = (e.target as HTMLInputElement).value.trim();
+                                if (!val) return;
+                                const currentTabs: string[] = (pagesHero as any)[activePagesHeroSection]?.tabs || [];
+                                if (!currentTabs.includes(val)) {
+                                  setPagesHero(prev => ({ ...prev, [activePagesHeroSection]: { ...(prev as any)[activePagesHeroSection], tabs: [...currentTabs, val] } }));
+                                }
+                                (e.target as HTMLInputElement).value = "";
+                              }
+                            }}
+                            className="flex-1 bg-black/60 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-brand-500 placeholder:text-white/30"
+                          />
+                          <span className="text-white/30 text-xs">Press Enter</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-white/60 mb-2 capitalize">{activePagesHeroSection} Background Image</label>
+                      <div className="flex items-center gap-4">
+                        <input
+                          type="url"
+                          value={(pagesHero as any)[activePagesHeroSection]?.bgImage || ""}
+                          onChange={(e) => setPagesHero(prev => ({ ...prev, [activePagesHeroSection]: { ...(prev as any)[activePagesHeroSection], bgImage: e.target.value } }))}
+                          placeholder="Image URL..."
+                          className="flex-1 bg-black/60 border border-white/10 rounded-xl px-5 py-4 text-white focus:outline-none focus:border-brand-500"
+                        />
+                        <div className="relative shrink-0">
+                          <input 
+                            type="file" 
+                            accept="image/*" 
+                            onChange={(e) => handlePagesHeroImageUpload(e, activePagesHeroSection)}
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                            disabled={uploadingPagesHeroImage === activePagesHeroSection}
+                          />
+                          <button 
+                            type="button" 
+                            className="bg-white/10 hover:bg-white/20 text-white font-medium py-4 px-6 rounded-xl flex items-center gap-2 border border-white/10 transition-colors disabled:opacity-50"
+                            disabled={uploadingPagesHeroImage === activePagesHeroSection}
+                          >
+                            {uploadingPagesHeroImage === activePagesHeroSection ? (
+                              <><div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> Uploading...</>
+                            ) : (
+                              <><Upload className="w-5 h-5" /> Upload File</>
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                      
+                      {(pagesHero as any)[activePagesHeroSection]?.bgImage && (
+                        <div className="mt-4 relative h-48 w-full rounded-2xl overflow-hidden border border-white/10 bg-black/50">
+                          <Image src={(pagesHero as any)[activePagesHeroSection].bgImage} alt={`${activePagesHeroSection} Hero`} fill className="object-cover" />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="pt-6 border-t border-white/10 flex justify-end">
+                    <button
+                      type="submit"
+                      disabled={isSavingPagesHero}
+                      className="bg-brand-600 hover:bg-brand-500 disabled:opacity-50 text-white font-bold py-4 px-8 rounded-xl flex items-center justify-center gap-2 transition-all hover:scale-[1.02] active:scale-[0.98] shadow-xl"
+                    >
+                      {isSavingPagesHero ? (
+                        <><div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> Saving...</>
+                      ) : (
+                        <><CheckCircle className="w-5 h-5" /> Save Pages Hero</>
+                      )}
+                    </button>
+                  </div>
+                </form>
+              </div>
+              )}
+            </div>
+          )}
+
+          {/* ABOUT PAGE TAB */}
+          {activeTab === "aboutPage" && (
+            <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div>
+                <h2 className="text-3xl font-bold text-white tracking-tight">About Page</h2>
+                <p className="text-white/50 mt-1">Manage the content, story, features, and imagery for the About Us page.</p>
+              </div>
+
+              <div className="bg-white/5 border border-white/10 rounded-[2rem] overflow-hidden backdrop-blur-md">
+                <form onSubmit={handleSaveAboutPage} className="p-8 space-y-12">
+                  
+                  {/* Hero Section */}
+                  <div className="space-y-6">
+                    <h3 className="font-bold text-xl text-white border-b border-white/10 pb-2">Hero Section</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <label className="block text-sm font-medium text-white/60 mb-2">Hero Title</label>
+                        <input
+                          type="text"
+                          value={aboutPage.heroTitle}
+                          onChange={(e) => setAboutPage({ ...aboutPage, heroTitle: e.target.value })}
+                          className="w-full bg-black/60 border border-white/10 rounded-xl px-5 py-4 text-white focus:outline-none focus:border-brand-500"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-white/60 mb-2">Hero Subtitle</label>
+                        <textarea
+                          value={aboutPage.heroSubtitle}
+                          onChange={(e) => setAboutPage({ ...aboutPage, heroSubtitle: e.target.value })}
+                          className="w-full bg-black/60 border border-white/10 rounded-xl px-5 py-4 text-white focus:outline-none focus:border-brand-500 h-[56px] resize-none"
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-white/60 mb-2">Hero Image</label>
+                      <div className="flex items-center gap-4">
+                        <input
+                          type="url"
+                          value={aboutPage.heroImage}
+                          onChange={(e) => setAboutPage({ ...aboutPage, heroImage: e.target.value })}
+                          placeholder="Image URL..."
+                          className="flex-1 bg-black/60 border border-white/10 rounded-xl px-5 py-4 text-white focus:outline-none focus:border-brand-500"
+                        />
+                        <div className="relative shrink-0">
+                          <input 
+                            type="file" 
+                            accept="image/*" 
+                            onChange={(e) => handleAboutImageUpload(e, "heroImage")}
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                            disabled={uploadingAboutImage === "heroImage"}
+                          />
+                          <button 
+                            type="button" 
+                            className="bg-white/10 hover:bg-white/20 text-white font-medium py-4 px-6 rounded-xl flex items-center gap-2 border border-white/10 transition-colors disabled:opacity-50"
+                            disabled={uploadingAboutImage === "heroImage"}
+                          >
+                            {uploadingAboutImage === "heroImage" ? "Uploading..." : <><Upload className="w-5 h-5" /> Upload File</>}
+                          </button>
+                        </div>
+                      </div>
+                      {aboutPage.heroImage && (
+                        <div className="mt-4 relative h-48 w-full rounded-2xl overflow-hidden border border-white/10 bg-black/50">
+                          <Image src={aboutPage.heroImage} alt="Hero" fill className="object-cover" />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Story Section */}
+                  <div className="space-y-6">
+                    <h3 className="font-bold text-xl text-white border-b border-white/10 pb-2">Our Story</h3>
+                    <div>
+                      <label className="block text-sm font-medium text-white/60 mb-2">Story Title</label>
+                      <input
+                        type="text"
+                        value={aboutPage.storyTitle}
+                        onChange={(e) => setAboutPage({ ...aboutPage, storyTitle: e.target.value })}
+                        className="w-full bg-black/60 border border-white/10 rounded-xl px-5 py-4 text-white focus:outline-none focus:border-brand-500"
+                        required
+                      />
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <label className="block text-sm font-medium text-white/60 mb-2">Story Text 1</label>
+                        <textarea
+                          value={aboutPage.storyText1}
+                          onChange={(e) => setAboutPage({ ...aboutPage, storyText1: e.target.value })}
+                          className="w-full bg-black/60 border border-white/10 rounded-xl px-5 py-4 text-white focus:outline-none focus:border-brand-500 min-h-[150px]"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-white/60 mb-2">Story Text 2</label>
+                        <textarea
+                          value={aboutPage.storyText2}
+                          onChange={(e) => setAboutPage({ ...aboutPage, storyText2: e.target.value })}
+                          className="w-full bg-black/60 border border-white/10 rounded-xl px-5 py-4 text-white focus:outline-none focus:border-brand-500 min-h-[150px]"
+                          required
+                        />
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-white/60 mb-2">Story Side Image</label>
+                      <div className="flex items-center gap-4">
+                        <input
+                          type="url"
+                          value={aboutPage.storyImage}
+                          onChange={(e) => setAboutPage({ ...aboutPage, storyImage: e.target.value })}
+                          placeholder="Image URL..."
+                          className="flex-1 bg-black/60 border border-white/10 rounded-xl px-5 py-4 text-white focus:outline-none focus:border-brand-500"
+                        />
+                        <div className="relative shrink-0">
+                          <input 
+                            type="file" 
+                            accept="image/*" 
+                            onChange={(e) => handleAboutImageUpload(e, "storyImage")}
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                            disabled={uploadingAboutImage === "storyImage"}
+                          />
+                          <button 
+                            type="button" 
+                            className="bg-white/10 hover:bg-white/20 text-white font-medium py-4 px-6 rounded-xl flex items-center gap-2 border border-white/10 transition-colors disabled:opacity-50"
+                            disabled={uploadingAboutImage === "storyImage"}
+                          >
+                            {uploadingAboutImage === "storyImage" ? "Uploading..." : <><Upload className="w-5 h-5" /> Upload File</>}
+                          </button>
+                        </div>
+                      </div>
+                      {aboutPage.storyImage && (
+                        <div className="mt-4 relative h-48 w-full md:w-1/2 rounded-2xl overflow-hidden border border-white/10 bg-black/50">
+                          <Image src={aboutPage.storyImage} alt="Story" fill className="object-cover" />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Features List */}
+                  <div className="space-y-4">
+                    <h3 className="font-bold text-xl text-white border-b border-white/10 pb-2">Bullet Features</h3>
+                    <div className="space-y-3">
+                      {aboutPage.features.map((feature, i) => (
+                        <div key={i} className="flex items-center gap-3">
+                          <input
+                            type="text"
+                            value={feature}
+                            onChange={(e) => {
+                              const newFeatures = [...aboutPage.features];
+                              newFeatures[i] = e.target.value;
+                              setAboutPage({ ...aboutPage, features: newFeatures });
+                            }}
+                            className="flex-1 bg-black/60 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-brand-500"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const newFeatures = aboutPage.features.filter((_, idx) => idx !== i);
+                              setAboutPage({ ...aboutPage, features: newFeatures });
+                            }}
+                            className="p-3 bg-red-500/10 text-red-400 hover:bg-red-500/20 rounded-lg transition-colors"
+                          >
+                            <Trash2 className="w-5 h-5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex items-center gap-3 pt-2">
+                      <input
+                        type="text"
+                        value={newAboutFeature}
+                        onChange={(e) => setNewAboutFeature(e.target.value)}
+                        placeholder="Add new feature..."
+                        className="flex-1 bg-black/40 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-brand-500"
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            if (newAboutFeature.trim()) {
+                              setAboutPage({ ...aboutPage, features: [...aboutPage.features, newAboutFeature.trim()] });
+                              setNewAboutFeature("");
+                            }
+                          }
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (newAboutFeature.trim()) {
+                            setAboutPage({ ...aboutPage, features: [...aboutPage.features, newAboutFeature.trim()] });
+                            setNewAboutFeature("");
+                          }
+                        }}
+                        className="p-3 bg-brand-500/20 text-brand-400 hover:bg-brand-500/30 rounded-lg transition-colors"
+                      >
+                        <Plus className="w-5 h-5" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Featured Testimonial */}
+                  <div className="space-y-4">
+                    <h3 className="font-bold text-xl text-white border-b border-white/10 pb-2">Featured Testimonial</h3>
+                    <p className="text-white/50 text-sm">Choose one client review to feature on the About page story section.</p>
+
+                    {/* Current Selection Preview */}
+                    {selectedTestimonialId && reviews.find(r => r.id === selectedTestimonialId) ? (() => {
+                      const t = reviews.find(r => r.id === selectedTestimonialId);
+                      return (
+                        <div className="relative bg-black/40 border border-brand-500/30 rounded-2xl p-5">
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-1 mb-2">
+                                {[...Array(t.rating || 5)].map((_: any, j: number) => (
+                                  <svg key={j} className="w-4 h-4 text-yellow-400 fill-yellow-400" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                                ))}
+                              </div>
+                              <p className="text-white/80 text-sm leading-relaxed">&ldquo;{t.message}&rdquo;</p>
+                              <p className="text-brand-400 text-xs font-bold mt-2 uppercase tracking-wider">— {t.name || "Verified Traveler"}</p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setSelectedTestimonialId("")}
+                              className="p-1.5 text-white/40 hover:text-red-400 transition-colors"
+                              title="Remove selection"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                          <span className="absolute top-3 right-10 text-[10px] bg-brand-500/20 text-brand-400 border border-brand-500/30 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">Selected</span>
+                        </div>
+                      );
+                    })() : (
+                      <div className="bg-black/20 border border-white/10 border-dashed rounded-2xl p-6 text-center text-white/30 text-sm">
+                        No testimonial selected — default text will be shown.
+                      </div>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={() => setShowPickTestimonialModal(true)}
+                      className="inline-flex items-center gap-2 px-5 py-3 bg-white/10 hover:bg-white/20 border border-white/10 text-white font-semibold rounded-xl transition-colors"
+                    >
+                      <MessageSquare className="w-4 h-4" />
+                      {selectedTestimonialId ? "Change Testimonial" : "Pick a Testimonial"}
+                    </button>
+                  </div>
+
+                  <div className="pt-6 border-t border-white/10 flex justify-end">
+                    <button
+                      type="submit"
+                      disabled={isSavingAbout}
+                      className="bg-brand-600 hover:bg-brand-500 disabled:opacity-50 text-white font-bold py-4 px-8 rounded-xl flex items-center justify-center gap-2 transition-all hover:scale-[1.02] active:scale-[0.98] shadow-xl"
+                    >
+                      {isSavingAbout ? (
+                        <><div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> Saving...</>
+                      ) : (
+                        <><CheckCircle className="w-5 h-5" /> Save About Page</>
+                      )}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {/* BLOG POSTS TAB */}
+          {activeTab === "blog" && (
+            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              {/* Header */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h2 className="text-3xl font-bold text-white tracking-tight">Blog Management</h2>
+                  <p className="text-white/50 mt-1">Manage published posts and review user submissions.</p>
+                </div>
+                <div className="flex items-center gap-3 flex-wrap">
+                  {blogs.length === 0 && blogTab === "published" && (
+                    <button onClick={handleSeedDemoPosts}
+                      className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-white/10 hover:bg-white/15 text-white/70 font-bold transition-all border border-white/10 text-sm">
+                      🌱 Seed Demo Posts
+                    </button>
+                  )}
+                  {blogTab === "published" && (
+                    <button onClick={() => openBlogModal()}
+                      className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-brand-600 hover:bg-brand-500 text-white font-bold transition-all hover:scale-105 shadow-xl shadow-brand-500/20">
+                      <Plus className="w-5 h-5" /> New Post
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Sub-tabs */}
+              <div className="flex items-center gap-1 bg-white/5 p-1 rounded-2xl border border-white/10 w-fit">
+                <button onClick={() => setBlogTab("published")}
+                  className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${blogTab === "published" ? "bg-brand-600 text-white shadow-lg" : "text-white/50 hover:text-white"}`}>
+                  Blog Posts
+                  <span className="ml-2 text-xs bg-white/10 px-2 py-0.5 rounded-full">{blogs.length}</span>
+                </button>
+                <button onClick={() => setBlogTab("pending")}
+                  className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${blogTab === "pending" ? "bg-brand-600 text-white shadow-lg" : "text-white/50 hover:text-white"}`}>
+                  Blog Requests
+                  {pendingBlogs.length > 0 && (
+                    <span className="text-xs bg-red-500 text-white px-2 py-0.5 rounded-full font-black">{pendingBlogs.length}</span>
+                  )}
+                </button>
+              </div>
+
+              {/* ── PUBLISHED POSTS ──────────────────────────────── */}
+              {blogTab === "published" && (
+                blogs.length === 0 ? (
+                  <div className="text-center py-24 bg-white/5 rounded-[2rem] border border-white/10">
+                    <BookOpen className="w-16 h-16 text-brand-500/30 mx-auto mb-4" />
+                    <h3 className="text-xl font-bold text-white mb-2">No blog posts yet</h3>
+                    <p className="text-white/40 mb-6">Click &ldquo;New Post&rdquo; to write your first article.</p>
+                    <button onClick={() => openBlogModal()}
+                      className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold transition-all">
+                      <Plus className="w-4 h-4" /> Create First Post
+                    </button>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                    {blogs.map((blog: any) => (
+                      <div key={blog.id}
+                        className="group relative bg-white/5 border border-white/10 rounded-[1.5rem] overflow-hidden hover:border-brand-500/30 transition-all hover:shadow-xl hover:shadow-brand-500/10">
+                        <div className="relative h-44 overflow-hidden">
+                          {blog.image ? (
+                            <Image src={blog.image} alt={blog.title} fill className="object-cover group-hover:scale-105 transition-transform duration-700" />
+                          ) : (
+                            <div className="h-full bg-gradient-to-br from-brand-500/20 to-brand-700/20 flex items-center justify-center">
+                              <BookOpen className="w-12 h-12 text-brand-500/40" />
+                            </div>
+                          )}
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                          <div className="absolute top-3 left-3 flex items-center gap-2">
+                            <span className="text-[10px] font-bold bg-brand-500 text-white px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                              {blog.category || "General"}
+                            </span>
+                            {blog.isFeatured && (
+                              <span className="text-[10px] font-black bg-yellow-500 text-black px-2 py-0.5 rounded-full uppercase">Featured</span>
+                            )}
+                          </div>
+                          {/* Author badge */}
+                          <div className="absolute bottom-3 left-3 flex items-center gap-1.5">
+                            {blog.source === "user" && blog.submittedBy?.photoURL ? (
+                              <Image src={blog.submittedBy.photoURL} alt={blog.submittedBy.name} width={18} height={18} className="rounded-full border border-white/30 object-cover" />
+                            ) : (
+                              <span className="w-5 h-5 rounded-full bg-brand-500/80 flex items-center justify-center text-[8px] font-black text-white">GA</span>
+                            )}
+                            <span className="text-white/70 text-[10px] font-semibold">
+                              {blog.source === "user" && blog.submittedBy ? blog.submittedBy.name : "Green Adventure"}
+                            </span>
+                          </div>
+                          <span className={`absolute top-3 right-3 text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase ${blog.status === "published" ? "bg-green-500/20 text-green-400 border border-green-500/30" : "bg-amber-500/20 text-amber-400 border border-amber-500/30"}`}>
+                            {blog.status || "draft"}
+                          </span>
+                        </div>
+                        <div className="p-5">
+                          <h3 className="font-bold text-white text-sm leading-snug line-clamp-2 mb-2 group-hover:text-brand-400 transition-colors">{blog.title}</h3>
+                          <p className="text-white/40 text-xs line-clamp-2 mb-4 leading-relaxed">{blog.excerpt}</p>
+                          {blog.tags?.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mb-4">
+                              {blog.tags.slice(0, 3).map((t: string) => (
+                                <span key={t} className="text-[10px] bg-white/10 text-white/60 px-2 py-0.5 rounded-full">{t}</span>
+                              ))}
+                            </div>
+                          )}
+                          <div className="flex items-center gap-2">
+                            <button onClick={() => openBlogModal(blog)}
+                              className="flex-1 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-colors">
+                              <Edit className="w-3.5 h-3.5" /> Edit
+                            </button>
+                            <button
+                              onClick={() => setDoc(doc(db, "blogs", blog.id), { isFeatured: !blog.isFeatured }, { merge: true })}
+                              className={`flex-1 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-colors border ${blog.isFeatured ? "bg-yellow-500/20 border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/30" : "bg-white/5 border-white/10 text-white/50 hover:bg-white/10 hover:text-white"}`}>
+                              {blog.isFeatured ? "★ Featured" : "☆ Feature"}
+                            </button>
+                            <button onClick={() => handleDeleteBlog(blog.id)} disabled={isDeletingBlog === blog.id}
+                              className="p-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors border border-red-500/20 disabled:opacity-50">
+                              {isDeletingBlog === blog.id
+                                ? <div className="w-4 h-4 border border-red-400 border-t-transparent rounded-full animate-spin" />
+                                : <Trash2 className="w-4 h-4" />}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )
+              )}
+
+              {/* ── PENDING REQUESTS ─────────────────────────────── */}
+              {blogTab === "pending" && (
+                pendingBlogs.length === 0 ? (
+                  <div className="text-center py-24 bg-white/5 rounded-[2rem] border border-white/10">
+                    <BookOpen className="w-16 h-16 text-brand-500/30 mx-auto mb-4" />
+                    <h3 className="text-xl font-bold text-white mb-2">No pending submissions</h3>
+                    <p className="text-white/40">User-submitted stories will appear here for review.</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                    {pendingBlogs.map((blog: any) => (
+                      <div key={blog.id}
+                        className="group relative bg-white/5 border border-amber-500/20 rounded-[1.5rem] overflow-hidden hover:border-amber-500/40 transition-all hover:shadow-xl hover:shadow-amber-500/10">
+                        {/* Pending badge */}
+                        <div className="bg-amber-500/10 border-b border-amber-500/20 px-4 py-2 flex items-center justify-between">
+                          <span className="text-amber-400 text-[11px] font-black uppercase tracking-wider">⏳ Pending Review</span>
+                          <span className="text-white/30 text-[10px]">{blog.createdAt?.seconds ? new Date(blog.createdAt.seconds * 1000).toLocaleDateString() : "Just now"}</span>
+                        </div>
+                        {/* Author info */}
+                        {blog.submittedBy && (
+                          <div className="px-4 py-3 flex items-center gap-3 border-b border-white/5">
+                            {blog.submittedBy.photoURL ? (
+                              <Image src={blog.submittedBy.photoURL} alt={blog.submittedBy.name} width={36} height={36} className="rounded-full border-2 border-brand-500/30 object-cover" />
+                            ) : (
+                              <div className="w-9 h-9 rounded-full bg-brand-500/20 border-2 border-brand-500/30 flex items-center justify-center text-xs font-black text-brand-400">
+                                {blog.submittedBy.name?.charAt(0).toUpperCase()}
+                              </div>
+                            )}
+                            <div className="min-w-0">
+                              <p className="text-white font-bold text-sm truncate">{blog.submittedBy.name}</p>
+                              <p className="text-white/40 text-[11px] truncate">{blog.submittedBy.email}</p>
+                            </div>
+                          </div>
+                        )}
+                        <div className="p-4">
+                          <span className="text-[10px] font-bold bg-brand-500/20 text-brand-400 px-2.5 py-0.5 rounded-full uppercase tracking-wider mb-2 inline-block">
+                            {blog.category || "General"}
+                          </span>
+                          <h3 className="font-bold text-white text-sm leading-snug line-clamp-2 mb-2">{blog.title}</h3>
+                          <p className="text-white/40 text-xs line-clamp-3 mb-4 leading-relaxed">{blog.excerpt}</p>
+                          {blog.tags?.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mb-4">
+                              {blog.tags.slice(0, 3).map((t: string) => (
+                                <span key={t} className="text-[10px] bg-white/10 text-white/60 px-2 py-0.5 rounded-full">{t}</span>
+                              ))}
+                            </div>
+                          )}
+                          {/* Approve / Edit / Reject */}
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={async () => {
+                                if (!confirm(`Approve "${blog.title}" and publish it?`)) return;
+                                await setDoc(doc(db, "blogs", blog.id), { status: "published", approvedAt: serverTimestamp() }, { merge: true });
+                                setBlogTab("published");
+                              }}
+                              className="flex-1 py-2 rounded-xl bg-green-500/15 hover:bg-green-500/25 text-green-400 text-xs font-black flex items-center justify-center gap-1.5 transition-colors border border-green-500/25">
+                              ✓ Approve
+                            </button>
+                            <button
+                              onClick={() => openBlogModal(blog)}
+                              className="flex-1 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-colors">
+                              <Edit className="w-3.5 h-3.5" /> Edit
+                            </button>
+                            <button
+                              onClick={() => handleDeleteBlog(blog.id)}
+                              disabled={isDeletingBlog === blog.id}
+                              className="p-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors border border-red-500/20 disabled:opacity-50">
+                              {isDeletingBlog === blog.id
+                                ? <div className="w-4 h-4 border border-red-400 border-t-transparent rounded-full animate-spin" />
+                                : <Trash2 className="w-4 h-4" />}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )
+              )}
+            </div>
+          )}
+
+
           {/* REGIONS TAB */}
+
           {activeTab === "regions" && (
             <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -2789,6 +4091,444 @@ export default function AdminPage() {
           </div>
         </div>
       )}
+      {/* ── Testimonial Picker Modal ──────────────────────────── */}
+      {showPickTestimonialModal && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div className="bg-[#111] border border-white/10 rounded-[2rem] w-full max-w-2xl max-h-[85vh] flex flex-col shadow-2xl">
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b border-white/10 shrink-0">
+              <div>
+                <h3 className="text-xl font-bold text-white">Pick a Testimonial</h3>
+                <p className="text-white/40 text-sm mt-0.5">Select a client review to feature on the About page.</p>
+              </div>
+              <button
+                onClick={() => setShowPickTestimonialModal(false)}
+                className="p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            {/* Review List */}
+            <div className="overflow-y-auto p-6 space-y-4 flex-1">
+              {reviews.filter((r: any) => r.status === "approved").length === 0 ? (
+                <div className="text-center py-12 text-white/30">
+                  <MessageSquare className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                  <p>No approved reviews yet.</p>
+                  <p className="text-xs mt-1">Approve reviews in the Reviews tab first.</p>
+                </div>
+              ) : (
+                reviews
+                  .filter((r: any) => r.status === "approved")
+                  .map((review: any) => {
+                    const isSelected = selectedTestimonialId === review.id;
+                    return (
+                      <button
+                        key={review.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedTestimonialId(review.id);
+                          setShowPickTestimonialModal(false);
+                        }}
+                        className={`w-full text-left p-5 rounded-2xl border transition-all duration-200 ${
+                          isSelected
+                            ? "bg-brand-500/15 border-brand-500/50 ring-1 ring-brand-500/30"
+                            : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20"
+                        }`}
+                      >
+                        <div className="flex items-start gap-4">
+                          <div className="shrink-0 h-10 w-10 rounded-full bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center text-white font-bold text-base">
+                            {review.name?.[0] || "?"}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-0.5 mb-1.5">
+                              {[...Array(review.rating || 5)].map((_: any, j: number) => (
+                                <svg key={j} className="w-3.5 h-3.5 text-yellow-400 fill-yellow-400" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                              ))}
+                            </div>
+                            <p className="text-white/80 text-sm leading-relaxed line-clamp-3">&ldquo;{review.message}&rdquo;</p>
+                            <p className="text-brand-400 text-xs font-bold mt-2 uppercase tracking-wider">{review.name || "Verified Traveler"}</p>
+                          </div>
+                          {isSelected && (
+                            <CheckCircle className="shrink-0 w-5 h-5 text-brand-500 mt-0.5" />
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })
+              )}
+            </div>
+            {/* Footer */}
+            <div className="p-4 border-t border-white/10 flex justify-end shrink-0">
+              <button
+                onClick={() => setShowPickTestimonialModal(false)}
+                className="px-6 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-medium transition-colors text-sm"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── BLOG CREATE/EDIT MODAL ─────────────────────────────── */}
+      {isBlogModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-[#0f1f0f] border border-white/10 rounded-[2rem] shadow-2xl w-full max-w-3xl max-h-[92vh] flex flex-col overflow-hidden">
+            {/* Header */}
+            <div className="flex items-center justify-between px-8 py-6 border-b border-white/10 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-brand-500/20 flex items-center justify-center">
+                  <BookOpen className="w-5 h-5 text-brand-400" />
+                </div>
+                <h2 className="text-xl font-bold text-white">{editingBlog ? "Edit Blog Post" : "New Blog Post"}</h2>
+              </div>
+              <button onClick={() => setIsBlogModalOpen(false)} className="p-2 rounded-xl hover:bg-white/10 text-white/50 hover:text-white transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Scrollable body */}
+            <form onSubmit={handleSaveBlog} className="overflow-y-auto flex-1 p-8 space-y-6">
+              {/* Title & Slug */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-white/60 text-xs font-semibold uppercase tracking-wider mb-2">Title *</label>
+                  <input
+                    required
+                    type="text"
+                    value={blogFormData.title}
+                    onChange={(e) => setBlogFormData((p) => ({
+                      ...p,
+                      title: e.target.value,
+                      slug: p.slug || slugify(e.target.value),
+                    }))}
+                    placeholder="Top 5 Treks in Nepal..."
+                    className="w-full bg-white/5 border border-white/10 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-brand-500 placeholder-white/30"
+                  />
+                </div>
+                <div>
+                  <label className="block text-white/60 text-xs font-semibold uppercase tracking-wider mb-2">Slug (URL)</label>
+                  <input
+                    type="text"
+                    value={blogFormData.slug}
+                    onChange={(e) => setBlogFormData((p) => ({ ...p, slug: slugify(e.target.value) }))}
+                    placeholder="auto-generated-from-title"
+                    className="w-full bg-white/5 border border-white/10 text-white/60 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-brand-500 font-mono"
+                  />
+                </div>
+              </div>
+
+              {/* Category & Author & Read Time */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-white/60 text-xs font-semibold uppercase tracking-wider mb-2">Category</label>
+                  <select
+                    value={blogFormData.category}
+                    onChange={(e) => setBlogFormData((p) => ({ ...p, category: e.target.value }))}
+                    className="w-full bg-white/5 border border-white/10 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-brand-500"
+                  >
+                    {BLOG_CATEGORIES.map((c) => <option key={c} value={c} className="bg-[#0f1f0f]">{c}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-white/60 text-xs font-semibold uppercase tracking-wider mb-2">Author</label>
+                  <input
+                    type="text"
+                    value={blogFormData.author}
+                    onChange={(e) => setBlogFormData((p) => ({ ...p, author: e.target.value }))}
+                    className="w-full bg-white/5 border border-white/10 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-brand-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-white/60 text-xs font-semibold uppercase tracking-wider mb-2">Read Time</label>
+                  <input
+                    type="text"
+                    value={blogFormData.readTime}
+                    onChange={(e) => setBlogFormData((p) => ({ ...p, readTime: e.target.value }))}
+                    placeholder="5 min read"
+                    className="w-full bg-white/5 border border-white/10 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-brand-500 placeholder-white/30"
+                  />
+                </div>
+              </div>
+
+              {/* Excerpt */}
+              <div>
+                <label className="block text-white/60 text-xs font-semibold uppercase tracking-wider mb-2">Excerpt (short description)</label>
+                <textarea
+                  rows={2}
+                  value={blogFormData.excerpt}
+                  onChange={(e) => setBlogFormData((p) => ({ ...p, excerpt: e.target.value }))}
+                  placeholder="A compelling one or two-sentence summary..."
+                  className="w-full bg-white/5 border border-white/10 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-brand-500 resize-none placeholder-white/30"
+                />
+              </div>
+
+
+              {/* ── Article Sections (no HTML needed) ───────────────── */}
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <label className="block text-white/60 text-xs font-semibold uppercase tracking-wider">Article Sections</label>
+                    <p className="text-white/30 text-[11px] mt-0.5">Each section = one heading + paragraph. No HTML needed!</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setBlogFormData((p) => ({
+                        ...p,
+                        sections: [...(p.sections || []), { heading: "", body: "" }],
+                      }))
+                    }
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-500/20 text-brand-400 text-xs font-bold hover:bg-brand-500/30 transition-all border border-brand-500/30"
+                  >
+                    + Add Section
+                  </button>
+                </div>
+
+                {/* Section list */}
+                <div className="space-y-4">
+                  {(blogFormData.sections || []).length === 0 && (
+                    <div className="flex flex-col items-center justify-center border-2 border-dashed border-white/10 rounded-2xl py-10 text-center">
+                      <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center mb-3">
+                        <span className="text-xl">📝</span>
+                      </div>
+                      <p className="text-white/40 text-sm font-medium">No sections yet</p>
+                      <p className="text-white/25 text-xs mt-1">Click &quot;Add Section&quot; above to start writing your article</p>
+                    </div>
+                  )}
+                  {(blogFormData.sections || []).map((sec, i) => (
+                    <div key={i} className="bg-white/5 border border-white/10 rounded-2xl p-4 space-y-3">
+                      {/* Section header row */}
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="flex items-center gap-2 text-xs font-black text-brand-400 uppercase tracking-wider">
+                          <span className="w-6 h-6 rounded-lg bg-brand-500/20 flex items-center justify-center text-[11px]">{i + 1}</span>
+                          Section {i + 1}
+                        </span>
+                        <div className="flex items-center gap-1.5">
+                          {/* Move up */}
+                          {i > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const arr = [...(blogFormData.sections || [])];
+                                [arr[i - 1], arr[i]] = [arr[i], arr[i - 1]];
+                                setBlogFormData((p) => ({ ...p, sections: arr }));
+                              }}
+                              className="w-7 h-7 rounded-lg bg-white/5 hover:bg-white/10 text-white/40 hover:text-white text-xs flex items-center justify-center transition-all"
+                              title="Move up"
+                            >↑</button>
+                          )}
+                          {/* Move down */}
+                          {i < (blogFormData.sections || []).length - 1 && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const arr = [...(blogFormData.sections || [])];
+                                [arr[i], arr[i + 1]] = [arr[i + 1], arr[i]];
+                                setBlogFormData((p) => ({ ...p, sections: arr }));
+                              }}
+                              className="w-7 h-7 rounded-lg bg-white/5 hover:bg-white/10 text-white/40 hover:text-white text-xs flex items-center justify-center transition-all"
+                              title="Move down"
+                            >↓</button>
+                          )}
+                          {/* Remove */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const arr = [...(blogFormData.sections || [])];
+                              arr.splice(i, 1);
+                              setBlogFormData((p) => ({ ...p, sections: arr }));
+                            }}
+                            className="w-7 h-7 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs flex items-center justify-center transition-all"
+                            title="Remove section"
+                          >✕</button>
+                        </div>
+                      </div>
+                      {/* Heading */}
+                      <div>
+                        <label className="text-white/40 text-[10px] font-semibold uppercase tracking-wider block mb-1">Section Heading</label>
+                        <input
+                          type="text"
+                          value={sec.heading}
+                          onChange={(e) => {
+                            const arr = [...(blogFormData.sections || [])];
+                            arr[i] = { ...arr[i], heading: e.target.value };
+                            setBlogFormData((p) => ({ ...p, sections: arr }));
+                          }}
+                          placeholder="e.g. Why the Annapurna Circuit is Unmissable"
+                          className="w-full bg-black/20 border border-white/10 text-white rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-brand-500 placeholder-white/20"
+                        />
+                      </div>
+                      {/* Body */}
+                      <div>
+                        <label className="text-white/40 text-[10px] font-semibold uppercase tracking-wider block mb-1">Paragraph Text</label>
+                        <textarea
+                          rows={4}
+                          value={sec.body}
+                          onChange={(e) => {
+                            const arr = [...(blogFormData.sections || [])];
+                            arr[i] = { ...arr[i], body: e.target.value };
+                            setBlogFormData((p) => ({ ...p, sections: arr }));
+                          }}
+                          placeholder="Write the content for this section..."
+                          className="w-full bg-black/20 border border-white/10 text-white rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-brand-500 resize-y placeholder-white/20 leading-relaxed"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                  {/* Quick add at the bottom */}
+                  {(blogFormData.sections || []).length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setBlogFormData((p) => ({
+                          ...p,
+                          sections: [...(p.sections || []), { heading: "", body: "" }],
+                        }))
+                      }
+                      className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl border-2 border-dashed border-white/10 text-white/30 text-xs font-bold hover:border-brand-500/30 hover:text-brand-400 transition-all"
+                    >
+                      + Add Another Section
+                    </button>
+                  )}
+                </div>
+              </div>
+
+
+              {/* Image */}
+              <div>
+                <label className="block text-white/60 text-xs font-semibold uppercase tracking-wider mb-2">Cover Image</label>
+                <div className="flex gap-3">
+                  <input
+                    type="text"
+                    value={blogFormData.image}
+                    onChange={(e) => setBlogFormData((p) => ({ ...p, image: e.target.value }))}
+                    placeholder="https://... or upload below"
+                    className="flex-1 bg-white/5 border border-white/10 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-brand-500 placeholder-white/30"
+                  />
+                  <label className={`shrink-0 inline-flex items-center gap-2 px-4 py-3 rounded-xl cursor-pointer text-sm font-bold transition-all border ${uploadingBlogImage ? "bg-white/5 border-white/10 text-white/30" : "bg-brand-500/10 border-brand-500/30 text-brand-400 hover:bg-brand-500/20"}`}>
+                    {uploadingBlogImage ? (
+                      <><div className="w-4 h-4 border border-brand-400 border-t-transparent rounded-full animate-spin" /> Uploading</>
+                    ) : (
+                      <><Upload className="w-4 h-4" /> Upload</>
+                    )}
+                    <input type="file" accept="image/*" className="hidden" onChange={handleBlogImageUpload} disabled={uploadingBlogImage} />
+                  </label>
+                </div>
+                {blogFormData.image && (
+                  <div className="mt-3 relative h-28 w-full rounded-xl overflow-hidden border border-white/10">
+                    <Image src={blogFormData.image} alt="cover preview" fill className="object-cover" />
+                  </div>
+                )}
+              </div>
+
+              {/* Tags */}
+              <div>
+                <label className="block text-white/60 text-xs font-semibold uppercase tracking-wider mb-2">Tags</label>
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {blogFormData.tags.map((tag) => (
+                    <span key={tag} className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-brand-500/20 text-brand-300 text-xs font-semibold border border-brand-500/30">
+                      {tag}
+                      <button type="button" onClick={() => setBlogFormData((p) => ({ ...p, tags: p.tags.filter((t) => t !== tag) }))} className="hover:text-red-400 ml-1">
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={blogTagInput}
+                    onChange={(e) => setBlogTagInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if ((e.key === "Enter" || e.key === ",") && blogTagInput.trim()) {
+                        e.preventDefault();
+                        const tag = blogTagInput.trim();
+                        if (!blogFormData.tags.includes(tag)) {
+                          setBlogFormData((p) => ({ ...p, tags: [...p.tags, tag] }));
+                        }
+                        setBlogTagInput("");
+                      }
+                    }}
+                    placeholder="Type tag & press Enter..."
+                    className="flex-1 bg-white/5 border border-white/10 text-white rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-brand-500 placeholder-white/30"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (blogTagInput.trim() && !blogFormData.tags.includes(blogTagInput.trim())) {
+                        setBlogFormData((p) => ({ ...p, tags: [...p.tags, blogTagInput.trim()] }));
+                        setBlogTagInput("");
+                      }
+                    }}
+                    className="px-4 py-2.5 rounded-xl bg-brand-500/10 border border-brand-500/30 text-brand-400 hover:bg-brand-500/20 transition-colors text-sm font-bold"
+                  >
+                    Add
+                  </button>
+                </div>
+                {/* Popular tag suggestions */}
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {["Nepal", "Trekking", "Himalaya", "Bhutan", "Culture", "Safety", "Eco"].filter(t => !blogFormData.tags.includes(t)).map((t) => (
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => setBlogFormData((p) => ({ ...p, tags: [...p.tags, t] }))}
+                      className="text-[11px] px-2.5 py-0.5 rounded-full bg-white/5 border border-white/10 text-white/40 hover:bg-brand-500/10 hover:text-brand-400 hover:border-brand-500/30 transition-colors"
+                    >
+                      + {t}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Toggles: Featured & Status */}
+              <div className="grid grid-cols-2 gap-4">
+                <button
+                  type="button"
+                  onClick={() => setBlogFormData((p) => ({ ...p, isFeatured: !p.isFeatured }))}
+                  className={`flex items-center gap-3 px-5 py-4 rounded-xl border font-bold text-sm transition-all ${blogFormData.isFeatured ? "bg-yellow-500/10 border-yellow-500/30 text-yellow-400" : "bg-white/5 border-white/10 text-white/50 hover:text-white"}`}
+                >
+                  <span className="text-xl">{blogFormData.isFeatured ? "★" : "☆"}</span>
+                  {blogFormData.isFeatured ? "Featured on Home" : "Not Featured"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setBlogFormData((p) => ({ ...p, status: p.status === "published" ? "draft" : "published" }))}
+                  className={`flex items-center gap-3 px-5 py-4 rounded-xl border font-bold text-sm transition-all ${blogFormData.status === "published" ? "bg-green-500/10 border-green-500/30 text-green-400" : "bg-white/5 border-white/10 text-white/50 hover:text-white"}`}
+                >
+                  <div className={`w-2.5 h-2.5 rounded-full ${blogFormData.status === "published" ? "bg-green-400" : "bg-white/30"}`} />
+                  {blogFormData.status === "published" ? "Published" : "Draft"}
+                </button>
+              </div>
+            </form>
+
+            {/* Footer */}
+            <div className="px-8 py-5 border-t border-white/10 flex justify-end gap-3 shrink-0">
+              <button
+                type="button"
+                onClick={() => setIsBlogModalOpen(false)}
+                className="px-6 py-3 rounded-xl bg-white/5 hover:bg-white/10 text-white font-bold transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                form="blog-form-internal"
+                onClick={handleSaveBlog}
+                disabled={isSavingBlog || !blogFormData.title}
+                className="px-8 py-3 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold transition-all hover:scale-105 shadow-xl shadow-brand-500/20 disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-2"
+              >
+                {isSavingBlog ? (
+                  <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Saving…</>
+                ) : (
+                  <>{editingBlog ? "Update Post" : "Publish Post"}</>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
