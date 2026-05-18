@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Image from "next/image";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { collection, getDocs, query, where, doc, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import TripCard, { EmptyTripsState, type TripCardData } from "@/components/TripCard";
@@ -21,17 +21,28 @@ export default function TrekkingPage() {
   const [treks, setTreks] = React.useState<TripCardData[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [activeCategory, setActiveCategory] = React.useState<string>("All");
+  const [activeBgIndex, setActiveBgIndex] = React.useState(0);
   const [hero, setHero] = React.useState(DEFAULT_HERO);
 
+  React.useEffect(() => {
+    const bgList = ((hero as any).bgImages && (hero as any).bgImages.length > 0) ? (hero as any).bgImages : [hero.bgImage];
+    if (bgList.length > 1) {
+      const interval = setInterval(() => {
+        setActiveBgIndex(prev => (prev + 1) % bgList.length);
+      }, 5000);
+return () => clearInterval(interval);
+    }
+  }, [(hero as any).bgImages, hero.bgImage]);
+  
   React.useEffect(() => {
     const unsub = onSnapshot(doc(db, "settings", "pages_hero"), (snap) => {
       if (snap.exists()) {
         const data = snap.data() as any;
         if (data?.trekking) {
-          setHero((prev) => ({
+          setHero((prev: any) => ({
             title: data.trekking.title || prev.title,
             subtitle: data.trekking.subtitle || prev.subtitle,
-            bgImage: data.trekking.bgImage || prev.bgImage,
+            bgImage: data.trekking.bgImage || prev.bgImage, bgImages: Array.isArray(data.trekking.bgImages) ? data.trekking.bgImages : prev.bgImages || [],
             tags: Array.isArray(data.trekking.tags) && data.trekking.tags.length > 0 ? data.trekking.tags : prev.tags,
             tabs: Array.isArray(data.trekking.tabs) && data.trekking.tabs.length > 0 ? data.trekking.tabs : prev.tabs,
           }));

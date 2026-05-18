@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useRef, useEffect } from "react";
+import { useTheme } from "next-themes";
 
 interface LoaderParticle {
   x: number;
@@ -15,6 +16,7 @@ interface LoaderParticle {
 
 const ParticleLoader: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const { resolvedTheme } = useTheme();
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -144,9 +146,18 @@ const ParticleLoader: React.FC = () => {
         const arrivalProgress = Math.max(0, 1 - distToOrigin / 200);
 
         const greenTint = arrivalProgress * 0.3;
-        const r = Math.round(255 - greenTint * 120);
-        const g = Math.round(255 - greenTint * 20);
-        const b = Math.round(255 - greenTint * 100);
+        
+        let r, g, b;
+        if (resolvedTheme === 'dark' || !resolvedTheme) {
+            r = Math.round(255 - greenTint * 120);
+            g = Math.round(255 - greenTint * 20);
+            b = Math.round(255 - greenTint * 100);
+        } else {
+            // green color for light mode: roughly brand-600 (22, 163, 74)
+            r = Math.round(22 + greenTint * 50);
+            g = Math.round(163 - greenTint * 20);
+            b = Math.round(74 + greenTint * 50);
+        }
 
         const breathe = Math.sin(pulsePhase * 1.5 + p.originX * 0.01) * 0.1;
         const a = p.opacity * (arrivalProgress * 0.6 + 0.4 + breathe);
@@ -169,13 +180,13 @@ const ParticleLoader: React.FC = () => {
       canvas.removeEventListener("mousemove", handleMove);
       canvas.removeEventListener("mouseleave", handleLeave);
     };
-  }, []);
+  }, [resolvedTheme]);
 
   return (
-    <div className="min-h-screen bg-[#050505] flex items-center justify-center relative overflow-hidden">
+    <div className="min-h-screen bg-white dark:bg-[#050505] flex items-center justify-center relative overflow-hidden transition-colors duration-500">
       {/* Ambient background glow */}
       <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-brand-500/5 rounded-full blur-[120px] animate-pulse" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-brand-500/10 dark:bg-brand-500/5 rounded-full blur-[120px] animate-pulse" />
       </div>
       <canvas
         ref={canvasRef}
@@ -188,14 +199,14 @@ const ParticleLoader: React.FC = () => {
           {[0, 1, 2].map((i) => (
             <div
               key={i}
-              className="w-1.5 h-1.5 rounded-full bg-white/40"
+              className="w-1.5 h-1.5 rounded-full bg-black/40 dark:bg-white/40"
               style={{
                 animation: `pulse 1.4s ease-in-out ${i * 0.2}s infinite`,
               }}
             />
           ))}
         </div>
-        <p className="text-white/20 text-xs tracking-[0.3em] uppercase font-medium">Loading</p>
+        <p className="text-black/40 dark:text-white/20 text-xs tracking-[0.3em] uppercase font-bold">Loading</p>
       </div>
       <style jsx>{`
         @keyframes pulse {
@@ -208,3 +219,4 @@ const ParticleLoader: React.FC = () => {
 };
 
 export default ParticleLoader;
+

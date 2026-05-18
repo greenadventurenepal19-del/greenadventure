@@ -55,6 +55,7 @@ export default function AdminPage() {
     itinerary: [] as { day: string; title: string; desc: string }[],
     includes: [] as string[],
     excludes: [] as string[],
+    faqs: [] as { q: string; a: string }[],
   });
   
   const [showDetailedInfo, setShowDetailedInfo] = useState(false);
@@ -220,6 +221,48 @@ export default function AdminPage() {
     }
   };
 
+  
+  const handleHeroBgImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, slideIdx: number, field: string = "bgImages") => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 4.5 * 1024 * 1024) {
+      alert("File is too large! Please choose an image smaller than 4.5MB.");
+      return;
+    }
+
+    if (field === "mobileBgImages") setUploadingHeroMobile(slideIdx);
+    else if (field === "tabletBgImages") setUploadingHeroTablet(slideIdx);
+    else setUploadingHeroSlide(slideIdx);
+
+    try {
+      const res = await fetch(`/api/upload?filename=${encodeURIComponent(file.name)}`, {
+        method: 'POST',
+        body: file,
+      });
+      const data = await res.json();
+      if (res.ok && data.url) {
+        setHeroSlides(prev => prev.map((s, i) => {
+          if (i === slideIdx) {
+            const currentArray = s[field] || [];
+            const newBgImages = [...currentArray, data.url];
+            return { ...s, [field]: newBgImages };
+          }
+          return s;
+        }));
+      } else {
+        throw new Error(data.error || `Failed with status ${res.status}`);
+      }
+    } catch (error: any) {
+      console.error("Error uploading hero bg image:", error);
+      alert("Failed to upload image to blob: " + error.message);
+    } finally {
+      if (field === "mobileBgImages") setUploadingHeroMobile(null);
+      else if (field === "tabletBgImages") setUploadingHeroTablet(null);
+      else setUploadingHeroSlide(null);
+    }
+  };
+
   const handleHeroImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, slideIdx: number, field: string = "image") => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -278,9 +321,9 @@ export default function AdminPage() {
 
   // Hero settings state — array-based slides
   const defaultSlides = [
-    { title: "INDIA", subtitle: "Explore the diverse beauty of the Indian Himalayas, from spiritual journeys to thrilling treks.", image: "", upperTags: ["Ladakh", "15 days", "Challenging"], lowerTags: ["Zero Waste", "Low-carbon", "Local Hire", "Inclusive Growth"] },
-    { title: "NEPAL", subtitle: "Discover the breathtaking landscapes, vibrant culture, and ancient heritage of the Himalayas.", image: "", upperTags: ["Everest Region", "15 days", "Challenging"], lowerTags: ["Zero Waste", "Low-carbon", "Local Hire", "Inclusive Growth"] },
-    { title: "BHUTAN", subtitle: "Experience the magic of the Land of the Thunder Dragon, with its pristine landscapes and ancient monasteries.", image: "", upperTags: ["Paro Valley", "7 days", "Moderate"], lowerTags: ["Eco-Friendly", "Cultural Preservation", "Local Hire", "Inclusive Growth"] },
+    { title: "NEPAL", subtitle: "Discover the breathtaking landscapes, vibrant culture, and ancient heritage of the Himalayas.", image: "", bgImages: [], mobileBgImages: [], tabletBgImages: [], upperTags: ["Everest Region", "15 days", "Challenging"], lowerTags: ["Zero Waste", "Low-carbon", "Local Hire", "Inclusive Growth"] },
+    { title: "INDIA", subtitle: "Explore the diverse beauty of the Indian Himalayas, from spiritual journeys to thrilling treks.", image: "", bgImages: [], mobileBgImages: [], tabletBgImages: [], upperTags: ["Ladakh", "15 days", "Challenging"], lowerTags: ["Zero Waste", "Low-carbon", "Local Hire", "Inclusive Growth"] },
+    { title: "BHUTAN", subtitle: "Experience the magic of the Land of the Thunder Dragon, with its pristine landscapes and ancient monasteries.", image: "", bgImages: [], mobileBgImages: [], tabletBgImages: [], upperTags: ["Paro Valley", "7 days", "Moderate"], lowerTags: ["Eco-Friendly", "Cultural Preservation", "Local Hire", "Inclusive Growth"] },
   ];
   const [heroSlides, setHeroSlides] = useState<any[]>(defaultSlides);
   const [heroTagInput, setHeroTagInput] = useState<{ [key: string]: string }>({});
@@ -406,7 +449,7 @@ export default function AdminPage() {
               subtitle: data[`slide${i}Subtitle`] || "",
               image: data[`slide${i}Image`] || "",
               upperTags: data[`slide${i}UpperTags`] || [],
-              lowerTags: data[`slide${i}LowerTags`] || [],
+              lowerTags: data[`slide${i}LowerTags`] || [], bgImages: data[`slide${i}BgImages`] || [], mobileBgImages: data[`slide${i}MobileBgImages`] || [], tabletBgImages: data[`slide${i}TabletBgImages`] || [],
             });
             i++;
           }
@@ -815,6 +858,42 @@ export default function AdminPage() {
     }
   };
 
+  const handlePagesHeroBgImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, section: string) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 4.5 * 1024 * 1024) {
+      alert("File is too large! Please choose an image smaller than 4.5MB.");
+      return;
+    }
+
+    setUploadingPagesHeroImage(section);
+
+    try {
+      const res = await fetch(`/api/upload?filename=${encodeURIComponent(file.name)}`, {
+        method: 'POST',
+        body: file,
+      });
+      const data = await res.json();
+      if (res.ok && data.url) {
+        setPagesHero(prev => ({
+          ...prev,
+          [section]: {
+            ...(prev as any)[section],
+            bgImages: [...((prev as any)[section].bgImages || []), data.url]
+          }
+        }));
+      } else {
+        throw new Error(data.error || `Failed with status ${res.status}`);
+      }
+    } catch (error: any) {
+      console.error("Error uploading pages hero bg image:", error);
+      alert("Failed to upload image to blob: " + error.message);
+    } finally {
+      setUploadingPagesHeroImage(null);
+    }
+  };
+
   const handlePagesHeroImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, section: "destinations" | "tours" | "trekking" | "blog") => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -919,7 +998,7 @@ export default function AdminPage() {
       setIsTripModalOpen(false);
       setEditingTrip(null);
       setShowDetailedInfo(false);
-      setTripFormData({ title: "", region: "", duration: "", price: "", difficulty: "moderate", desc: "", image: "", isFeatured: false, tripType: "Tour", groupSize: "", tags: [], slug: "", rating: 5, altitude: "", overview: "", itinerary: [], includes: [], excludes: [] });
+      setTripFormData({ title: "", region: "", duration: "", price: "", difficulty: "moderate", desc: "", image: "", isFeatured: false, tripType: "Tour", groupSize: "", tags: [], slug: "", rating: 5, altitude: "", overview: "", itinerary: [], includes: [], excludes: [], faqs: [] });
     } catch (error) {
       console.error("Error saving trip", error);
       alert("Failed to save trip.");
@@ -1610,7 +1689,7 @@ export default function AdminPage() {
                     onClick={() => {
                       setEditingTrip(null);
                       setShowDetailedInfo(false);
-                      setTripFormData({ title: "", region: "", duration: "", price: "", difficulty: "moderate", desc: "", image: "", isFeatured: false, tripType: "Tour", groupSize: "", tags: [], slug: "", rating: 5, altitude: "", overview: "", itinerary: [], includes: [], excludes: [] });
+                      setTripFormData({ title: "", region: "", duration: "", price: "", difficulty: "moderate", desc: "", image: "", isFeatured: false, tripType: "Tour", groupSize: "", tags: [], slug: "", rating: 5, altitude: "", overview: "", itinerary: [], includes: [], excludes: [], faqs: [] });
                       setIsTripModalOpen(true);
                     }}
                     className="bg-brand-600 hover:bg-brand-500 text-white font-bold py-3 px-6 rounded-xl flex items-center justify-center gap-2 transition-all hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-brand-500/20"
@@ -2031,27 +2110,42 @@ export default function AdminPage() {
                           )}
                         </div>
                         
-                        {/* Background Image Upload — Desktop */}
+                        {/* Background Images Upload — Auto Changing */}
                         <div>
-                          <label className="block text-sm font-medium text-white/60 mb-2">🖥️ Desktop Image</label>
-                          <div className="flex items-center gap-4">
-                            {slide.image && (
-                              <div className="relative group shrink-0">
+                          <label className="block text-sm font-medium text-white/60 mb-2">🖥️ Auto-Changing Background Images</label>
+                          <p className="text-xs text-white/40 mb-4">These images will smoothly crossfade in the background every 5 seconds while this slide is active.</p>
+                          <div className="flex flex-wrap items-center gap-4">
+                            {(slide.bgImages || []).length > 0 ? (slide.bgImages || []).map((imgUrl: string, imgIdx: number) => (
+                              <div key={imgIdx} className="relative group shrink-0">
                                 <div className="w-24 h-16 relative rounded-xl overflow-hidden border border-white/10">
-                                  <Image src={slide.image} alt={`Slide ${idx + 1} desktop preview`} fill className="object-cover" />
+                                  <Image src={imgUrl} alt={`Slide ${idx + 1} bg preview ${imgIdx}`} fill className="object-cover" />
                                 </div>
                                 <button
                                   type="button"
-                                  onClick={async () => { await deleteBlobImage(slide.image); updateSlide("image", ""); }}
+                                  onClick={async () => { 
+                                    await deleteBlobImage(imgUrl); 
+                                    const newBgImages = [...slide.bgImages];
+                                    newBgImages.splice(imgIdx, 1);
+                                    updateSlide("bgImages", newBgImages); 
+                                  }}
                                   className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 hover:bg-red-400 text-white rounded-full flex items-center justify-center text-xs font-bold shadow-lg opacity-0 group-hover:opacity-100 transition-opacity z-10"
                                   title="Remove image"
                                 >✕</button>
                               </div>
+                            )) : (
+                              slide.image && (
+                                <div className="relative group shrink-0 opacity-50">
+                                  <div className="w-24 h-16 relative rounded-xl overflow-hidden border border-white/10">
+                                    <Image src={slide.image} alt={`Slide ${idx + 1} old desktop preview`} fill className="object-cover" />
+                                  </div>
+                                  <p className="text-[10px] text-center mt-1 text-white/40">Legacy Image</p>
+                                </div>
+                              )
                             )}
                             <label className="flex items-center gap-2 px-4 py-3 bg-black/60 border border-white/10 rounded-xl cursor-pointer hover:bg-white/5 transition-colors text-sm font-medium text-white/80 w-full sm:w-auto">
                               <UploadCloud className="w-4 h-4" />
-                              {uploadingHeroSlide === idx ? "Uploading..." : "Upload Desktop"}
-                              <input type="file" className="hidden" accept="image/*" onChange={(e) => handleHeroImageUpload(e, idx, "image")} disabled={uploadingHeroSlide === idx} />
+                              {uploadingHeroSlide === idx ? "Uploading..." : "Add Background Image"}
+                              <input type="file" className="hidden" accept="image/*" onChange={(e) => handleHeroBgImageUpload(e, idx)} disabled={uploadingHeroSlide === idx} />
                             </label>
                           </div>
                         </div>
@@ -2060,53 +2154,81 @@ export default function AdminPage() {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           {/* Mobile */}
                           <div>
-                            <label className="block text-sm font-medium text-white/60 mb-2">📱 Mobile Image</label>
-                            <div className="flex items-center gap-4">
-                              {slide.mobileImage && (
-                                <div className="relative group shrink-0">
+                            <label className="block text-sm font-medium text-white/60 mb-2">📱 Mobile Images</label>
+                            <div className="flex flex-wrap items-center gap-4">
+                              {(slide.mobileBgImages || []).length > 0 ? (slide.mobileBgImages || []).map((imgUrl: string, imgIdx: number) => (
+                                <div key={imgIdx} className="relative group shrink-0">
                                   <div className="w-16 h-24 relative rounded-xl overflow-hidden border border-white/10">
-                                    <Image src={slide.mobileImage} alt={`Slide ${idx + 1} mobile preview`} fill className="object-cover" />
+                                    <Image src={imgUrl} alt={`Slide ${idx + 1} mobile preview ${imgIdx}`} fill className="object-cover" />
                                   </div>
                                   <button
                                     type="button"
-                                    onClick={async () => { await deleteBlobImage(slide.mobileImage); updateSlide("mobileImage", ""); }}
+                                    onClick={async () => { 
+                                      await deleteBlobImage(imgUrl); 
+                                      const newBgImages = [...slide.mobileBgImages];
+                                      newBgImages.splice(imgIdx, 1);
+                                      updateSlide("mobileBgImages", newBgImages); 
+                                    }}
                                     className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 hover:bg-red-400 text-white rounded-full flex items-center justify-center text-xs font-bold shadow-lg opacity-0 group-hover:opacity-100 transition-opacity z-10"
                                     title="Remove image"
                                   >✕</button>
                                 </div>
+                              )) : (
+                                slide.mobileImage && (
+                                  <div className="relative group shrink-0 opacity-50">
+                                    <div className="w-16 h-24 relative rounded-xl overflow-hidden border border-white/10">
+                                      <Image src={slide.mobileImage} alt={`Slide ${idx + 1} old mobile preview`} fill className="object-cover" />
+                                    </div>
+                                    <p className="text-[10px] text-center mt-1 text-white/40">Legacy Image</p>
+                                  </div>
+                                )
                               )}
                               <label className="flex items-center gap-2 px-4 py-3 bg-black/60 border border-white/10 rounded-xl cursor-pointer hover:bg-white/5 transition-colors text-sm font-medium text-white/80 w-full">
                                 <UploadCloud className="w-4 h-4" />
-                                {uploadingHeroMobile === idx ? "Uploading..." : (slide.mobileImage ? "Change" : "Upload Mobile")}
-                                <input type="file" className="hidden" accept="image/*" onChange={(e) => handleHeroImageUpload(e, idx, "mobileImage")} disabled={uploadingHeroMobile === idx} />
+                                {uploadingHeroMobile === idx ? "Uploading..." : "Add Mobile Image"}
+                                <input type="file" className="hidden" accept="image/*" onChange={(e) => handleHeroBgImageUpload(e, idx, "mobileBgImages")} disabled={uploadingHeroMobile === idx} />
                               </label>
                             </div>
-                            {!slide.mobileImage && <p className="text-xs text-white/30 mt-1">Falls back to desktop image if empty.</p>}
+                            {(!slide.mobileBgImages || slide.mobileBgImages.length === 0) && !slide.mobileImage && <p className="text-xs text-white/30 mt-1">Falls back to desktop images if empty.</p>}
                           </div>
                           {/* Tablet */}
                           <div>
-                            <label className="block text-sm font-medium text-white/60 mb-2">📟 Tablet Image</label>
-                            <div className="flex items-center gap-4">
-                              {slide.tabletImage && (
-                                <div className="relative group shrink-0">
+                            <label className="block text-sm font-medium text-white/60 mb-2">📟 Tablet Images</label>
+                            <div className="flex flex-wrap items-center gap-4">
+                              {(slide.tabletBgImages || []).length > 0 ? (slide.tabletBgImages || []).map((imgUrl: string, imgIdx: number) => (
+                                <div key={imgIdx} className="relative group shrink-0">
                                   <div className="w-20 h-16 relative rounded-xl overflow-hidden border border-white/10">
-                                    <Image src={slide.tabletImage} alt={`Slide ${idx + 1} tablet preview`} fill className="object-cover" />
+                                    <Image src={imgUrl} alt={`Slide ${idx + 1} tablet preview ${imgIdx}`} fill className="object-cover" />
                                   </div>
                                   <button
                                     type="button"
-                                    onClick={async () => { await deleteBlobImage(slide.tabletImage); updateSlide("tabletImage", ""); }}
+                                    onClick={async () => { 
+                                      await deleteBlobImage(imgUrl); 
+                                      const newBgImages = [...slide.tabletBgImages];
+                                      newBgImages.splice(imgIdx, 1);
+                                      updateSlide("tabletBgImages", newBgImages); 
+                                    }}
                                     className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 hover:bg-red-400 text-white rounded-full flex items-center justify-center text-xs font-bold shadow-lg opacity-0 group-hover:opacity-100 transition-opacity z-10"
                                     title="Remove image"
                                   >✕</button>
                                 </div>
+                              )) : (
+                                slide.tabletImage && (
+                                  <div className="relative group shrink-0 opacity-50">
+                                    <div className="w-20 h-16 relative rounded-xl overflow-hidden border border-white/10">
+                                      <Image src={slide.tabletImage} alt={`Slide ${idx + 1} old tablet preview`} fill className="object-cover" />
+                                    </div>
+                                    <p className="text-[10px] text-center mt-1 text-white/40">Legacy Image</p>
+                                  </div>
+                                )
                               )}
                               <label className="flex items-center gap-2 px-4 py-3 bg-black/60 border border-white/10 rounded-xl cursor-pointer hover:bg-white/5 transition-colors text-sm font-medium text-white/80 w-full">
                                 <UploadCloud className="w-4 h-4" />
-                                {uploadingHeroTablet === idx ? "Uploading..." : (slide.tabletImage ? "Change" : "Upload Tablet")}
-                                <input type="file" className="hidden" accept="image/*" onChange={(e) => handleHeroImageUpload(e, idx, "tabletImage")} disabled={uploadingHeroTablet === idx} />
+                                {uploadingHeroTablet === idx ? "Uploading..." : "Add Tablet Image"}
+                                <input type="file" className="hidden" accept="image/*" onChange={(e) => handleHeroBgImageUpload(e, idx, "tabletBgImages")} disabled={uploadingHeroTablet === idx} />
                               </label>
                             </div>
-                            {!slide.tabletImage && <p className="text-xs text-white/30 mt-1">Falls back to desktop image if empty.</p>}
+                            {(!slide.tabletBgImages || slide.tabletBgImages.length === 0) && !slide.tabletImage && <p className="text-xs text-white/30 mt-1">Falls back to desktop images if empty.</p>}
                           </div>
                         </div>
 
@@ -2226,7 +2348,7 @@ export default function AdminPage() {
                   <div className="pt-6 border-t border-white/10">
                     <button
                       type="button"
-                      onClick={() => setHeroSlides(prev => [...prev, { title: "", subtitle: "", image: "", mobileImage: "", tabletImage: "", upperTags: [], lowerTags: [] }])}
+                      onClick={() => setHeroSlides(prev => [...prev, { title: "", subtitle: "", image: "", bgImages: [], mobileBgImages: [], tabletBgImages: [], mobileImage: "", tabletImage: "", upperTags: [], lowerTags: [] }])}
                       className="w-full py-4 border-2 border-dashed border-white/15 hover:border-brand-500/50 rounded-2xl text-white/40 hover:text-brand-400 font-medium flex items-center justify-center gap-2 transition-all hover:bg-brand-500/5"
                     >
                       <Plus className="w-5 h-5" />
@@ -2708,38 +2830,51 @@ export default function AdminPage() {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-white/60 mb-2 capitalize">{activePagesHeroSection} Background Image</label>
-                      <div className="flex items-center gap-4">
-                        <input
-                          type="url"
-                          value={(pagesHero as any)[activePagesHeroSection]?.bgImage || ""}
-                          onChange={(e) => setPagesHero(prev => ({ ...prev, [activePagesHeroSection]: { ...(prev as any)[activePagesHeroSection], bgImage: e.target.value } }))}
-                          placeholder="Image URL..."
-                          className="flex-1 bg-black/60 border border-white/10 rounded-xl px-5 py-4 text-white focus:outline-none focus:border-brand-500"
-                        />
-                        <div className="relative shrink-0">
-                          <input 
-                            type="file" 
-                            accept="image/*" 
-                            onChange={(e) => handlePagesHeroImageUpload(e, activePagesHeroSection)}
-                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                            disabled={uploadingPagesHeroImage === activePagesHeroSection}
-                          />
-                          <button 
-                            type="button" 
-                            className="bg-white/10 hover:bg-white/20 text-white font-medium py-4 px-6 rounded-xl flex items-center gap-2 border border-white/10 transition-colors disabled:opacity-50"
-                            disabled={uploadingPagesHeroImage === activePagesHeroSection}
-                          >
-                            {uploadingPagesHeroImage === activePagesHeroSection ? (
-                              <><div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> Uploading...</>
-                            ) : (
-                              <><Upload className="w-5 h-5" /> Upload File</>
-                            )}
-                          </button>
-                        </div>
+                      <label className="block text-sm font-medium text-white/60 mb-2 capitalize">{activePagesHeroSection} Auto-Changing Background Images</label>
+                      <p className="text-xs text-white/40 mb-4">These images will smoothly crossfade in the background every 5 seconds.</p>
+                      
+                      <div className="flex flex-wrap items-center gap-4">
+                        {((pagesHero as any)[activePagesHeroSection]?.bgImages || []).length > 0 ? ((pagesHero as any)[activePagesHeroSection]?.bgImages || []).map((imgUrl: string, imgIdx: number) => (
+                          <div key={imgIdx} className="relative group shrink-0">
+                            <div className="w-32 h-20 relative rounded-xl overflow-hidden border border-white/10 bg-black/50">
+                              <Image src={imgUrl} alt={`${activePagesHeroSection} bg preview ${imgIdx}`} fill className="object-cover" />
+                            </div>
+                            <button
+                              type="button"
+                              onClick={async () => { 
+                                await deleteBlobImage(imgUrl); 
+                                const newBgImages = [...(pagesHero as any)[activePagesHeroSection].bgImages];
+                                newBgImages.splice(imgIdx, 1);
+                                setPagesHero(prev => ({
+                                  ...prev,
+                                  [activePagesHeroSection]: {
+                                    ...(prev as any)[activePagesHeroSection],
+                                    bgImages: newBgImages
+                                  }
+                                }));
+                              }}
+                              className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 hover:bg-red-400 text-white rounded-full flex items-center justify-center text-xs font-bold shadow-lg opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                              title="Remove image"
+                            >✕</button>
+                          </div>
+                        )) : (
+                          (pagesHero as any)[activePagesHeroSection]?.bgImage && (
+                            <div className="relative group shrink-0 opacity-50">
+                              <div className="w-32 h-20 relative rounded-xl overflow-hidden border border-white/10 bg-black/50">
+                                <Image src={(pagesHero as any)[activePagesHeroSection].bgImage} alt="Legacy Image" fill className="object-cover" />
+                              </div>
+                              <p className="text-[10px] text-center mt-1 text-white/40">Legacy Image</p>
+                            </div>
+                          )
+                        )}
+                        <label className="flex items-center gap-2 px-4 py-3 bg-black/60 border border-white/10 rounded-xl cursor-pointer hover:bg-white/5 transition-colors text-sm font-medium text-white/80 w-full sm:w-auto h-20">
+                          <UploadCloud className="w-5 h-5" />
+                          {uploadingPagesHeroImage === activePagesHeroSection ? "Uploading..." : "Add Background Image"}
+                          <input type="file" className="hidden" accept="image/*" onChange={(e) => handlePagesHeroBgImageUpload(e, activePagesHeroSection)} disabled={uploadingPagesHeroImage === activePagesHeroSection} />
+                        </label>
                       </div>
                       
-                      {(pagesHero as any)[activePagesHeroSection]?.bgImage && (
+                      {/* hidden to gracefully remove old UI logic block */}{(pagesHero as any)[activePagesHeroSection]?.bgImage && (
                         <div className="mt-4 relative h-48 w-full rounded-2xl overflow-hidden border border-white/10 bg-black/50">
                           <Image src={(pagesHero as any)[activePagesHeroSection].bgImage} alt={`${activePagesHeroSection} Hero`} fill className="object-cover" />
                         </div>
@@ -3721,6 +3856,71 @@ export default function AdminPage() {
                             {tripFormData.excludes.length === 0 && (
                               <div className="text-center py-6 text-white/30 text-sm border border-dashed border-white/10 rounded-xl">
                                 No excludes added yet. Click "+ Add Exclude" to start.
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* FAQs Section */}
+                        <div className="space-y-4 pt-4 border-t border-white/10">
+                          <div className="flex items-center justify-between">
+                            <label className="text-sm font-bold text-white uppercase tracking-wider">Frequently Asked Questions (FAQs)</label>
+                            <button
+                              type="button"
+                              onClick={() => setTripFormData({ ...tripFormData, faqs: [...(tripFormData.faqs || []), { q: "", a: "" }] })}
+                              className="text-xs font-bold text-brand-400 bg-brand-500/10 hover:bg-brand-500/20 px-3 py-1.5 rounded-lg border border-brand-500/20 flex items-center gap-1 transition-colors"
+                            >
+                              <Plus className="w-3.5 h-3.5" /> Add FAQ
+                            </button>
+                          </div>
+                          <div className="space-y-4">
+                            {(tripFormData.faqs || []).map((faq, index) => (
+                              <div key={index} className="bg-black/40 p-4 rounded-xl border border-white/5 relative group">
+                                <div className="flex justify-between items-start mb-3">
+                                  <div className="flex-1 pr-4">
+                                    <input
+                                      type="text"
+                                      value={faq.q}
+                                      onChange={(e) => {
+                                        const newFaqs = [...(tripFormData.faqs || [])];
+                                        newFaqs[index].q = e.target.value;
+                                        setTripFormData({ ...tripFormData, faqs: newFaqs });
+                                      }}
+                                      placeholder="Question (e.g. What is the best time to visit?)"
+                                      className="w-full bg-transparent border-b border-white/10 px-0 py-1.5 focus:outline-none focus:border-brand-500 text-white font-medium text-sm"
+                                      required
+                                    />
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const newFaqs = [...(tripFormData.faqs || [])];
+                                      newFaqs.splice(index, 1);
+                                      setTripFormData({ ...tripFormData, faqs: newFaqs });
+                                    }}
+                                    className="p-1.5 bg-red-500/10 text-red-400 hover:bg-red-500/20 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </div>
+                                <div>
+                                  <textarea
+                                    value={faq.a}
+                                    onChange={(e) => {
+                                      const newFaqs = [...(tripFormData.faqs || [])];
+                                      newFaqs[index].a = e.target.value;
+                                      setTripFormData({ ...tripFormData, faqs: newFaqs });
+                                    }}
+                                    placeholder="Answer..."
+                                    className="w-full bg-black/20 border border-white/5 rounded-lg px-3 py-2 text-white/70 text-sm focus:outline-none focus:border-brand-500 min-h-[60px] resize-y"
+                                    required
+                                  />
+                                </div>
+                              </div>
+                            ))}
+                            {(tripFormData.faqs || []).length === 0 && (
+                              <div className="text-center py-6 text-white/30 text-sm border border-dashed border-white/10 rounded-xl">
+                                No FAQs added yet. Click "+ Add FAQ" to start.
                               </div>
                             )}
                           </div>

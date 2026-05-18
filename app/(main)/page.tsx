@@ -127,16 +127,38 @@ export default function HomePage() {
   const [currentSlide, setCurrentSlide] = React.useState(0);
   const [isHovered, setIsHovered] = React.useState(false);
   const [isMouseDown, setIsMouseDown] = React.useState(false);
+  const [activeBgIndex, setActiveBgIndex] = React.useState(0);
 
   const defaultHeroSlides = [
-    { title: "INDIA", subtitle: "Explore the diverse beauty of the Indian Himalayas, from spiritual journeys to thrilling treks.", image: "/images/hero-india.PNG", mobileImage: "", tabletImage: "", upperTags: ["Ladakh", "15 days", "Challenging"], lowerTags: ["Zero Waste", "Low-carbon", "Local Hire", "Inclusive Growth"] },
     { title: "NEPAL", subtitle: "Discover the breathtaking landscapes, vibrant culture, and ancient heritage of the Himalayas.", image: "/images/hero-nepal.PNG", mobileImage: "", tabletImage: "", upperTags: ["Everest Region", "15 days", "Challenging"], lowerTags: ["Zero Waste", "Low-carbon", "Local Hire", "Inclusive Growth"] },
+    { title: "INDIA", subtitle: "Explore the diverse beauty of the Indian Himalayas, from spiritual journeys to thrilling treks.", image: "/images/hero-india.PNG", mobileImage: "", tabletImage: "", upperTags: ["Ladakh", "15 days", "Challenging"], lowerTags: ["Zero Waste", "Low-carbon", "Local Hire", "Inclusive Growth"] },
     { title: "BHUTAN", subtitle: "Experience the magic of the Land of the Thunder Dragon, with its pristine landscapes and ancient monasteries.", image: "/images/hero-bhutan.PNG", mobileImage: "", tabletImage: "", upperTags: ["Paro Valley", "7 days", "Moderate"], lowerTags: ["Eco-Friendly", "Cultural Preservation", "Local Hire", "Inclusive Growth"] },
   ];
   const [heroSlides, setHeroSlides] = React.useState<any[]>(defaultHeroSlides);
 
   // Device type detection for responsive hero images
   const [deviceType, setDeviceType] = React.useState<"mobile" | "tablet" | "desktop">("desktop");
+
+  // Auto cycle background images for the active slide every 5 seconds
+  React.useEffect(() => {
+    const activeSlideData = heroSlides[currentSlide];
+    let bgList = (activeSlideData?.bgImages && activeSlideData.bgImages.length > 0) ? activeSlideData.bgImages : [activeSlideData?.image];
+    
+    if (deviceType === "mobile") {
+      bgList = (activeSlideData?.mobileBgImages && activeSlideData.mobileBgImages.length > 0) ? activeSlideData.mobileBgImages : (activeSlideData?.mobileImage ? [activeSlideData.mobileImage] : bgList);
+    } else if (deviceType === "tablet") {
+      bgList = (activeSlideData?.tabletBgImages && activeSlideData.tabletBgImages.length > 0) ? activeSlideData.tabletBgImages : (activeSlideData?.tabletImage ? [activeSlideData.tabletImage] : bgList);
+    }
+    
+    const bgCount = bgList.length || 1;
+    if (bgCount > 1) {
+      const interval = setInterval(() => {
+        setActiveBgIndex(prev => (prev + 1) % bgCount);
+      }, 5000);
+      return () => clearInterval(interval);
+    }
+  }, [currentSlide, heroSlides, deviceType]);
+
 
   const [featuredTours, setFeaturedTours] = React.useState<any[]>([]);
   const [featuredTreks, setFeaturedTreks] = React.useState<any[]>([]);
@@ -160,7 +182,7 @@ export default function HomePage() {
           const data = docSnap.data() as any;
           if (Array.isArray(data.slides) && data.slides.length > 0) {
             // New array format — merge with defaults for missing images
-            const defaultImages = ["/images/hero-india.PNG", "/images/hero-nepal.PNG", "/images/hero-bhutan.PNG"];
+            const defaultImages = ["/images/hero-nepal.PNG", "/images/hero-india.PNG", "/images/hero-bhutan.PNG"];
             setHeroSlides(data.slides.map((s: any, i: number) => ({
               ...s,
               image: s.image || defaultImages[i] || defaultImages[0],
@@ -288,11 +310,24 @@ export default function HomePage() {
   }, []);
 
   // Helper to pick the right image per slide based on device
-  const getResponsiveImage = React.useCallback((slide: any) => {
-    if (deviceType === "mobile" && slide.mobileImage) return slide.mobileImage;
-    if (deviceType === "tablet" && slide.tabletImage) return slide.tabletImage;
-    return slide.image;
-  }, [deviceType]);
+  const getResponsiveImage = React.useCallback((slide: any, slideIdx: number) => {
+    let baseImg = slide.image;
+    let bgList = (Array.isArray(slide.bgImages) && slide.bgImages.length > 0) ? slide.bgImages : [baseImg];
+    
+    if (deviceType === "mobile") {
+      baseImg = slide.mobileImage || baseImg;
+      bgList = (Array.isArray(slide.mobileBgImages) && slide.mobileBgImages.length > 0) ? slide.mobileBgImages : (slide.mobileImage ? [slide.mobileImage] : bgList);
+    } else if (deviceType === "tablet") {
+      baseImg = slide.tabletImage || baseImg;
+      bgList = (Array.isArray(slide.tabletBgImages) && slide.tabletBgImages.length > 0) ? slide.tabletBgImages : (slide.tabletImage ? [slide.tabletImage] : bgList);
+    }
+    
+    if (slideIdx === currentSlide) {
+      return bgList[activeBgIndex % bgList.length] || baseImg;
+    } else {
+      return bgList[0] || baseImg;
+    }
+  }, [deviceType, currentSlide, activeBgIndex]);
 
   React.useEffect(() => {
     // Liquid slider is now user-controlled via hover and click, 
@@ -300,18 +335,17 @@ export default function HomePage() {
   }, []);
 
   const toggleMute = () => {
-    setIsMuted(prev => {
-      const newMuted = !prev;
-      // We intentionally do NOT change the video's mute state, so the video remains silent.
-      if (audioRef.current) {
-        if (!newMuted) {
-          audioRef.current.play().catch(() => {});
-        } else {
-          audioRef.current.pause();
-        }
+    const newMuted = !isMuted;
+    setIsMuted(newMuted);
+    
+    if (audioRef.current) {
+      if (!newMuted) {
+        audioRef.current.volume = 1;
+        audioRef.current.play().catch((err) => console.error("Audio play failed:", err));
+      } else {
+        audioRef.current.pause();
       }
-      return newMuted;
-    });
+    }
   };
 
   return (
@@ -346,6 +380,7 @@ export default function HomePage() {
         onMouseDown={() => setIsMouseDown(true)}
         onMouseUp={() => setIsMouseDown(false)}
         onClick={() => {
+          setActiveBgIndex(0);
           setCurrentSlide((prev) => (prev + 1) % heroSlides.length);
         }}
       >
@@ -411,7 +446,7 @@ export default function HomePage() {
         {/* Layer 1: Background Liquid Slider */}
         <motion.div style={{ y: bgY }} className="absolute -inset-[10%] z-0 pointer-events-none">
           <LiquidSlider 
-            slides={heroSlides.map(s => getResponsiveImage(s))}
+            slides={heroSlides.map((s, i) => getResponsiveImage(s, i))}
             currentIndex={currentSlide}
             nextIndex={(currentSlide + 1) % heroSlides.length}
             isHovered={isHovered}
@@ -450,7 +485,7 @@ export default function HomePage() {
                 {heroSlides.map((_, i) => (
                   <button
                     key={i}
-                    onClick={() => setCurrentSlide(i)}
+                    onClick={() => { setActiveBgIndex(0); setCurrentSlide(i); }}
                     className={`h-1.5 md:h-1.5 rounded-full transition-all duration-500 ${
                       i === currentSlide ? "w-8 md:w-12 bg-white" : "w-3 md:w-4 bg-white/40 hover:bg-white/60"
                     }`}
@@ -512,7 +547,7 @@ export default function HomePage() {
         </div>
         
         {/* Hidden Audio Element for Mountain Sound */}
-        <audio ref={audioRef} src="/mountain-sound.ogg" loop />
+        <audio ref={audioRef} src="/audio.mp3" preload="auto" loop />
       </section>
 
       {/* 2. MAIN CONTENT AREA with Unified Greenish Gradient Morphism Background */}
@@ -534,30 +569,6 @@ export default function HomePage() {
         </AnimatePresence>
 
 
-        {/* Cursor tracking interactive background (Travel/Globe Theme) */}
-        <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden flex items-center justify-center">
-          {/* Large Wireframe Text */}
-          <motion.div
-            style={{ x: trackerY, y: trackerX }} // Inverted slightly for parallax difference
-            className="absolute top-[15%] left-0 right-0 flex justify-center opacity-5 dark:opacity-10"
-          >
-            <h2 
-              className="text-[15vw] font-black uppercase tracking-tighter leading-none text-foreground text-center" 
-              style={{ WebkitTextStroke: '1px currentColor', color: 'transparent' }}
-            >
-              ALWAYS<br/>EXPLORING
-            </h2>
-          </motion.div>
-
-          {/* Wireframe Globe */}
-          <motion.div 
-            style={{ x: trackerX, y: trackerY }}
-            className="absolute top-[5%] w-full flex items-center justify-center opacity-[0.04] dark:opacity-[0.06]"
-          >
-            <Globe className="w-[90vw] h-[90vw] text-foreground" strokeWidth={0.5} />
-          </motion.div>
-        </div>
-
         {/* Unified Glassmorphic Green Background Orbs */}
         <div className="absolute inset-0 z-0 pointer-events-none">
           {/* Top Left Green Glow */}
@@ -567,92 +578,6 @@ export default function HomePage() {
           {/* Bottom Center Teal Glow */}
           <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[1000px] h-[600px] bg-teal-500/10 dark:bg-teal-500/15 blur-[150px] rounded-full mix-blend-normal" />
         </div>
-
-        {/* 2. HIGHLIGHTS (Trust Section) */}
-        <section className="py-24 relative z-10">
-          <div className="container mx-auto px-4">
-            <div className="flex flex-col md:flex-row md:items-end justify-between mb-16 gap-8">
-              <div className="max-w-2xl">
-                <motion.h2
-                  initial={{ opacity: 0, x: -20 }}
-                  whileInView={{ opacity: 1, x: 0 }}
-                  viewport={{ once: true }}
-                  className="text-4xl md:text-5xl lg:text-6xl font-black tracking-tight mb-6 uppercase"
-                >
-                  {whyChoose.title}
-                  {whyChoose.titleHighlight && (
-                    <>
-                      {" "}
-                      <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-500 to-brand-700">
-                        {whyChoose.titleHighlight}
-                      </span>
-                    </>
-                  )}
-                </motion.h2>
-                {whyChoose.description && (
-                  <motion.p
-                    initial={{ opacity: 0, x: -20 }}
-                    whileInView={{ opacity: 1, x: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ delay: 0.1 }}
-                    className="text-lg md:text-xl text-muted-foreground font-medium leading-relaxed"
-                  >
-                    {whyChoose.description}
-                  </motion.p>
-                )}
-              </div>
-
-              {/* Trust Badge */}
-              {whyChoose.trustBadge && (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  whileInView={{ opacity: 1, scale: 1 }}
-                  viewport={{ once: true }}
-                  className="hidden md:flex items-center gap-3 bg-brand-500/10 dark:bg-brand-500/20 border border-brand-500/20 text-brand-700 dark:text-brand-300 px-6 py-4 rounded-full font-bold shadow-lg backdrop-blur-sm"
-                >
-                  <Star className="h-5 w-5 text-brand-500 fill-brand-500" />
-                  {whyChoose.trustBadge}
-                </motion.div>
-              )}
-            </div>
-
-            {whyChoose.features.length > 0 && (
-              <div
-                className={`grid gap-6 md:gap-8 grid-cols-1 md:grid-cols-2 ${
-                  whyChoose.features.length >= 4 ? "lg:grid-cols-4" : whyChoose.features.length === 3 ? "lg:grid-cols-3" : "lg:grid-cols-2"
-                }`}
-              >
-                {whyChoose.features.map((feature, i) => {
-                  const Icon = resolveIcon(feature.iconName);
-                  return (
-                    <motion.div
-                      key={i}
-                      initial={{ opacity: 0, y: 40 }}
-                      whileInView={{ opacity: 1, y: 0 }}
-                      viewport={{ once: true }}
-                      transition={{ delay: i * 0.1, duration: 0.5, ease: "easeOut" }}
-                      className="group relative p-8 md:p-10 rounded-[2.5rem] bg-card/80 backdrop-blur-md border border-border/50 hover:border-brand-500/30 transition-all duration-500 overflow-hidden hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.05)] dark:hover:shadow-[0_20px_40px_-15px_rgba(var(--brand-500),0.1)]"
-                    >
-                      <div className="absolute inset-0 bg-gradient-to-br from-brand-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-
-                      <div className="relative z-10">
-                        <div className="h-16 w-16 rounded-2xl bg-muted/50 border border-border/50 flex items-center justify-center mb-8 shadow-sm group-hover:-translate-y-2 group-hover:bg-gradient-to-br group-hover:from-brand-500 group-hover:to-brand-600 group-hover:text-white group-hover:border-transparent transition-all duration-500">
-                          <Icon className="h-8 w-8 text-foreground group-hover:text-white transition-colors duration-500" />
-                        </div>
-                        <h3 className="text-2xl font-black tracking-tight mb-4 group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors duration-500">
-                          {feature.title}
-                        </h3>
-                        <p className="text-muted-foreground font-medium leading-relaxed">
-                          {feature.desc}
-                        </p>
-                      </div>
-                    </motion.div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        </section>
 
         {/* 3. FEATURED TOURS */}
         <section id="featured" className="py-24 relative z-10 border-y border-border/30">
@@ -1142,6 +1067,93 @@ export default function HomePage() {
           </section>
         )}
 
+        {/* 2. HIGHLIGHTS (Trust Section) */}
+        <section className="py-24 relative z-10">
+          <div className="container mx-auto px-4">
+            <div className="flex flex-col md:flex-row md:items-end justify-between mb-16 gap-8">
+              <div className="max-w-2xl">
+                <motion.h2
+                  initial={{ opacity: 0, x: -20 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true }}
+                  className="text-4xl md:text-5xl lg:text-6xl font-black tracking-tight mb-6 uppercase"
+                >
+                  {whyChoose.title}
+                  {whyChoose.titleHighlight && (
+                    <>
+                      {" "}
+                      <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-500 to-brand-700">
+                        {whyChoose.titleHighlight}
+                      </span>
+                    </>
+                  )}
+                </motion.h2>
+                {whyChoose.description && (
+                  <motion.p
+                    initial={{ opacity: 0, x: -20 }}
+                    whileInView={{ opacity: 1, x: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: 0.1 }}
+                    className="text-lg md:text-xl text-muted-foreground font-medium leading-relaxed"
+                  >
+                    {whyChoose.description}
+                  </motion.p>
+                )}
+              </div>
+
+              {/* Trust Badge */}
+              {whyChoose.trustBadge && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  whileInView={{ opacity: 1, scale: 1 }}
+                  viewport={{ once: true }}
+                  className="hidden md:flex items-center gap-3 bg-brand-500/10 dark:bg-brand-500/20 border border-brand-500/20 text-brand-700 dark:text-brand-300 px-6 py-4 rounded-full font-bold shadow-lg backdrop-blur-sm"
+                >
+                  <Star className="h-5 w-5 text-brand-500 fill-brand-500" />
+                  {whyChoose.trustBadge}
+                </motion.div>
+              )}
+            </div>
+
+            {whyChoose.features.length > 0 && (
+              <div
+                className={`grid gap-6 md:gap-8 grid-cols-1 md:grid-cols-2 ${
+                  whyChoose.features.length >= 4 ? "lg:grid-cols-4" : whyChoose.features.length === 3 ? "lg:grid-cols-3" : "lg:grid-cols-2"
+                }`}
+              >
+                {whyChoose.features.map((feature, i) => {
+                  const Icon = resolveIcon(feature.iconName);
+                  return (
+                    <motion.div
+                      key={i}
+                      initial={{ opacity: 0, y: 40 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      viewport={{ once: true }}
+                      transition={{ delay: i * 0.1, duration: 0.5, ease: "easeOut" }}
+                      className="group relative p-8 md:p-10 rounded-[2.5rem] bg-card/80 backdrop-blur-md border border-border/50 hover:border-brand-500/30 transition-all duration-500 overflow-hidden hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.05)] dark:hover:shadow-[0_20px_40px_-15px_rgba(var(--brand-500),0.1)]"
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-br from-brand-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+
+                      <div className="relative z-10">
+                        <div className="h-16 w-16 rounded-2xl bg-muted/50 border border-border/50 flex items-center justify-center mb-8 shadow-sm group-hover:-translate-y-2 group-hover:bg-gradient-to-br group-hover:from-brand-500 group-hover:to-brand-600 group-hover:text-white group-hover:border-transparent transition-all duration-500">
+                          <Icon className="h-8 w-8 text-foreground group-hover:text-white transition-colors duration-500" />
+                        </div>
+                        <h3 className="text-2xl font-black tracking-tight mb-4 group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors duration-500">
+                          {feature.title}
+                        </h3>
+                        <p className="text-muted-foreground font-medium leading-relaxed">
+                          {feature.desc}
+                        </p>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </section>
+
+        
         {/* 6. TESTIMONIALS PREVIEW */}
 
         <section className="py-24 relative z-10">
@@ -1214,8 +1226,8 @@ export default function HomePage() {
         </section>
 
         {/* 6. CTA BANNER */}
-        <section className="p-8 md:p-12 lg:px-16 relative overflow-hidden z-[70] rounded-[3rem] mx-4 md:mx-12 mb-12 shadow-2xl bg-[#0c0c0c] border border-white/5 group">
-          <div className="absolute -top-32 -right-12 text-[#161616] rotate-12 group-hover:rotate-45 group-hover:scale-110 transition-transform duration-1000 ease-out z-0">
+        <section className="p-8 md:p-12 lg:px-16 relative overflow-hidden z-[70] rounded-[3rem] mx-4 md:mx-12 mb-12 shadow-2xl bg-card border border-border group">
+          <div className="absolute -top-32 -right-12 text-slate-100 dark:text-white/5 rotate-12 group-hover:rotate-45 group-hover:scale-110 transition-transform duration-1000 ease-out z-0">
             <Compass className="w-[500px] h-[500px]" />
           </div>
           
@@ -1227,11 +1239,11 @@ export default function HomePage() {
               className="flex flex-col xl:flex-row items-center justify-between gap-8"
             >
               <div className="relative z-10 max-w-2xl xl:max-w-4xl text-center xl:text-left">
-                <h2 className="text-3xl md:text-[3.25rem] xl:text-[3.5rem] font-black tracking-tight mb-4 text-white uppercase leading-[1.1]">
-                  <span className="block md:inline whitespace-normal md:whitespace-nowrap">Ready for the <span className="text-[#22c55e]">adventure</span></span><br className="hidden md:block" />
+                <h2 className="text-3xl md:text-[3.25rem] xl:text-[3.5rem] font-black tracking-tight mb-4 text-foreground uppercase leading-[1.1]">
+                  <span className="block md:inline whitespace-normal md:whitespace-nowrap">Ready for the <span className="text-brand-600 dark:text-[#22c55e]">adventure</span></span><br className="hidden md:block" />
                   <span className="block md:inline mt-2 md:mt-0">of a lifetime?</span>
                 </h2>
-                <p className="text-white/60 text-base md:text-lg font-medium leading-relaxed max-w-xl mx-auto xl:mx-0">
+                <p className="text-muted-foreground text-base md:text-lg font-medium leading-relaxed max-w-xl mx-auto xl:mx-0">
                   Book your Himalayan trek today and let us take care of all the details.
                 </p>
               </div>

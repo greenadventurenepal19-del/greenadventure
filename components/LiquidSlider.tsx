@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useRef, useState, useEffect } from "react";
-import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
+import React, { useRef, useState, useEffect, useRef as useRefAlias } from "react";
+import { motion, useMotionValue, useSpring, useTransform, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 
 export default function LiquidSlider({ 
@@ -26,12 +26,89 @@ export default function LiquidSlider({
   // Smoothly follow the mouse with springs
   const smoothX = useSpring(mouseX, { stiffness: 100, damping: 20, mass: 0.5 });
   const smoothY = useSpring(mouseY, { stiffness: 100, damping: 20, mass: 0.5 });
-  
-  // We manage our own displayed slides so we can animate out of them when the parent changes currentIndex
-  const [displayBaseIdx, setDisplayBaseIdx] = useState(currentIndex);
-  const [displayRevealIdx, setDisplayRevealIdx] = useState(nextIndex);
+
+  // Track whether a transition is in progress
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  // isResetting: hide the reveal layer while we swap images to avoid flicker
   const [isResetting, setIsResetting] = useState(false);
   
+  // The frozen images used during transitions – updated atomically to prevent flicker
+  // baseImage: what's shown as the full-screen background
+  // revealImage: what's shown under the liquid mask (the "next" slide preview)
+  const [baseImage, setBaseImage] = useState(slides[currentIndex] || "");
+  const [revealImage, setRevealImage] = useState(slides[nextIndex] || "");
+
+  // Keep a ref of the previous currentIndex so we know when a real slide change happened
+  const prevCurrentIndex = useRef(currentIndex);
+  const prevSlides = useRef(slides);
+
+  // When the slide index changes (click), kick off the liquid transition
+  useEffect(() => {
+    const prevIdx = prevCurrentIndex.current;
+    const didSlideChange = currentIndex !== prevIdx;
+    const didSlidesChange = slides !== prevSlides.current;
+
+    if (didSlideChange) {
+      // A click happened — start expanding the liquid circle
+      prevCurrentIndex.current = currentIndex;
+      prevSlides.current = slides;
+
+      // The reveal layer should already show the image for currentIndex (it was the "next" preview)
+      // Make sure it has the correct image right now
+      setRevealImage(slides[currentIndex] || "");
+      setIsTransitioning(true);
+
+      // Expand circle
+      const maxRadius = Math.max(window.innerWidth, window.innerHeight) * 1.8;
+      size.set(maxRadius);
+
+      // After circle covers screen, atomically swap base→current, reveal→next
+      const timeout = setTimeout(() => {
+        setIsResetting(true);
+        // Swap: base becomes the newly revealed slide
+        setBaseImage(slides[currentIndex] || "");
+        // Reveal becomes the next-next slide
+        setRevealImage(slides[(currentIndex + 1) % slides.length] || "");
+
+        // Collapse circle immediately (jump, no spring)
+        size.set(isHovered ? 180 : 0);
+        if (typeof smoothSize.jump === "function") {
+          smoothSize.jump(isHovered ? 180 : 0);
+        }
+
+        // Brief pause so the image swap doesn't create a visible flicker
+        setTimeout(() => {
+          setIsResetting(false);
+          setIsTransitioning(false);
+        }, 50);
+      }, 700);
+
+      return () => clearTimeout(timeout);
+    } else if (didSlidesChange) {
+      // slides array content changed (e.g. activeBgIndex changed) but slide index didn't
+      prevSlides.current = slides;
+      // Only update the reveal image (which is the hover preview) – don't touch base
+      setRevealImage(slides[nextIndex] || "");
+      if (!isTransitioning) {
+        setBaseImage(slides[currentIndex] || "");
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentIndex, slides]);
+
+  // Separate effect for hover/mousedown circle changes (not slide changes)
+  useEffect(() => {
+    if (isTransitioning) return; // let the transition effect own size during transitions
+    if (!isResetting) {
+      if (isHovered) {
+        size.set(isMouseDown ? 800 : 180);
+      } else {
+        size.set(0);
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isHovered, isMouseDown, isResetting, isTransitioning]);
+
   // Circle radius
   const size = useMotionValue(0);
   const smoothSize = useSpring(size, { stiffness: 60, damping: 15, mass: 0.5 });
@@ -61,45 +138,6 @@ export default function LiquidSlider({
     window.addEventListener("mousemove", handleMouseMove);
     return () => window.removeEventListener("mousemove", handleMouseMove);
   }, [mouseX, mouseY]);
-
-  useEffect(() => {
-    // If the parent slide changed (a click happened)
-    if (currentIndex !== displayBaseIdx) {
-      // 1. Expand the circle to cover the screen (increased to 1.8 to overcome gooey shrink)
-      const maxRadius = Math.max(window.innerWidth, window.innerHeight) * 1.8;
-      size.set(maxRadius);
-      
-      // 2. Wait for it to cover the screen, then swap background images and reset circle
-      const timeout = setTimeout(() => {
-        setIsResetting(true);
-        
-        // Now the base image is the one we just revealed
-        setDisplayBaseIdx(currentIndex);
-        // And the reveal image is the next one
-        setDisplayRevealIdx((currentIndex + 1) % slides.length);
-        
-        // Reset the circle
-        size.set(isHovered ? 180 : 0);
-        if (typeof smoothSize.jump === "function") {
-          smoothSize.jump(isHovered ? 180 : 0);
-        }
-        
-        // Re-enable the reveal layer after a short delay
-        setTimeout(() => setIsResetting(false), 50);
-      }, 700); // 700ms gives the spring time to expand fully
-      
-      return () => clearTimeout(timeout);
-    } else {
-      // Normal hover behaviour
-      if (!isResetting) {
-        if (isHovered) {
-          size.set(isMouseDown ? 800 : 180);
-        } else {
-          size.set(0);
-        }
-      }
-    }
-  }, [currentIndex, isHovered, isMouseDown, displayBaseIdx, slides.length, size, smoothSize, isResetting]);
 
   return (
     <div ref={ref} className="absolute inset-0 z-0 overflow-hidden bg-black pointer-events-none">
@@ -150,15 +188,32 @@ export default function LiquidSlider({
         </defs>
       </svg>
 
-      {/* Layer 1: Base Image (Full width/height) */}
-      <div className="absolute inset-0 w-full h-full">
-        <Image
-          src={slides[displayBaseIdx]}
-          alt="Base slider image"
-          fill
-          className="object-cover"
-          priority
-        />
+      {/* Layer 1: Base Image — smoothly cross-fades during auto-cycle, but swaps instantly during slide transition (resetting) */}
+      <div className="absolute inset-0 w-full h-full bg-black">
+        <AnimatePresence initial={false}>
+          <motion.div
+            key={baseImage}
+            initial={{ opacity: 0, scale: 1.05 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ 
+              opacity: 0,
+              transition: { duration: (isTransitioning || isResetting) ? 0 : 1.5 }
+            }}
+            transition={{ 
+              duration: (isTransitioning || isResetting) ? 0 : 1.5,
+              ease: "easeInOut" 
+            }}
+            className="absolute inset-0 w-full h-full"
+          >
+            <Image
+              src={baseImage}
+              alt="Base slider image"
+              fill
+              className="object-cover"
+              priority
+            />
+          </motion.div>
+        </AnimatePresence>
       </div>
 
       {/* Layer 2: Reveal Image (Masked by dynamic liquid) */}
@@ -172,7 +227,7 @@ export default function LiquidSlider({
           }}
         >
           <Image
-            src={slides[displayRevealIdx]}
+            src={revealImage}
             alt="Reveal slider image"
             fill
             className="object-cover"

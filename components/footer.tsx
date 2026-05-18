@@ -116,16 +116,67 @@ export function Footer() {
   ].filter(s => s.show);
 
   return (
-    <footer className="relative bg-[#050c05] dark:bg-[#050c05] text-slate-100 pt-24 pb-8 overflow-hidden mt-16 rounded-t-[2.5rem]">
-      {/* Background Image - Dimmed */}
-      <div className="absolute inset-0 z-0 pointer-events-none opacity-40 dark:opacity-30 mix-blend-screen dark:mix-blend-lighten transition-all duration-500">
+    <footer className="footer-container relative pt-24 pb-8 overflow-hidden mt-16 rounded-t-[2.5rem] border-t">
+      <style>{`
+        .footer-container {
+          --f-bg: #fafafa;
+          --f-text: #27272a;
+          --f-heading: #18181b;
+          --f-muted: #71717a;
+          --f-border: #e4e4e7;
+          --f-card-bg: rgba(228, 228, 231, 0.6);
+          --f-card-hover: #16a34a; /* brand-600 */
+          --f-icon: #16a34a;
+          --f-icon-hover: #ffffff;
+          --f-grad-bottom: rgba(250, 250, 250, 0.95);
+          --f-grad-mid: rgba(250, 250, 250, 0.6);
+          --f-grad-top: rgba(250, 250, 250, 0.1);
+          --f-image-op: 0.4;
+          --f-blend: multiply;
+          background-color: var(--f-bg);
+          color: var(--f-text);
+          border-color: var(--f-border);
+        }
+        .dark .footer-container {
+          --f-bg: #050c05;
+          --f-text: #f1f5f9;
+          --f-heading: #ffffff;
+          --f-muted: #94a3b8;
+          --f-border: rgba(255, 255, 255, 0.05);
+          --f-card-bg: rgba(255, 255, 255, 0.05);
+          --f-card-hover: #16a34a;
+          --f-icon: #22c55e; /* brand-500 */
+          --f-icon-hover: #ffffff;
+          --f-grad-bottom: rgba(5, 12, 5, 0.95);
+          --f-grad-mid: rgba(5, 12, 5, 0.5);
+          --f-grad-top: rgba(5, 12, 5, 0.1);
+          --f-image-op: 0.7;
+          --f-blend: lighten;
+        }
+      `}</style>
+
+      {/* Background Image — visible in both modes, appropriately masked */}
+      <div 
+        className="absolute inset-0 z-0 pointer-events-none transition-all duration-500"
+        style={{ opacity: 'var(--f-image-op)', mixBlendMode: 'var(--f-blend)' as any }}
+      >
         <Image 
           src="/images/footer-bg-green.png" 
           alt="Green Mountain Background" 
           fill 
           className="object-cover object-bottom"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#050c05] via-[#050c05]/60 to-transparent" />
+      </div>
+      
+      {/* Gradient Mask to ensure text readability */}
+      <div 
+        className="absolute inset-0 z-0 pointer-events-none"
+        style={{ background: 'linear-gradient(to top, var(--f-grad-bottom), var(--f-grad-mid), var(--f-grad-top))' }}
+      />
+
+      {/* Subtle light-mode brand tint */}
+      <div className="absolute inset-0 z-0 pointer-events-none dark:opacity-0 transition-opacity duration-500 mix-blend-overlay">
+        <div className="absolute inset-0 bg-gradient-to-br from-brand-500/5 via-transparent to-brand-500/10" />
       </div>
 
       <div className="container mx-auto px-6 md:px-12 relative z-10">
@@ -133,13 +184,13 @@ export function Footer() {
           {/* Brand & Get In Touch */}
           <div className="lg:col-span-5 space-y-8 lg:pr-8">
             <div>
-              <h3 className="font-black tracking-widest uppercase text-xs mb-4 text-brand-500">
+              <h3 className="font-black tracking-widest uppercase text-xs mb-4 text-brand-600 dark:text-brand-500">
                 Get in Touch
               </h3>
-              <h2 className="text-4xl md:text-5xl font-bold text-white leading-tight mb-6">
+              <h2 className="text-4xl md:text-5xl font-bold leading-tight mb-6" style={{ color: 'var(--f-heading)' }}>
                 {footer.tagline || DEFAULT_FOOTER.tagline}
               </h2>
-              <p className="text-slate-400 text-base font-medium leading-relaxed max-w-sm drop-shadow-sm mb-6">
+              <p className="text-base font-medium leading-relaxed max-w-sm drop-shadow-sm mb-6" style={{ color: 'var(--f-muted)' }}>
                 {footer.description || DEFAULT_FOOTER.description}
               </p>
               
@@ -151,10 +202,25 @@ export function Footer() {
                     target={s.href !== "#" ? "_blank" : undefined}
                     rel="noopener noreferrer"
                     title={s.label}
-                    className="p-3.5 rounded-2xl bg-white/5 hover:bg-brand-600 text-slate-300 hover:text-white transition-all border border-white/10 shadow-[0_4px_15px_rgba(0,0,0,0.05)] hover:shadow-[0_10px_25px_rgba(22,163,74,0.4)] hover:-translate-y-1"
+                    className="p-3.5 rounded-2xl transition-all shadow-sm hover:shadow-[0_10px_25px_rgba(22,163,74,0.4)] hover:-translate-y-1"
+                    style={{ 
+                      backgroundColor: 'var(--f-card-bg)',
+                      borderColor: 'var(--f-border)',
+                      borderWidth: '1px'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = 'var(--f-card-hover)';
+                      e.currentTarget.style.color = 'var(--f-icon-hover)';
+                      e.currentTarget.querySelector('svg')!.style.color = 'var(--f-icon-hover)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = 'var(--f-card-bg)';
+                      e.currentTarget.style.color = 'var(--f-text)';
+                      e.currentTarget.querySelector('svg')!.style.color = 'var(--f-icon)';
+                    }}
                   >
                     <span className="sr-only">{s.label}</span>
-                    {s.icon}
+                    <span style={{ color: 'var(--f-icon)', transition: 'color 0.2s' }}>{s.icon}</span>
                   </a>
                 ))}
               </div>
@@ -163,8 +229,8 @@ export function Footer() {
 
           {/* Explore */}
           <div className="lg:col-span-2">
-            <h3 className="font-bold tracking-wide uppercase text-sm mb-6 text-white flex items-center gap-2">
-              <Tent className="w-4 h-4 text-brand-500" /> Explore
+            <h3 className="font-bold tracking-wide uppercase text-sm mb-6 flex items-center gap-2" style={{ color: 'var(--f-heading)' }}>
+              <Tent className="w-4 h-4 text-brand-600 dark:text-brand-500" /> Explore
             </h3>
             <ul className="space-y-4">
               {[
@@ -176,7 +242,7 @@ export function Footer() {
                 { name: "Contact Us", href: "/contact" },
               ].map((link) => (
                 <li key={link.name}>
-                  <Link href={link.href} className="text-slate-400 hover:text-white hover:translate-x-1 inline-block font-medium text-sm transition-all">
+                  <Link href={link.href} className="hover:text-brand-600 dark:hover:text-white hover:translate-x-1 inline-block font-medium text-sm transition-all" style={{ color: 'var(--f-muted)' }}>
                     {link.name}
                   </Link>
                 </li>
@@ -186,8 +252,8 @@ export function Footer() {
 
           {/* Support */}
           <div className="lg:col-span-2">
-            <h3 className="font-bold tracking-wide uppercase text-sm mb-6 text-white flex items-center gap-2">
-              <Compass className="w-4 h-4 text-brand-500" /> Support
+            <h3 className="font-bold tracking-wide uppercase text-sm mb-6 flex items-center gap-2" style={{ color: 'var(--f-heading)' }}>
+              <Compass className="w-4 h-4 text-brand-600 dark:text-brand-500" /> Support
             </h3>
             <ul className="space-y-4">
               {[
@@ -198,7 +264,7 @@ export function Footer() {
                 { name: "Visa Info", href: "/visa-info" },
               ].map((link) => (
                 <li key={link.name}>
-                  <Link href={link.href} className="text-slate-400 hover:text-white hover:translate-x-1 inline-block font-medium text-sm transition-all">
+                  <Link href={link.href} className="hover:text-brand-600 dark:hover:text-white hover:translate-x-1 inline-block font-medium text-sm transition-all" style={{ color: 'var(--f-muted)' }}>
                     {link.name}
                   </Link>
                 </li>
@@ -208,17 +274,20 @@ export function Footer() {
 
           {/* Contact */}
           <div className="lg:col-span-3">
-            <h3 className="font-bold tracking-wide uppercase text-sm mb-6 text-white flex items-center gap-2">
-              <MapPin className="w-4 h-4 text-brand-500" /> Contact
+            <h3 className="font-bold tracking-wide uppercase text-sm mb-6 flex items-center gap-2" style={{ color: 'var(--f-heading)' }}>
+              <MapPin className="w-4 h-4 text-brand-600 dark:text-brand-500" /> Contact
             </h3>
             {hasAnyContact ? (
               <ul className="space-y-5">
                 {hasLocation && (
-                  <li className="flex items-start gap-4 text-sm text-slate-400 font-medium group cursor-pointer">
-                    <div className="p-2.5 rounded-xl bg-white/5 border border-white/10 group-hover:bg-brand-600 transition-all shrink-0">
-                      <MapPin className="h-4 w-4 text-brand-500 group-hover:text-white transition-colors" />
+                  <li className="flex items-start gap-4 text-sm font-medium group cursor-pointer" style={{ color: 'var(--f-muted)' }}>
+                    <div 
+                      className="p-2.5 rounded-xl border group-hover:bg-brand-600 transition-all shrink-0"
+                      style={{ backgroundColor: 'var(--f-card-bg)', borderColor: 'var(--f-border)' }}
+                    >
+                      <MapPin className="h-4 w-4 text-brand-600 dark:text-brand-500 group-hover:text-white transition-colors" />
                     </div>
-                    <span className="pt-1.5 leading-relaxed group-hover:text-brand-400 transition-colors">
+                    <span className="pt-1.5 leading-relaxed group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors">
                       {contact.locationLine1}
                       {contact.locationLine1 && contact.locationLine2 && <br />}
                       {contact.locationLine2}
@@ -226,54 +295,64 @@ export function Footer() {
                   </li>
                 )}
                 {hasPhone && (
-                  <li className="flex items-center gap-4 text-sm text-slate-400 font-medium group cursor-pointer">
-                    <div className="p-2.5 rounded-xl bg-white/5 border border-white/10 group-hover:bg-brand-600 transition-all shrink-0">
-                      <Phone className="h-4 w-4 text-brand-500 group-hover:text-white transition-colors" />
+                  <li className="flex items-center gap-4 text-sm font-medium group cursor-pointer" style={{ color: 'var(--f-muted)' }}>
+                    <div 
+                      className="p-2.5 rounded-xl border group-hover:bg-brand-600 transition-all shrink-0"
+                      style={{ backgroundColor: 'var(--f-card-bg)', borderColor: 'var(--f-border)' }}
+                    >
+                      <Phone className="h-4 w-4 text-brand-600 dark:text-brand-500 group-hover:text-white transition-colors" />
                     </div>
-                    <a href={`tel:${contact.phonePrimary.replace(/[^0-9+]/g, "")}`} className="group-hover:text-brand-400 transition-colors">
+                    <a href={`tel:${contact.phonePrimary.replace(/[^0-9+]/g, "")}`} className="group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors">
                       {contact.phonePrimary}
                     </a>
                   </li>
                 )}
                 {hasEmail && (
-                  <li className="flex items-center gap-4 text-sm text-slate-400 font-medium group cursor-pointer">
-                    <div className="p-2.5 rounded-xl bg-white/5 border border-white/10 group-hover:bg-brand-600 transition-all shrink-0">
-                      <Mail className="h-4 w-4 text-brand-500 group-hover:text-white transition-colors" />
+                  <li className="flex items-center gap-4 text-sm font-medium group cursor-pointer" style={{ color: 'var(--f-muted)' }}>
+                    <div 
+                      className="p-2.5 rounded-xl border group-hover:bg-brand-600 transition-all shrink-0"
+                      style={{ backgroundColor: 'var(--f-card-bg)', borderColor: 'var(--f-border)' }}
+                    >
+                      <Mail className="h-4 w-4 text-brand-600 dark:text-brand-500 group-hover:text-white transition-colors" />
                     </div>
-                    <a href={`mailto:${contact.emailPrimary}`} className="group-hover:text-brand-400 transition-colors break-all">
+                    <a href={`mailto:${contact.emailPrimary}`} className="group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors break-all">
                       {contact.emailPrimary}
                     </a>
                   </li>
                 )}
               </ul>
             ) : (
-              <p className="text-sm text-slate-500 italic">Contact details coming soon.</p>
+              <p className="text-sm italic" style={{ color: 'var(--f-muted)' }}>Contact details coming soon.</p>
             )}
           </div>
         </div>
 
         {/* Big Text Hover Animation */}
-        <div className="w-full flex items-center justify-start overflow-hidden relative z-20 mix-blend-screen pointer-events-auto mt-4 mb-4">
+        <div className="w-full flex items-center justify-start overflow-hidden relative z-20 mix-blend-multiply dark:mix-blend-screen pointer-events-auto mt-4 mb-4">
           <TextHoverEffect text="Greenadventure" duration={0.5} />
         </div>
 
         {/* Footer Bottom */}
-        <div className="pt-8 flex flex-col md:flex-row items-center justify-between gap-6 relative z-10">
-          <p className="text-sm text-slate-500 font-medium">
+        <div 
+          className="pt-8 border-t flex flex-col md:flex-row items-center justify-between gap-6 relative z-10"
+          style={{ borderColor: 'var(--f-border)' }}
+        >
+          <p className="text-sm font-medium" style={{ color: 'var(--f-muted)' }}>
             © {new Date().getFullYear()} Green Adventure Treks &amp; Expeditions. All rights reserved.
           </p>
           <div className="flex items-center gap-3">
-            <span className="text-sm text-slate-500 font-medium">GreenAdventure by</span>
+            <span className="text-sm font-medium" style={{ color: 'var(--f-muted)' }}>GreenAdventure by</span>
             <a 
               href="http://tritechies.vercel.app/" 
               target="_blank" 
               rel="noopener noreferrer"
-              className="group flex items-center gap-1.5 px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-sm font-bold text-slate-300 hover:bg-brand-500/10 hover:border-brand-500/30 transition-all shadow-sm"
+              className="group flex items-center gap-1.5 px-4 py-2 border rounded-xl text-sm font-bold hover:bg-brand-500/10 hover:border-brand-500/30 transition-all shadow-sm"
+              style={{ backgroundColor: 'var(--f-card-bg)', borderColor: 'var(--f-border)', color: 'var(--f-text)' }}
             >
-              <span className="text-emerald-400 group-hover:text-emerald-300 transition-colors drop-shadow-sm">
+              <span className="text-emerald-600 dark:text-emerald-400 group-hover:text-emerald-500 dark:group-hover:text-emerald-300 transition-colors drop-shadow-sm">
                 tritechies.
               </span>
-              <ArrowUpRight className="w-3.5 h-3.5 text-brand-500 group-hover:text-brand-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
+              <ArrowUpRight className="w-3.5 h-3.5 text-brand-600 dark:text-brand-500 group-hover:text-brand-500 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
             </a>
           </div>
         </div>

@@ -4,10 +4,12 @@ import Link from "next/link";
 import { 
   Calendar, Mountain, DollarSign, Activity, 
   Map, CheckCircle, XCircle, ChevronDown, Star,
-  MapPin, Clock, TrendingUp, Leaf, Cloud, Users, Heart, MessageCircle, Compass
+  MapPin, Clock, TrendingUp, Leaf, Cloud, Users, Heart, MessageCircle, Compass, ArrowRight
 } from "lucide-react";
 import TripBookingWidget from "@/components/TripBookingWidget";
 import TripBookingModalWrapper from "@/components/TripBookingModalWrapper";
+import FaqAccordion from "@/components/FaqAccordion";
+import ScrollReveal from "@/components/ScrollReveal";
 import { fetchTripBySlug, buildTripJsonLd } from "@/lib/trip-server";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
@@ -44,6 +46,7 @@ export default async function TripDetailPage({ params }: { params: Promise<{ slu
   const defaultTitle = slug.replace(/-/g, " ").replace(/\b\w/g, l => l.toUpperCase());
   
   let trip: any = null;
+  let relatedTrips: any[] = [];
   const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
 
   // Fetch Contact Info Settings (only show what admin has saved)
@@ -108,7 +111,7 @@ export default async function TripDetailPage({ params }: { params: Promise<{ slu
             altitude: getString(fields.altitude, "TBD"),
             price: getString(fields.price, "On Request"),
             rating: getNumber(fields.rating, 4.8).toString(),
-            type: getString(fields.type, "trekking"),
+            tripType: getString(fields.tripType, "Tour"),
             isFeatured: fields.isFeatured?.booleanValue || false,
             overview: getString(fields.overview, `Welcome to the ${defaultTitle}. This is an incredible journey through some of the most beautiful landscapes in the world.\n\nContact us to customize this itinerary.`).split('\n').filter((p: string) => p.trim() !== ''),
             includes: Array.isArray(fields.includes?.arrayValue?.values)
@@ -117,6 +120,14 @@ export default async function TripDetailPage({ params }: { params: Promise<{ slu
             excludes: Array.isArray(fields.excludes?.arrayValue?.values)
               ? fields.excludes.arrayValue.values.map((v: any) => v.stringValue || '').filter(Boolean)
               : getString(fields.excludes, "International flights\nPersonal expenses\nTips").split('\n').filter((p: string) => p.trim() !== ''),
+            faqs: fields.faqs?.arrayValue?.values?.map((v: any) => {
+              const obj = v.mapValue.fields;
+              const getString = (field: any, defaultVal = "") => field?.stringValue || defaultVal;
+              return {
+                q: getString(obj.q, "Question?"),
+                a: getString(obj.a, "Answer.")
+              };
+            }) || [],
             itinerary: fields.itinerary?.arrayValue?.values?.map((v: any) => {
               const obj = v.mapValue.fields;
               return {
@@ -133,6 +144,49 @@ export default async function TripDetailPage({ params }: { params: Promise<{ slu
         }
       }
     }
+
+      // 3. Fetch Related Featured Trips
+      if (trip && trip.region) {
+        const relatedQuery = {
+          structuredQuery: {
+            from: [{ collectionId: "trips" }],
+            where: {
+              fieldFilter: {
+                field: { fieldPath: "region" },
+                op: "EQUAL",
+                value: { stringValue: trip.region }
+              }
+            },
+            limit: 20
+          }
+        };
+        const relatedRes = await fetch(`https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents:runQuery`, {
+          method: "POST",
+          body: JSON.stringify(relatedQuery),
+          next: { revalidate: 60 }
+        });
+        if (relatedRes.ok) {
+          const resJson = await relatedRes.json();
+          const parsed = resJson.filter((r: any) => r.document).map((r: any) => {
+             const f = r.document.fields;
+             const isF = f.isFeatured?.booleanValue || false;
+             const sl = f.slug?.stringValue || r.document.name.split('/').pop();
+             return {
+                id: r.document.name.split('/').pop(),
+                title: f.title?.stringValue || "",
+                image: f.image?.stringValue || "",
+                region: f.region?.stringValue || "",
+                slug: sl,
+                duration: f.duration?.stringValue || "",
+                difficulty: f.difficulty?.stringValue || "",
+                price: f.price?.stringValue || "",
+                isFeatured: isF,
+                tripType: f.tripType?.stringValue || "",
+             };
+          });
+          relatedTrips = parsed.filter((t: any) => t.isFeatured && t.slug !== slug && (t.tripType || "").toLowerCase() === (trip.tripType || "").toLowerCase()).slice(0, 3);
+        }
+      }
   } catch (error) {
     console.error("Failed to fetch data via REST", error);
   }
@@ -148,13 +202,14 @@ export default async function TripDetailPage({ params }: { params: Promise<{ slu
       altitude: "TBD",
       price: "On Request",
       rating: "4.8",
-      type: "trekking",
+      tripType: "Tour",
       overview: [
         `Welcome to the ${defaultTitle}. This is an incredible journey through some of the most beautiful landscapes in the world.`,
         "Contact us to customize this itinerary to perfectly match your preferences and physical fitness level."
       ],
       includes: ["Guide and support staff", "Necessary permits", "Accommodation"],
       excludes: ["International flights", "Personal expenses", "Travel insurance"],
+      faqs: [],
       itinerary: [
         { day: "Day 1", title: "Arrival", desc: "Welcome and briefing about the trip." },
         { day: "Day 2", title: "Start Activity", desc: "Beginning of the adventure." },
@@ -293,18 +348,21 @@ export default async function TripDetailPage({ params }: { params: Promise<{ slu
           <div className="w-full lg:w-2/3 space-y-16">
             
             {/* Overview */}
+            <ScrollReveal>
             <div id="overview" className="scroll-mt-32">
-              <h2 className="text-3xl font-bold mb-6">Overview</h2>
-              <div className="prose dark:prose-invert max-w-none text-lg text-muted-foreground">
+              <h2 className="text-3xl md:text-4xl font-black tracking-tight mb-6 uppercase">Over<span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-500 to-brand-700">view</span></h2>
+              <div className="prose dark:prose-invert max-w-none text-lg text-muted-foreground leading-relaxed">
                 {trip.overview.map((paragraph: string, idx: number) => (
                   <p key={idx} className={idx > 0 ? "mt-4" : ""}>{paragraph}</p>
                 ))}
               </div>
             </div>
+            </ScrollReveal>
 
             {/* Itinerary */}
+            <ScrollReveal delay={0.1}>
             <div id="itinerary" className="scroll-mt-32">
-              <h2 className="text-3xl font-bold mb-6">Day-by-Day Itinerary</h2>
+              <h2 className="text-3xl md:text-4xl font-black tracking-tight mb-6 uppercase">Day-by-Day <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-500 to-brand-700">Itinerary</span></h2>
               <div className="space-y-4">
                 {trip.itinerary.map((item: any) => (
                   <div key={item.day} className="border border-border rounded-2xl overflow-hidden bg-card">
@@ -322,6 +380,7 @@ export default async function TripDetailPage({ params }: { params: Promise<{ slu
                 ))}
               </div>
             </div>
+            </ScrollReveal>
 
             {/* Flexible Itinerary Note */}
             <div className="flex items-start gap-3 bg-brand-50 dark:bg-brand-950/20 border border-brand-200 dark:border-brand-800/40 rounded-2xl px-5 py-4">
@@ -333,8 +392,9 @@ export default async function TripDetailPage({ params }: { params: Promise<{ slu
             </div>
 
             {/* Includes / Excludes */}
+            <ScrollReveal delay={0.15}>
             <div id="includes" className="scroll-mt-32">
-              <h2 className="text-3xl font-bold mb-6">Cost Includes & Excludes</h2>
+              <h2 className="text-3xl md:text-4xl font-black tracking-tight mb-6 uppercase">Cost <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-500 to-brand-700">Includes & Excludes</span></h2>
               <div className="grid md:grid-cols-2 gap-8">
                 <div className="bg-green-50 dark:bg-green-950/20 p-6 rounded-2xl border border-green-100 dark:border-green-900/50">
                   <h3 className="text-xl font-bold text-green-700 dark:text-green-500 mb-4 flex items-center gap-2">
@@ -364,6 +424,8 @@ export default async function TripDetailPage({ params }: { params: Promise<{ slu
                 </div>
               </div>
             </div>
+            </ScrollReveal>
+
 
           </div>
 
@@ -399,6 +461,76 @@ export default async function TripDetailPage({ params }: { params: Promise<{ slu
 
         </div>
       </section>
+      {/* 3.5 FAQs SECTION */}
+      {trip.faqs && trip.faqs.length > 0 && (
+        <section className="py-24 relative z-10 border-t border-border/30">
+          <div className="absolute inset-0 -z-10">
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[900px] h-[500px] bg-brand-500/5 rounded-full blur-3xl" />
+          </div>
+          <div className="container mx-auto px-4 max-w-4xl">
+            <ScrollReveal>
+            <div className="text-center mb-14">
+              <h2 className="text-4xl md:text-5xl lg:text-6xl font-black tracking-tight mb-6 uppercase">
+                Frequently Asked <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-500 to-brand-700">Questions</span>
+              </h2>
+              <p className="text-lg md:text-xl text-muted-foreground font-medium leading-relaxed">
+                Everything you need to know about this trip.
+              </p>
+            </div>
+            </ScrollReveal>
+            <ScrollReveal delay={0.1}>
+              <FaqAccordion faqs={trip.faqs} />
+            </ScrollReveal>
+          </div>
+        </section>
+      )}
+
+      {/* 4. RELATED TRIPS */}
+      {relatedTrips.length > 0 && (
+        <section className="py-24 relative z-10 border-t border-border/30">
+          <div className="container mx-auto px-4">
+            <div className="flex flex-col md:flex-row md:items-end justify-between mb-16 gap-6">
+              <ScrollReveal>
+              <div className="max-w-2xl">
+                <h2 className="text-4xl md:text-5xl lg:text-6xl font-black tracking-tight mb-6 uppercase">
+                  Related <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-500 to-brand-700">Tours</span>
+                </h2>
+                <p className="text-lg md:text-xl text-muted-foreground font-medium leading-relaxed">
+                  Explore more featured trips in {trip.region}.
+                </p>
+              </div>
+              </ScrollReveal>
+              <ScrollReveal delay={0.1}>
+                <Link
+                  href="/tours"
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-brand-500/10 text-brand-600 dark:text-brand-400 font-bold hover:bg-brand-500 hover:text-white transition-all group border border-brand-500/20 shadow-md backdrop-blur-sm"
+                >
+                  View All Tours
+                  <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                </Link>
+              </ScrollReveal>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {relatedTrips.map((rt: any, i: number) => (
+                <ScrollReveal key={rt.id} delay={i * 0.1}>
+                <Link href={`/${rt.tripType?.toLowerCase() === 'trekking' ? 'trekking' : 'tours'}/${rt.slug}`} className="group relative rounded-[2rem] overflow-hidden shadow-lg hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.1)] dark:hover:shadow-[0_20px_40px_-15px_rgba(var(--brand-500),0.15)] hover:border-brand-500/30 border border-border/50 block h-[400px] transition-all duration-500">
+                  <Image src={rt.image || "/images/everest.png"} alt={rt.title} fill className="object-cover transition-transform duration-700 group-hover:scale-110" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
+                  <div className="absolute inset-x-0 bottom-0 p-6 flex flex-col justify-end">
+                    <span className="text-brand-400 font-bold text-sm tracking-wider uppercase mb-2">{rt.region}</span>
+                    <h3 className="text-2xl font-bold text-white mb-2 leading-tight group-hover:text-brand-300 transition-colors">{rt.title}</h3>
+                    <div className="flex items-center gap-4 text-white/80 text-sm">
+                      <span className="flex items-center gap-1.5"><Clock className="w-4 h-4" /> {rt.duration}</span>
+                      <span className="flex items-center gap-1.5"><Activity className="w-4 h-4" /> {rt.difficulty}</span>
+                    </div>
+                  </div>
+                </Link>
+                </ScrollReveal>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
     </div>
   );
 }

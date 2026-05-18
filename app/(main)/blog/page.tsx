@@ -1,4 +1,5 @@
 "use client";
+import React from "react";
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
@@ -339,17 +340,29 @@ export default function BlogPage() {
   const [activeCategory, setActiveCategory] = useState("All");
   const [search, setSearch] = useState("");
   const [showSubmitModal, setShowSubmitModal] = useState(false);
-  const [hero, setHero] = useState({
+  const [activeBgIndex, setActiveBgIndex] = React.useState(0);
+  const [hero, setHero] = useState<any>({
     title: "Travel Blog",
     subtitle: "Inspiring stories, practical guides, and expert tips from the heart of the Himalayas.",
     bgImage: "/images/hero.png",
   });
 
-  useEffect(() => {
+  
+  React.useEffect(() => {
+    const bgList = ((hero as any).bgImages && (hero as any).bgImages.length > 0) ? (hero as any).bgImages : [hero.bgImage];
+    if (bgList.length > 1) {
+      const interval = setInterval(() => {
+        setActiveBgIndex(prev => (prev + 1) % bgList.length);
+      }, 5000);
+      return () => clearInterval(interval);
+    }
+  }, [(hero as any).bgImages, hero.bgImage]);
+  
+  React.useEffect(() => {
     const unsubHero = onSnapshot(doc(db, "settings", "pages_hero"), (snap) => {
       if (snap.exists()) {
         const d = snap.data() as any;
-        if (d?.blog) setHero(p => ({ ...p, ...d.blog }));
+        if (d?.blog) setHero((p: any) => ({ ...p, ...d.blog }));
       }
     });
 
@@ -378,12 +391,26 @@ export default function BlogPage() {
     return matchCat && matchSearch;
   });
 
+  const bgList = ((hero as any).bgImages && (hero as any).bgImages.length > 0) ? (hero as any).bgImages : [hero.bgImage];
+  const activeBgUrl = bgList[activeBgIndex % bgList.length] || hero.bgImage;
+
   return (
     <div className="flex flex-col min-h-screen">
       {/* ── Hero ──────────────────────────────────────────────────── */}
       <section className="relative h-[52vh] min-h-[360px] flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0">
-          <Image src={hero.bgImage} alt="Blog" fill className="object-cover object-center" priority />
+          <AnimatePresence mode="popLayout">
+            <motion.div
+              key={activeBgUrl}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 1.5, ease: "easeInOut" }}
+              className="absolute inset-0 w-full h-full"
+            >
+              <Image src={activeBgUrl} alt="Hero Background" fill className="object-cover object-center" priority />
+            </motion.div>
+          </AnimatePresence>
           <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/50 to-background" />
         </div>
         <div className="relative z-10 text-center px-4 max-w-4xl mx-auto">

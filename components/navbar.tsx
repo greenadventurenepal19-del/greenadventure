@@ -172,12 +172,11 @@ export function Navbar() {
       <div 
         className={`pointer-events-auto flex items-center justify-between transition-all duration-500 w-full ${
           isTransparent
-            ? "max-w-7xl bg-transparent border-transparent px-2"
-            : "max-w-5xl bg-background/90 dark:bg-background/80 backdrop-blur-2xl border border-border/50 shadow-2xl rounded-full px-6 py-1.5 md:py-2"
+            ? "max-w-7xl bg-transparent border-transparent pl-0 pr-2"
+            : "max-w-5xl bg-background/90 dark:bg-background/80 backdrop-blur-2xl border border-border/50 shadow-2xl rounded-full px-3 py-1.5 md:py-2"
         }`}
       >
-        <div className="flex-1">
-          <Link href="/" className="flex items-center gap-2.5 group w-fit">
+        <Link href="/" className="flex items-center gap-2.5 group w-fit">
             <div className={`relative h-11 w-11 md:h-12 md:w-12 rounded-full overflow-hidden ring-2 transition-all shrink-0 ${
               isTransparent
                 ? "ring-white/40 group-hover:ring-white/70 shadow-lg shadow-black/20"
@@ -188,7 +187,7 @@ export function Navbar() {
                 alt="Green Adventure Nepal logo"
                 fill
                 sizes="48px"
-                className="object-cover"
+                className="object-cover scale-[1.35]"
                 priority
               />
             </div>
@@ -198,7 +197,6 @@ export function Navbar() {
               Green<span className={isTransparent ? "text-brand-300 drop-shadow-sm" : "text-brand-600 dark:text-brand-500"}>Adventure</span>
             </span>
           </Link>
-        </div>
 
         <nav className="hidden md:flex items-center justify-center gap-2">
           {navLinks.map((link) => {
@@ -334,7 +332,7 @@ export function Navbar() {
         <div className="flex items-center justify-between px-5 py-4 border-b border-border/60">
           <Link href="/" onClick={() => setIsOpen(false)} className="flex items-center gap-2.5">
             <div className="relative h-9 w-9 rounded-full overflow-hidden ring-2 ring-brand-500/30 shadow-md">
-              <Image src="/images/logo.png" alt="Green Adventure Nepal" fill sizes="36px" className="object-cover" />
+              <Image src="/images/logo.png" alt="Green Adventure Nepal" fill sizes="36px" className="object-cover scale-[1.35]" />
             </div>
             <span className="text-base font-bold tracking-tight text-foreground">
               Green<span className="text-brand-600 dark:text-brand-500">Adventure</span>

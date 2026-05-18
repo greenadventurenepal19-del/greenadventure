@@ -1,9 +1,10 @@
 "use client";
+import React from "react";
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, MapPin, Mountain, Loader2, Compass, Globe } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { collection, query, orderBy, onSnapshot, doc } from "firebase/firestore";
@@ -55,17 +56,29 @@ const DEFAULT_DEST_HERO = {
 export default function DestinationsPage() {
   const [destinations, setDestinations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [destHero, setDestHero] = useState(DEFAULT_DEST_HERO);
+  const [activeBgIndex, setActiveBgIndex] = React.useState(0);
+  const [destHero, setDestHero] = useState<any>(DEFAULT_DEST_HERO);
 
-  useEffect(() => {
+  
+  React.useEffect(() => {
+    const bgList = ((destHero as any).bgImages && (destHero as any).bgImages.length > 0) ? (destHero as any).bgImages : [destHero.bgImage];
+    if (bgList.length > 1) {
+      const interval = setInterval(() => {
+        setActiveBgIndex(prev => (prev + 1) % bgList.length);
+      }, 5000);
+return () => clearInterval(interval);
+    }
+  }, [(destHero as any).bgImages, destHero.bgImage]);
+  
+  React.useEffect(() => {
     const unsub2 = onSnapshot(doc(db, "settings", "pages_hero"), (snap) => {
       if (snap.exists()) {
         const data = snap.data() as any;
         if (data?.destinations) {
-          setDestHero((prev) => ({
+          setDestHero((prev: any) => ({
             title: data.destinations.title || prev.title,
             subtitle: data.destinations.subtitle || prev.subtitle,
-            bgImage: data.destinations.bgImage || prev.bgImage,
+            bgImage: data.destinations.bgImage || prev.bgImage, bgImages: Array.isArray(data.destinations.bgImages) ? data.destinations.bgImages : prev.bgImages || [],
             tags: Array.isArray(data.destinations.tags) && data.destinations.tags.length > 0 ? data.destinations.tags : prev.tags,
             tabs: Array.isArray(data.destinations.tabs) && data.destinations.tabs.length > 0 ? data.destinations.tabs : prev.tabs,
           }));
@@ -106,18 +119,32 @@ export default function DestinationsPage() {
     );
   }
 
+    const bgList = ((destHero as any).bgImages && (destHero as any).bgImages.length > 0) ? (destHero as any).bgImages : [destHero.bgImage];
+  const activeBgUrl = bgList[activeBgIndex % bgList.length] || destHero.bgImage;
+
   return (
     <div className="flex flex-col min-h-screen bg-background selection:bg-brand-500/30 overflow-hidden">
       {/* Hero */}
       <section className="relative h-[70vh] min-h-[500px] flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0 z-0">
-          <Image
-            src={destHero.bgImage}
-            alt="Himalayan Destinations"
-            fill
-            className="object-cover scale-105"
-            priority
-          />
+          <AnimatePresence mode="popLayout">
+            <motion.div
+              key={activeBgUrl}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 1.5, ease: "easeInOut" }}
+              className="absolute inset-0 w-full h-full"
+            >
+              <Image
+                src={activeBgUrl}
+                alt="Hero Background"
+                fill
+                className="object-cover scale-105"
+                priority
+              />
+            </motion.div>
+          </AnimatePresence>
           <div className="absolute inset-0 bg-gradient-to-b from-background/30 via-black/50 to-background" />
         </div>
 

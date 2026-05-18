@@ -26,12 +26,12 @@ export default function PageLoader({ isLoading }: PageLoaderProps) {
           key="page-loader"
           initial={{ opacity: 1 }}
           exit={{ opacity: 0, transition: { duration: 0.7, ease: "easeInOut" } }}
-          className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-[#050a0a] overflow-hidden"
+          className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-white dark:bg-[#050a0a] overflow-hidden transition-colors duration-500"
         >
           {/* Background subtle gradient orbs */}
           <div className="absolute inset-0 overflow-hidden pointer-events-none">
-            <div className="absolute top-1/4 left-1/4 w-[40vw] h-[40vw] bg-brand-600/10 rounded-full blur-[120px]" />
-            <div className="absolute bottom-1/4 right-1/4 w-[30vw] h-[30vw] bg-emerald-600/10 rounded-full blur-[100px]" />
+            <div className="absolute top-1/4 left-1/4 w-[40vw] h-[40vw] bg-brand-500/10 dark:bg-brand-600/10 rounded-full blur-[120px]" />
+            <div className="absolute bottom-1/4 right-1/4 w-[30vw] h-[30vw] bg-emerald-500/10 dark:bg-emerald-600/10 rounded-full blur-[100px]" />
           </div>
 
           {/* Brand name */}
@@ -42,10 +42,10 @@ export default function PageLoader({ isLoading }: PageLoaderProps) {
             className="relative z-10 flex flex-col items-center mb-2"
           >
             <div className="flex items-baseline gap-2">
-              <span className="text-3xl md:text-4xl font-black tracking-tighter text-white">
+              <span className="text-3xl md:text-4xl font-black tracking-tighter text-slate-900 dark:text-white">
                 Green
               </span>
-              <span className="text-3xl md:text-4xl font-black tracking-tighter text-brand-400">
+              <span className="text-3xl md:text-4xl font-black tracking-tighter text-brand-600 dark:text-brand-400">
                 Adventure
               </span>
             </div>
@@ -53,7 +53,7 @@ export default function PageLoader({ isLoading }: PageLoaderProps) {
               initial={{ scaleX: 0 }}
               animate={{ scaleX: 1 }}
               transition={{ delay: 0.5, duration: 0.8, ease: "easeOut" }}
-              className="h-0.5 w-full bg-gradient-to-r from-transparent via-brand-400 to-transparent mt-1 origin-center"
+              className="h-0.5 w-full bg-gradient-to-r from-transparent via-brand-500 dark:via-brand-400 to-transparent mt-1 origin-center"
             />
           </motion.div>
 
@@ -78,13 +78,13 @@ export default function PageLoader({ isLoading }: PageLoaderProps) {
             transition={{ delay: 0.5, duration: 0.6 }}
             className="relative z-10 flex flex-col items-center gap-4 -mt-4"
           >
-            <p className="text-white/60 text-sm font-medium tracking-[0.2em] uppercase">
+            <p className="text-slate-600 dark:text-white/60 text-sm font-bold md:font-medium tracking-[0.2em] uppercase">
               Preparing your adventure
               <LoadingDots />
             </p>
 
             {/* Progress bar */}
-            <div className="w-48 md:w-64 h-0.5 bg-white/10 rounded-full overflow-hidden">
+            <div className="w-48 md:w-64 h-0.5 bg-slate-200 dark:bg-white/10 rounded-full overflow-hidden">
               <motion.div
                 initial={{ x: "-100%" }}
                 animate={{ x: "100%" }}
@@ -93,7 +93,7 @@ export default function PageLoader({ isLoading }: PageLoaderProps) {
                   repeat: Infinity,
                   ease: "easeInOut",
                 }}
-                className="h-full w-1/2 bg-gradient-to-r from-transparent via-brand-400 to-transparent rounded-full"
+                className="h-full w-1/2 bg-gradient-to-r from-transparent via-brand-500 dark:via-brand-400 to-transparent rounded-full"
               />
             </div>
           </motion.div>
