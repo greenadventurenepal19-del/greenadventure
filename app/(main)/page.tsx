@@ -40,6 +40,23 @@ const ParachuteIcon = ({ className }: { className?: string }) => (
   </svg>
 );
 
+const defaultHeroSlides = [
+  { title: "NEPAL", subtitle: "Discover the breathtaking landscapes, vibrant culture, and ancient heritage of the Himalayas.", image: "/images/hero-nepal.PNG", mobileImage: "", tabletImage: "", upperTags: ["Everest Region", "15 days", "Challenging"], lowerTags: ["Zero Waste", "Low-carbon", "Local Hire", "Inclusive Growth"] },
+  { title: "INDIA", subtitle: "Explore the diverse beauty of the Indian Himalayas, from spiritual journeys to thrilling treks.", image: "/images/hero-india.PNG", mobileImage: "", tabletImage: "", upperTags: ["Ladakh", "15 days", "Challenging"], lowerTags: ["Zero Waste", "Low-carbon", "Local Hire", "Inclusive Growth"] },
+  { title: "BHUTAN", subtitle: "Experience the magic of the Land of the Thunder Dragon, with its pristine landscapes and ancient monasteries.", image: "/images/hero-bhutan.PNG", mobileImage: "", tabletImage: "", upperTags: ["Paro Valley", "7 days", "Moderate"], lowerTags: ["Eco-Friendly", "Cultural Preservation", "Local Hire", "Inclusive Growth"] },
+];
+
+let homeCache = {
+  isLoaded: false,
+  heroSlides: null as any,
+  whyChoose: null as any,
+  featuredTours: null as any,
+  featuredTreks: null as any,
+  featuredBlogs: null as any,
+  dbRegions: null as any,
+  approvedReviews: null as any,
+};
+
 export default function HomePage() {
   const { scrollY, scrollYProgress } = useScroll();
   const bgY = useTransform(scrollY, [0, 1000], [0, 200]);
@@ -129,12 +146,7 @@ export default function HomePage() {
   const [isMouseDown, setIsMouseDown] = React.useState(false);
   const [activeBgIndex, setActiveBgIndex] = React.useState(0);
 
-  const defaultHeroSlides = [
-    { title: "NEPAL", subtitle: "Discover the breathtaking landscapes, vibrant culture, and ancient heritage of the Himalayas.", image: "/images/hero-nepal.PNG", mobileImage: "", tabletImage: "", upperTags: ["Everest Region", "15 days", "Challenging"], lowerTags: ["Zero Waste", "Low-carbon", "Local Hire", "Inclusive Growth"] },
-    { title: "INDIA", subtitle: "Explore the diverse beauty of the Indian Himalayas, from spiritual journeys to thrilling treks.", image: "/images/hero-india.PNG", mobileImage: "", tabletImage: "", upperTags: ["Ladakh", "15 days", "Challenging"], lowerTags: ["Zero Waste", "Low-carbon", "Local Hire", "Inclusive Growth"] },
-    { title: "BHUTAN", subtitle: "Experience the magic of the Land of the Thunder Dragon, with its pristine landscapes and ancient monasteries.", image: "/images/hero-bhutan.PNG", mobileImage: "", tabletImage: "", upperTags: ["Paro Valley", "7 days", "Moderate"], lowerTags: ["Eco-Friendly", "Cultural Preservation", "Local Hire", "Inclusive Growth"] },
-  ];
-  const [heroSlides, setHeroSlides] = React.useState<any[]>(defaultHeroSlides);
+  const [heroSlides, setHeroSlides] = React.useState<any[]>(homeCache.heroSlides || defaultHeroSlides);
 
   // Device type detection for responsive hero images
   const [deviceType, setDeviceType] = React.useState<"mobile" | "tablet" | "desktop">("desktop");
@@ -160,35 +172,49 @@ export default function HomePage() {
   }, [currentSlide, heroSlides, deviceType]);
 
 
-  const [featuredTours, setFeaturedTours] = React.useState<any[]>([]);
-  const [featuredTreks, setFeaturedTreks] = React.useState<any[]>([]);
-  const [featuredBlogs, setFeaturedBlogs] = React.useState<any[]>([]);
-  const [dbRegions, setDbRegions] = React.useState<any[]>([]);
-  const [approvedReviews, setApprovedReviews] = React.useState<any[]>([]);
+  const [featuredTours, setFeaturedTours] = React.useState<any[]>(homeCache.featuredTours || []);
+  const [featuredTreks, setFeaturedTreks] = React.useState<any[]>(homeCache.featuredTreks || []);
+  const [featuredBlogs, setFeaturedBlogs] = React.useState<any[]>(homeCache.featuredBlogs || []);
+  const [dbRegions, setDbRegions] = React.useState<any[]>(homeCache.dbRegions || []);
+  const [approvedReviews, setApprovedReviews] = React.useState<any[]>(homeCache.approvedReviews || []);
   const [showReviewModal, setShowReviewModal] = React.useState(false);
-  const [whyChoose, setWhyChoose] = React.useState<WhyChooseSettings>(DEFAULT_WHY_CHOOSE);
-  const [pageLoaded, setPageLoaded] = React.useState(false);
+  const [whyChoose, setWhyChoose] = React.useState<WhyChooseSettings>(homeCache.whyChoose || DEFAULT_WHY_CHOOSE);
+  const [pageLoaded, setPageLoaded] = React.useState(homeCache.isLoaded);
   const loadFlags = React.useRef({ hero: false, why: false, data: false, reviews: false });
   const markLoaded = React.useCallback((key: keyof typeof loadFlags.current) => {
     loadFlags.current[key] = true;
     if (Object.values(loadFlags.current).every(Boolean)) setPageLoaded(true);
   }, []);
 
+
+
   React.useEffect(() => {
+    if (homeCache.isLoaded) {
+      setHeroSlides(homeCache.heroSlides || defaultHeroSlides);
+      setWhyChoose(homeCache.whyChoose || DEFAULT_WHY_CHOOSE);
+      setFeaturedTours(homeCache.featuredTours || []);
+      setFeaturedTreks(homeCache.featuredTreks || []);
+      setFeaturedBlogs(homeCache.featuredBlogs || []);
+      setDbRegions(homeCache.dbRegions || []);
+      setApprovedReviews(homeCache.approvedReviews || []);
+      setPageLoaded(true);
+      return;
+    }
+
     async function fetchHeroSettings() {
       try {
         const docSnap = await getDoc(doc(db, "settings", "hero_content"));
         if (docSnap.exists()) {
           const data = docSnap.data() as any;
           if (Array.isArray(data.slides) && data.slides.length > 0) {
-            // New array format — merge with defaults for missing images
             const defaultImages = ["/images/hero-nepal.PNG", "/images/hero-india.PNG", "/images/hero-bhutan.PNG"];
-            setHeroSlides(data.slides.map((s: any, i: number) => ({
+            const slides = data.slides.map((s: any, i: number) => ({
               ...s,
               image: s.image || defaultImages[i] || defaultImages[0],
-            })));
+            }));
+            setHeroSlides(slides);
+            homeCache.heroSlides = slides;
           } else if (data.slide1Title) {
-            // Old flat format — migrate
             const defaultImages = ["/images/hero-india.PNG", "/images/hero-nepal.PNG", "/images/hero-bhutan.PNG"];
             const migrated = [];
             let i = 1;
@@ -202,7 +228,10 @@ export default function HomePage() {
               });
               i++;
             }
-            if (migrated.length > 0) setHeroSlides(migrated);
+            if (migrated.length > 0) {
+              setHeroSlides(migrated);
+              homeCache.heroSlides = migrated;
+            }
           }
         }
       } catch (error) {
@@ -217,11 +246,15 @@ export default function HomePage() {
         const docSnap = await getDoc(doc(db, "settings", "why_choose_us"));
         if (docSnap.exists()) {
           const data = docSnap.data() as Partial<WhyChooseSettings>;
-          setWhyChoose(prev => ({
-            ...prev,
-            ...data,
-            features: Array.isArray(data.features) && data.features.length > 0 ? data.features : prev.features,
-          }));
+          setWhyChoose(prev => {
+            const newState = {
+              ...prev,
+              ...data,
+              features: Array.isArray(data.features) && data.features.length > 0 ? data.features : prev.features,
+            };
+            homeCache.whyChoose = newState;
+            return newState;
+          });
         }
       } catch (error) {
         console.error("Error fetching Why Choose Us settings:", error);
@@ -236,14 +269,20 @@ export default function HomePage() {
         const tripsSnap = await getDocs(qTrips);
         const tripsData = tripsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-        setFeaturedTours(tripsData.filter((t: any) => t.tripType === "Tour" || t.tripType === "Tours" || !t.tripType).slice(0, 3));
-        setFeaturedTreks(tripsData.filter((t: any) => t.tripType === "Trekking").slice(0, 3));
+        const tours = tripsData.filter((t: any) => t.tripType === "Tour" || t.tripType === "Tours" || !t.tripType).slice(0, 3);
+        const treks = tripsData.filter((t: any) => t.tripType === "Trekking").slice(0, 3);
+        setFeaturedTours(tours);
+        setFeaturedTreks(treks);
+        homeCache.featuredTours = tours;
+        homeCache.featuredTreks = treks;
 
         const qRegions = query(collection(db, "regions"));
         const regionsSnap = await getDocs(qRegions);
         const regionsData = regionsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         if (regionsData.length > 0) {
-          setDbRegions(regionsData.sort((a: any, b: any) => (a.order || 0) - (b.order || 0)));
+          const sortedRegions = regionsData.sort((a: any, b: any) => (a.order || 0) - (b.order || 0));
+          setDbRegions(sortedRegions);
+          homeCache.dbRegions = sortedRegions;
         }
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -266,6 +305,7 @@ export default function HomePage() {
             return bTime - aTime;
           });
         setApprovedReviews(data);
+        homeCache.approvedReviews = data;
       } catch (err) {
         console.error("Error fetching reviews:", err);
       } finally {
@@ -273,27 +313,34 @@ export default function HomePage() {
       }
     }
 
-    fetchHeroSettings();
-    fetchWhyChoose();
-    fetchData();
-    fetchReviews();
-    fetchFeaturedBlogs();
-  }, []);
-
-  async function fetchFeaturedBlogs() {
-    try {
-      const q = query(
-        collection(db, "blogs"),
-        where("isFeatured", "==", true),
-        where("status", "==", "published")
-      );
-      const snap = await getDocs(q);
-      const data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      setFeaturedBlogs(data.slice(0, 3));
-    } catch {
-      setFeaturedBlogs([]);
+    async function fetchFeaturedBlogsData() {
+      try {
+        const q = query(
+          collection(db, "blogs"),
+          where("isFeatured", "==", true),
+          where("status", "==", "published")
+        );
+        const snap = await getDocs(q);
+        const data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        const blogs = data.slice(0, 3);
+        setFeaturedBlogs(blogs);
+        homeCache.featuredBlogs = blogs;
+      } catch {
+        setFeaturedBlogs([]);
+      }
     }
-  }
+
+    Promise.all([
+      fetchHeroSettings(),
+      fetchWhyChoose(),
+      fetchData(),
+      fetchReviews(),
+      fetchFeaturedBlogsData()
+    ]).then(() => {
+      homeCache.isLoaded = true;
+    });
+
+  }, []);
 
 
   // Detect device type on mount and resize for responsive hero images

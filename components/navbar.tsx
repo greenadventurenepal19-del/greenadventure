@@ -110,7 +110,7 @@ export function Navbar() {
       { name: "Destinations", href: "/destinations", dropdown: STATIC_DESTINATIONS },
       { name: "Tours", href: "/tours", dropdown: tourItems },
       { name: "Trekking", href: "/trekking", dropdown: trekItems },
-      { name: "About", href: "/about" },
+      { name: "Travel Blogs", href: "/blogs" },
     ],
     [tourItems, trekItems],
   );
@@ -198,7 +198,7 @@ export function Navbar() {
             </span>
           </Link>
 
-        <nav className="hidden md:flex items-center justify-center gap-2">
+        <nav className="hidden md:flex items-center justify-end gap-2 ml-auto">
           {navLinks.map((link) => {
             const isActive = pathname === link.href || (link.dropdown && pathname.startsWith(link.href));
             const hasDropdown = !!link.dropdown;
@@ -277,8 +277,8 @@ export function Navbar() {
           })}
         </nav>
 
-        <div className="hidden md:flex flex-1 justify-end items-center">
-          <div className="flex items-center gap-4 pl-4 border-l border-border/50">
+        <div className="hidden md:flex items-center">
+          <div className="flex items-center gap-4 pl-4 ml-2 border-l border-border/50">
             <div>
               <ThemeToggle />
             </div>

@@ -53,9 +53,14 @@ const DEFAULT_DEST_HERO = {
   tabs: [],
 };
 
+let destsCache = {
+  isLoaded: false,
+  destinations: [] as any[],
+};
+
 export default function DestinationsPage() {
-  const [destinations, setDestinations] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [destinations, setDestinations] = useState<any[]>(destsCache.destinations);
+  const [loading, setLoading] = useState(!destsCache.isLoaded);
   const [activeBgIndex, setActiveBgIndex] = React.useState(0);
   const [destHero, setDestHero] = useState<any>(DEFAULT_DEST_HERO);
 
@@ -66,7 +71,7 @@ export default function DestinationsPage() {
       const interval = setInterval(() => {
         setActiveBgIndex(prev => (prev + 1) % bgList.length);
       }, 5000);
-return () => clearInterval(interval);
+      return () => clearInterval(interval);
     }
   }, [(destHero as any).bgImages, destHero.bgImage]);
   
@@ -85,9 +90,15 @@ return () => clearInterval(interval);
         }
       }
     });
+
+    if (destsCache.isLoaded) {
+      return () => unsub2();
+    }
+
     const q = query(collection(db, "regions"), orderBy("order", "asc"));
     const unsub = onSnapshot(q, (snap) => {
       const dbRegions = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      let newDests = [];
       if (dbRegions.length > 0) {
         // Merge defaults: ensure Nepal/Bhutan/India always exist
         const defaultKeys = ["nepal", "bhutan", "india"];
@@ -102,10 +113,13 @@ return () => clearInterval(interval);
           (r: any) =>
             !defaultKeys.includes(r.title?.toLowerCase?.() || "")
         );
-        setDestinations([...merged, ...extraRegions]);
+        newDests = [...merged, ...extraRegions];
       } else {
-        setDestinations(defaultDestinations);
+        newDests = defaultDestinations;
       }
+      setDestinations(newDests);
+      destsCache.destinations = newDests;
+      destsCache.isLoaded = true;
       setLoading(false);
     });
     return () => { unsub(); unsub2(); };
@@ -285,44 +299,35 @@ return () => clearInterval(interval);
       </section>
 
       {/* CTA Section */}
-      <section className="py-32 relative overflow-hidden mx-4 md:mx-12 rounded-[4rem] mb-16 shadow-[0_30px_100px_-20px_rgba(var(--brand-500),0.4)]">
-        <div className="absolute inset-0 bg-brand-600 dark:bg-brand-900 overflow-hidden">
-          <motion.div
-            animate={{
-              scale: [1, 1.2, 1],
-              rotate: [0, 90, 0],
-            }}
-            transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-            className="absolute -top-[50%] -left-[50%] w-[200%] h-[200%] bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-brand-400/40 via-transparent to-transparent opacity-60 mix-blend-overlay"
-          />
+      <section className="p-8 md:p-12 lg:px-16 relative overflow-hidden z-[70] rounded-[3rem] mx-4 md:max-w-5xl md:mx-auto mb-12 shadow-2xl bg-card border border-border group">
+        <div className="absolute -top-32 -right-12 text-slate-100 dark:text-white/5 rotate-12 group-hover:rotate-45 group-hover:scale-110 transition-transform duration-1000 ease-out z-0">
+          <Mountain className="w-[500px] h-[500px]" />
         </div>
-        <div className="absolute inset-0 opacity-5 bg-[url('/images/pattern.svg')] bg-repeat" />
-
-        <div className="container mx-auto px-4 relative z-20 text-center text-white flex flex-col items-center">
+        
+        <div className="container mx-auto relative z-10">
           <motion.div
-            initial={{ scale: 0.9, opacity: 0, y: 30 }}
-            whileInView={{ scale: 1, opacity: 1, y: 0 }}
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            transition={{ duration: 0.8, ease: "easeOut" }}
+            className="flex flex-col xl:flex-row items-center justify-between gap-8"
           >
-            <Mountain className="w-16 h-16 mb-6 mx-auto text-brand-200 opacity-80" />
-            <h2 className="text-5xl md:text-7xl font-black mb-8 tracking-tighter drop-shadow-2xl">
-              PLAN YOUR <br />
-              <span className="text-brand-200">HIMALAYAN</span> JOURNEY
-            </h2>
-            <p className="text-xl mb-12 max-w-3xl mx-auto text-brand-50 font-medium leading-relaxed drop-shadow-lg">
-              Get in touch with our experts to plan your perfect itinerary.
-              Make memories that will last a lifetime.
-            </p>
-            <Link
-              href="/contact"
-              className="inline-flex items-center gap-4 px-12 py-6 rounded-full bg-white text-brand-700 font-black tracking-widest uppercase text-sm hover:scale-105 active:scale-95 transition-all duration-300 shadow-2xl hover:shadow-white/20 group"
-            >
-              Inquire Now
-              <span className="bg-brand-100 text-brand-600 p-2 rounded-full group-hover:rotate-45 transition-transform duration-300">
-                <ArrowRight className="h-5 w-5" />
-              </span>
-            </Link>
+            <div className="relative z-10 max-w-2xl xl:max-w-4xl text-center xl:text-left">
+              <h2 className="text-3xl md:text-[3.25rem] xl:text-[3.5rem] font-black tracking-tight mb-4 text-foreground uppercase leading-[1.1]">
+                <span className="block md:inline whitespace-normal md:whitespace-nowrap">START YOUR <span className="text-brand-600 dark:text-[#22c55e]">HIMALAYAN</span></span><br className="hidden md:block" />
+                <span className="block md:inline mt-2 md:mt-0">JOURNEY</span>
+              </h2>
+              <p className="text-muted-foreground text-base md:text-lg font-medium leading-relaxed max-w-xl mx-auto xl:mx-0">
+                Ready to explore the roof of the world? Our expert team is here to craft your perfect Himalayan experience.
+              </p>
+            </div>
+            <div className="relative z-10 shrink-0 mt-8 xl:mt-0 w-full sm:w-auto flex justify-center xl:justify-end">
+              <Link 
+                href="/contact" 
+                className="inline-flex items-center justify-center gap-2 px-6 py-4 md:px-10 md:py-5 rounded-full bg-[#22c55e] hover:bg-[#1fae53] text-white font-black tracking-wide uppercase text-xs md:text-sm group/btn hover:scale-105 active:scale-95 transition-all w-full sm:w-auto"
+              >
+                Contact Us <ArrowRight className="w-4 h-4 md:w-5 md:h-5 group-hover/btn:translate-x-1 transition-transform" />
+              </Link>
+            </div>
           </motion.div>
         </div>
       </section>

@@ -19,9 +19,14 @@ const DEFAULT_HERO = {
   tabs: [] as string[],
 };
 
+let toursCache = {
+  isLoaded: false,
+  tours: [] as TripCardData[],
+};
+
 export default function ToursPage() {
-  const [tours, setTours] = React.useState<TripCardData[]>([]);
-  const [loading, setLoading] = React.useState(true);
+  const [tours, setTours] = React.useState<TripCardData[]>(toursCache.tours);
+  const [loading, setLoading] = React.useState(!toursCache.isLoaded);
   const [activeCategory, setActiveCategory] = React.useState<string>("All");
   const [activeBgIndex, setActiveBgIndex] = React.useState(0);
   const [hero, setHero] = React.useState(DEFAULT_HERO);
@@ -32,7 +37,7 @@ export default function ToursPage() {
       const interval = setInterval(() => {
         setActiveBgIndex(prev => (prev + 1) % bgList.length);
       }, 5000);
-return () => clearInterval(interval);
+      return () => clearInterval(interval);
     }
   }, [(hero as any).bgImages, hero.bgImage]);
   
@@ -55,12 +60,17 @@ return () => clearInterval(interval);
   }, []);
 
   React.useEffect(() => {
+    if (toursCache.isLoaded) {
+      return;
+    }
     async function load() {
       try {
         const qTrips = query(collection(db, "trips"), where("tripType", "in", TOUR_TYPES));
         const snap = await getDocs(qTrips);
         const data = snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) })) as TripCardData[];
         setTours(data);
+        toursCache.tours = data;
+        toursCache.isLoaded = true;
       } catch (err) {
         console.error("Error loading tours from Firestore:", err);
         setTours([]);

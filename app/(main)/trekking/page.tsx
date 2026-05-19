@@ -17,9 +17,14 @@ const DEFAULT_HERO = {
   tabs: [],
 };
 
+let treksCache = {
+  isLoaded: false,
+  treks: [] as TripCardData[],
+};
+
 export default function TrekkingPage() {
-  const [treks, setTreks] = React.useState<TripCardData[]>([]);
-  const [loading, setLoading] = React.useState(true);
+  const [treks, setTreks] = React.useState<TripCardData[]>(treksCache.treks);
+  const [loading, setLoading] = React.useState(!treksCache.isLoaded);
   const [activeCategory, setActiveCategory] = React.useState<string>("All");
   const [activeBgIndex, setActiveBgIndex] = React.useState(0);
   const [hero, setHero] = React.useState(DEFAULT_HERO);
@@ -30,7 +35,7 @@ export default function TrekkingPage() {
       const interval = setInterval(() => {
         setActiveBgIndex(prev => (prev + 1) % bgList.length);
       }, 5000);
-return () => clearInterval(interval);
+      return () => clearInterval(interval);
     }
   }, [(hero as any).bgImages, hero.bgImage]);
   
@@ -53,12 +58,17 @@ return () => clearInterval(interval);
   }, []);
 
   React.useEffect(() => {
+    if (treksCache.isLoaded) {
+      return;
+    }
     async function load() {
       try {
         const qTrips = query(collection(db, "trips"), where("tripType", "==", "Trekking"));
         const snap = await getDocs(qTrips);
         const data = snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) })) as TripCardData[];
         setTreks(data);
+        treksCache.treks = data;
+        treksCache.isLoaded = true;
       } catch (err) {
         console.error("Error loading treks from Firestore:", err);
         setTreks([]);

@@ -220,8 +220,7 @@ export default function RootLayout({
       <body className={`${inter.variable} ${nunito.variable} antialiased min-h-screen flex flex-col font-sans transition-colors duration-300 overscroll-none`}>
         <ThemeProvider
           attribute="class"
-          defaultTheme="system"
-          enableSystem
+          defaultTheme="light"
           disableTransitionOnChange
         >
           {children}
