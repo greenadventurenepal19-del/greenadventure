@@ -110,7 +110,7 @@ export function Navbar() {
       { name: "Destinations", href: "/destinations", dropdown: STATIC_DESTINATIONS },
       { name: "Tours", href: "/tours", dropdown: tourItems },
       { name: "Trekking", href: "/trekking", dropdown: trekItems },
-      { name: "Travel Blogs", href: "/blogs" },
+      { name: "Travel Blogs", href: "/blog" },
     ],
     [tourItems, trekItems],
   );
