@@ -422,6 +422,7 @@ export default function HomePage() {
       {/* 1. HERO SECTION (Advanced 3D Layered Parallax) */}
       <section 
         className="relative h-[100svh] min-h-[700px] overflow-hidden flex flex-col justify-end pb-24 md:pb-32 cursor-pointer"
+        style={{ WebkitTapHighlightColor: "transparent" }}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => { setIsHovered(false); setIsMouseDown(false); }}
         onMouseDown={() => setIsMouseDown(true)}
@@ -1274,7 +1275,7 @@ export default function HomePage() {
 
         {/* 6. CTA BANNER */}
         <section className="p-8 md:p-12 lg:px-16 relative overflow-hidden z-[70] rounded-[3rem] mx-4 md:mx-12 mb-12 shadow-2xl bg-card border border-border group">
-          <div className="absolute -top-32 -right-12 text-slate-100 dark:text-white/5 rotate-12 group-hover:rotate-45 group-hover:scale-110 transition-transform duration-1000 ease-out z-0">
+          <div className="absolute -top-32 -right-12 text-slate-200 dark:text-white opacity-[0.25] dark:opacity-[0.07] md:opacity-[0.45] md:dark:opacity-[0.15] pointer-events-none rotate-12 group-hover:rotate-45 group-hover:scale-110 transition-transform duration-1000 ease-out z-0">
             <Compass className="w-[500px] h-[500px]" />
           </div>
           

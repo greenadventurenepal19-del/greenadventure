@@ -127,16 +127,43 @@ export default function LiquidSlider({
   const trail3Y = useSpring(mouseY, { stiffness: 40, damping: 35, mass: 0.8 });
   const trail3Size = useTransform(smoothSize, v => v * 0.3);
   
+  // Set initial position to center of screen so the bubble doesn't start at top-left
   useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
+    if (typeof window !== "undefined") {
+      mouseX.set(window.innerWidth / 2);
+      mouseY.set(window.innerHeight / 2);
+    }
+  }, [mouseX, mouseY]);
+
+  useEffect(() => {
+    const updateCoordinates = (clientX: number, clientY: number) => {
       if (ref.current) {
         const rect = ref.current.getBoundingClientRect();
-        mouseX.set(e.clientX - rect.left);
-        mouseY.set(e.clientY - rect.top);
+        mouseX.set(clientX - rect.left);
+        mouseY.set(clientY - rect.top);
       }
     };
+
+    const handleMouseMove = (e: MouseEvent) => {
+      updateCoordinates(e.clientX, e.clientY);
+    };
+
+    const handleTouch = (e: TouchEvent) => {
+      if (e.touches && e.touches.length > 0) {
+        const touch = e.touches[0];
+        updateCoordinates(touch.clientX, touch.clientY);
+      }
+    };
+
     window.addEventListener("mousemove", handleMouseMove);
-    return () => window.removeEventListener("mousemove", handleMouseMove);
+    window.addEventListener("touchstart", handleTouch, { passive: true });
+    window.addEventListener("touchmove", handleTouch, { passive: true });
+
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("touchstart", handleTouch);
+      window.removeEventListener("touchmove", handleTouch);
+    };
   }, [mouseX, mouseY]);
 
   return (
@@ -156,7 +183,7 @@ export default function LiquidSlider({
           </filter>
 
           <mask id="splash-mask">
-            <rect width="100vw" height="100vh" fill="black" />
+            <rect x="0" y="0" width="100%" height="100%" fill="black" />
             <g filter="url(#liquid-splash)">
               {/* Splat cluster following mouse */}
               <motion.g style={{ x: smoothX, y: smoothY, scale: sizeScale }}>
