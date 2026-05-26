@@ -18,6 +18,17 @@ export default function LiquidSlider({
   isMouseDown?: boolean
 }) {
   const ref = useRef<HTMLDivElement>(null);
+  const [isTouchDevice, setIsTouchDevice] = useState(false);
+
+  // Detect touch device — hover liquid effect is disabled on mobile
+  useEffect(() => {
+    const check = () => setIsTouchDevice(
+      window.matchMedia("(hover: none) and (pointer: coarse)").matches
+    );
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
   
   // Track mouse coordinates globally to keep track even if they exit and re-enter quickly
   const mouseX = useMotionValue(0);
@@ -97,17 +108,18 @@ export default function LiquidSlider({
   }, [currentIndex, slides]);
 
   // Separate effect for hover/mousedown circle changes (not slide changes)
+  // On touch devices, hover is fully disabled — only slide transitions animate
   useEffect(() => {
     if (isTransitioning) return; // let the transition effect own size during transitions
     if (!isResetting) {
-      if (isHovered) {
+      if (!isTouchDevice && isHovered) {
         size.set(isMouseDown ? 800 : 180);
-      } else {
+      } else if (!isTransitioning) {
         size.set(0);
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isHovered, isMouseDown, isResetting, isTransitioning]);
+  }, [isHovered, isMouseDown, isResetting, isTransitioning, isTouchDevice]);
 
   // Circle radius
   const size = useMotionValue(0);

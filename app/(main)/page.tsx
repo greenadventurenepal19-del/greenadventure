@@ -145,6 +145,17 @@ export default function HomePage() {
   const [isHovered, setIsHovered] = React.useState(false);
   const [isMouseDown, setIsMouseDown] = React.useState(false);
   const [activeBgIndex, setActiveBgIndex] = React.useState(0);
+  const [isTouchDevice, setIsTouchDevice] = React.useState(false);
+
+  // Detect touch device on mount — disables hover liquid effect on mobile
+  React.useEffect(() => {
+    const check = () => setIsTouchDevice(
+      window.matchMedia("(hover: none) and (pointer: coarse)").matches
+    );
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
 
   const [heroSlides, setHeroSlides] = React.useState<any[]>(homeCache.heroSlides || defaultHeroSlides);
 
@@ -423,10 +434,10 @@ export default function HomePage() {
       <section 
         className="relative h-[100svh] min-h-[700px] overflow-hidden flex flex-col justify-end pb-24 md:pb-32 cursor-pointer"
         style={{ WebkitTapHighlightColor: "transparent" }}
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => { setIsHovered(false); setIsMouseDown(false); }}
-        onMouseDown={() => setIsMouseDown(true)}
-        onMouseUp={() => setIsMouseDown(false)}
+        onMouseEnter={() => { if (!isTouchDevice) setIsHovered(true); }}
+        onMouseLeave={() => { if (!isTouchDevice) { setIsHovered(false); setIsMouseDown(false); } }}
+        onMouseDown={() => { if (!isTouchDevice) setIsMouseDown(true); }}
+        onMouseUp={() => { if (!isTouchDevice) setIsMouseDown(false); }}
         onClick={() => {
           setActiveBgIndex(0);
           setCurrentSlide((prev) => (prev + 1) % heroSlides.length);
