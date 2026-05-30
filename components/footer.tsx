@@ -120,18 +120,18 @@ export function Footer() {
       <style>{`
         .footer-container {
           --f-bg: #fafafa;
-          --f-text: #27272a;
-          --f-heading: #18181b;
-          --f-muted: #71717a;
-          --f-border: #e4e4e7;
-          --f-card-bg: rgba(228, 228, 231, 0.6);
+          --f-text: #0f172a;
+          --f-heading: #042f1a;
+          --f-muted: #2f3f35; /* forest green-tinted charcoal for beautiful high-contrast text */
+          --f-border: rgba(0, 0, 0, 0.08);
+          --f-card-bg: rgba(255, 255, 255, 0.75);
           --f-card-hover: #16a34a; /* brand-600 */
           --f-icon: #16a34a;
           --f-icon-hover: #ffffff;
-          --f-grad-bottom: rgba(250, 250, 250, 0.95);
-          --f-grad-mid: rgba(250, 250, 250, 0.6);
-          --f-grad-top: rgba(250, 250, 250, 0.1);
-          --f-image-op: 0.4;
+          --f-grad-bottom: rgba(250, 250, 250, 0.3);
+          --f-grad-mid: rgba(250, 250, 250, 0.1);
+          --f-grad-top: rgba(250, 250, 250, 0.0);
+          --f-image-op: 0.85;
           --f-blend: multiply;
           background-color: var(--f-bg);
           color: var(--f-text);
@@ -334,25 +334,32 @@ export function Footer() {
 
         {/* Footer Bottom */}
         <div 
-          className="pt-8 border-t flex flex-col md:flex-row items-center justify-between gap-6 relative z-10"
-          style={{ borderColor: 'var(--f-border)' }}
+          className="mt-6 p-6 md:p-8 rounded-3xl bg-white/60 dark:bg-black/35 backdrop-blur-md border border-white/80 dark:border-white/5 flex flex-col md:flex-row items-center justify-between gap-6 relative z-10 shadow-lg shadow-brand-900/5"
         >
-          <p className="text-sm font-medium" style={{ color: 'var(--f-muted)' }}>
+          <p className="text-sm font-black tracking-wide" style={{ color: 'var(--f-text)' }}>
             © {new Date().getFullYear()} Green Adventure Treks &amp; Expeditions. All rights reserved.
           </p>
-          <div className="flex items-center gap-3">
-            <span className="text-sm font-medium" style={{ color: 'var(--f-muted)' }}>GreenAdventure by</span>
+          <div className="flex items-center gap-4">
+            <span className="text-sm font-bold" style={{ color: 'var(--f-muted)' }}>GreenAdventure by</span>
             <a 
               href="http://tritechies.vercel.app/" 
               target="_blank" 
               rel="noopener noreferrer"
-              className="group flex items-center gap-1.5 px-4 py-2 border rounded-xl text-sm font-bold hover:bg-brand-500/10 hover:border-brand-500/30 transition-all shadow-sm"
+              className="group flex items-center gap-1.5 px-5 py-2.5 border rounded-2xl text-sm font-black transition-all shadow-sm shrink-0"
               style={{ backgroundColor: 'var(--f-card-bg)', borderColor: 'var(--f-border)', color: 'var(--f-text)' }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'var(--f-card-hover)';
+                e.currentTarget.style.color = '#ffffff';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'var(--f-card-bg)';
+                e.currentTarget.style.color = 'var(--f-text)';
+              }}
             >
-              <span className="text-emerald-600 dark:text-emerald-400 group-hover:text-emerald-500 dark:group-hover:text-emerald-300 transition-colors drop-shadow-sm">
+              <span className="text-emerald-700 dark:text-emerald-400 group-hover:text-white transition-colors drop-shadow-sm">
                 tritechies.
               </span>
-              <ArrowUpRight className="w-3.5 h-3.5 text-brand-600 dark:text-brand-500 group-hover:text-brand-500 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
+              <ArrowUpRight className="w-4 h-4 text-brand-600 dark:text-brand-500 group-hover:text-white transition-all shrink-0" />
             </a>
           </div>
         </div>

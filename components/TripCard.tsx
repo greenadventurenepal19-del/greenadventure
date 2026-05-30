@@ -94,26 +94,7 @@ export default function TripCard({ trip, index = 0, basePath }: Props) {
             </div>
           )}
         </div>
-
-        {trip.tags && trip.tags.length > 0 ? (
-          <div className="flex flex-wrap gap-2 mb-8 mt-auto">
-            {trip.tags.map((tag, idx) => {
-              const isString = typeof tag === "string";
-              const label = isString ? tag : tag.label;
-              const Icon = !isString && tag.icon ? tag.icon : pickIcon(label);
-              return (
-                <span
-                  key={idx}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-background/60 backdrop-blur-md border border-border shadow-sm transition-transform hover:scale-105 cursor-default text-foreground"
-                >
-                  <Icon className="h-3.5 w-3.5 opacity-70" /> {label}
-                </span>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="mt-auto mb-8" />
-        )}
+        <div className="mt-auto mb-4" />
 
         <div className="pt-5 border-t border-border/50 flex items-center justify-between mt-auto">
           <div>

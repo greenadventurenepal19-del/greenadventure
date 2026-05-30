@@ -3,17 +3,17 @@
 import * as React from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { motion, useScroll, useTransform, AnimatePresence, useMotionValue, useSpring } from "framer-motion";
+import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
 import { 
   Mountain, MapPin, Users, Star, 
   ArrowRight, Search, Calendar, Quote,
   Clock, TrendingUp, Leaf, Cloud, Heart, Volume2, VolumeX,
-  Globe, Plane, Compass, BookOpen, Tag
+  Globe, Plane, Compass, BookOpen, Tag,
+  ChevronLeft, ChevronRight, Phone, Mail
 } from "lucide-react";
 import { doc, getDoc, collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import LiquidSlider from "@/components/LiquidSlider";
-import ParticleText from "@/components/ParticleText";
 import ReviewSubmitModal from "@/components/ReviewSubmitModal";
 import PageLoader from "@/components/PageLoader";
 import {
@@ -21,24 +21,6 @@ import {
   resolveIcon,
   type WhyChooseSettings,
 } from "@/lib/why-choose";
-
-const ParachuteIcon = ({ className }: { className?: string }) => (
-  <svg viewBox="0 0 200 250" fill="none" stroke="currentColor" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" className={className}>
-    <path d="M 20 100 C 20 -20, 180 -20, 180 100" fill="currentColor" fillOpacity="0.2" />
-    <path d="M 20 100 C 60 80, 140 80, 180 100" />
-    <path d="M 60 100 C 60 85, 140 85, 140 100" />
-    <line x1="20" y1="100" x2="100" y2="180" />
-    <line x1="60" y1="100" x2="100" y2="180" />
-    <line x1="140" y1="100" x2="100" y2="180" />
-    <line x1="180" y1="100" x2="100" y2="180" />
-    <circle cx="100" cy="190" r="10" fill="currentColor" />
-    <line x1="100" y1="200" x2="100" y2="220" />
-    <line x1="100" y1="205" x2="85" y2="190" />
-    <line x1="100" y1="205" x2="115" y2="190" />
-    <line x1="100" y1="220" x2="90" y2="245" />
-    <line x1="100" y1="220" x2="110" y2="245" />
-  </svg>
-);
 
 const defaultHeroSlides = [
   { title: "NEPAL", subtitle: "Discover the breathtaking landscapes, vibrant culture, and ancient heritage of the Himalayas.", image: "/images/hero-nepal.PNG", mobileImage: "", tabletImage: "", upperTags: ["Everest Region", "15 days", "Challenging"], lowerTags: ["Zero Waste", "Low-carbon", "Local Hire", "Inclusive Growth"] },
@@ -58,104 +40,22 @@ let homeCache = {
 };
 
 export default function HomePage() {
-  const { scrollY, scrollYProgress } = useScroll();
+  const { scrollY } = useScroll();
   const bgY = useTransform(scrollY, [0, 1000], [0, 200]);
   const textY = useTransform(scrollY, [0, 1000], [0, 100]);
-
-  // Scroll Parachute Animation Map
-  const paraX = useTransform(
-    scrollYProgress,
-    [0, 0.2, 0.4, 0.6, 0.8, 0.9, 1.0],
-    ["80vw", "5vw", "80vw", "5vw", "80vw", "40vw", "5vw"]
-  );
-
-  const paraY = useTransform(
-    scrollYProgress,
-    [0, 0.2, 0.4, 0.6, 0.8, 0.9, 1.0],
-    ["20vh", "70vh", "20vh", "80vh", "30vh", "80vh", "-20vh"]
-  );
-
-  const paraRotate = useTransform(
-    scrollYProgress,
-    [0, 0.2, 0.4, 0.6, 0.8, 0.9, 1.0],
-    [0, -10, 10, -10, 10, 0, 15]
-  );
-
-  // Flip the parachute depending on travel direction
-  // Assuming native image faces Left (1 = Left, -1 = Right)
-  const paraScaleX = useTransform(
-    scrollYProgress,
-    [0, 0.19, 0.2, 0.39, 0.4, 0.59, 0.6, 0.79, 0.8, 0.89, 0.9, 1.0],
-    [1, 1, -1, -1, 1, 1, -1, -1, 1, 1, 1, 1]
-  );
-
-  const paraScale = useTransform(
-    scrollYProgress,
-    [0, 0.2, 1],
-    [2.5, 1, 1]
-  );
-
-  const mouseX = useMotionValue(0);
-  const mouseY = useMotionValue(0);
-  const smoothMouseX = useSpring(mouseX, { stiffness: 50, damping: 20 });
-  const smoothMouseY = useSpring(mouseY, { stiffness: 50, damping: 20 });
-
-  // Exact coordinates for Parachute
-  const sectionRef = React.useRef<HTMLDivElement>(null);
-  const cursorX = useMotionValue(-1000); // Start off-screen
-  const cursorY = useMotionValue(-1000);
-  const smoothCursorX = useSpring(cursorX, { stiffness: 150, damping: 25, mass: 0.5 });
-  const smoothCursorY = useSpring(cursorY, { stiffness: 150, damping: 25, mass: 0.5 });
-  const [isHoveringSection, setIsHoveringSection] = React.useState(false);
-
-  React.useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      const x = (e.clientX / window.innerWidth) * 2 - 1;
-      const y = (e.clientY / window.innerHeight) * 2 - 1;
-      mouseX.set(x);
-      mouseY.set(y);
-
-      if (sectionRef.current) {
-        const rect = sectionRef.current.getBoundingClientRect();
-        // Check if mouse is hovering this massive section
-        const isHovering = e.clientX >= rect.left && e.clientX <= rect.right &&
-                           e.clientY >= rect.top && e.clientY <= rect.bottom;
-        
-        setIsHoveringSection(isHovering);
-
-        if (isHovering) {
-          // Adjust by half the icon size (assuming ~80x100 rendered size)
-          cursorX.set(e.clientX - rect.left - 40);
-          cursorY.set(e.clientY - rect.top - 50);
-        }
-      }
-    };
-    window.addEventListener("mousemove", handleMouseMove);
-    return () => window.removeEventListener("mousemove", handleMouseMove);
-  }, [mouseX, mouseY, cursorX, cursorY]);
-
-  const trackerX = useTransform(smoothMouseX, [-1, 1], [-80, 80]);
-  const trackerY = useTransform(smoothMouseY, [-1, 1], [-80, 80]);
-  const trackerXFast = useTransform(smoothMouseX, [-1, 1], [-160, 160]);
-  const trackerYFast = useTransform(smoothMouseY, [-1, 1], [-160, 160]);
 
   const audioRef = React.useRef<HTMLAudioElement>(null);
   const [isMuted, setIsMuted] = React.useState(true);
   const [currentSlide, setCurrentSlide] = React.useState(0);
-  const [isHovered, setIsHovered] = React.useState(false);
-  const [isMouseDown, setIsMouseDown] = React.useState(false);
   const [activeBgIndex, setActiveBgIndex] = React.useState(0);
-  const [isTouchDevice, setIsTouchDevice] = React.useState(false);
+  const [textSlide, setTextSlide] = React.useState(0);
 
-  // Detect touch device on mount — disables hover liquid effect on mobile
   React.useEffect(() => {
-    const check = () => setIsTouchDevice(
-      window.matchMedia("(hover: none) and (pointer: coarse)").matches
-    );
-    check();
-    window.addEventListener("resize", check);
-    return () => window.removeEventListener("resize", check);
-  }, []);
+    const timer = setTimeout(() => {
+      setTextSlide(currentSlide);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [currentSlide]);
 
   const [heroSlides, setHeroSlides] = React.useState<any[]>(homeCache.heroSlides || defaultHeroSlides);
 
@@ -190,14 +90,30 @@ export default function HomePage() {
   const [approvedReviews, setApprovedReviews] = React.useState<any[]>(homeCache.approvedReviews || []);
   const [showReviewModal, setShowReviewModal] = React.useState(false);
   const [whyChoose, setWhyChoose] = React.useState<WhyChooseSettings>(homeCache.whyChoose || DEFAULT_WHY_CHOOSE);
-  const [pageLoaded, setPageLoaded] = React.useState(homeCache.isLoaded);
+  const [pageLoaded, setPageLoaded] = React.useState(true);
   const loadFlags = React.useRef({ hero: false, why: false, data: false, reviews: false });
   const markLoaded = React.useCallback((key: keyof typeof loadFlags.current) => {
     loadFlags.current[key] = true;
     if (Object.values(loadFlags.current).every(Boolean)) setPageLoaded(true);
   }, []);
 
-
+  // Preloader session manager — handles instant caching & safety timeout
+  React.useEffect(() => {
+    const shown = typeof window !== "undefined" ? sessionStorage.getItem("preloader_shown") : null;
+    if (shown === "true" || homeCache.isLoaded) {
+      setPageLoaded(true);
+    } else {
+      setPageLoaded(false);
+      // Safety timeout: transition after 1.8 seconds max to keep performance instant
+      const timer = setTimeout(() => {
+        setPageLoaded(true);
+        if (typeof window !== "undefined") {
+          sessionStorage.setItem("preloader_shown", "true");
+        }
+      }, 1800);
+      return () => clearTimeout(timer);
+    }
+  }, []);
 
   React.useEffect(() => {
     if (homeCache.isLoaded) {
@@ -349,6 +265,10 @@ export default function HomePage() {
       fetchFeaturedBlogsData()
     ]).then(() => {
       homeCache.isLoaded = true;
+      setPageLoaded(true);
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem("preloader_shown", "true");
+      }
     });
 
   }, []);
@@ -409,39 +329,11 @@ export default function HomePage() {
   return (
     <div className="flex flex-col min-h-screen">
       <PageLoader isLoading={!pageLoaded} />
-      {/* 3D Scrolling Parachute */}
-      <motion.div
-        className="fixed z-[60] pointer-events-none drop-shadow-2xl"
-        style={{
-          x: paraX,
-          y: paraY,
-          scaleX: paraScaleX,
-          scale: paraScale,
-          rotate: paraRotate
-        }}
-      >
-        <Image 
-          src="/para3d.png" 
-          alt="Parachute" 
-          width={240} 
-          height={300} 
-          className="w-32 md:w-48 h-auto object-contain"
-          priority
-        />
-      </motion.div>
 
       {/* 1. HERO SECTION (Advanced 3D Layered Parallax) */}
       <section 
-        className="relative h-[100svh] min-h-[700px] overflow-hidden flex flex-col justify-end pb-24 md:pb-32 cursor-pointer"
+        className="relative h-[100svh] min-h-[700px] overflow-hidden flex flex-col justify-end pb-24 md:pb-32"
         style={{ WebkitTapHighlightColor: "transparent" }}
-        onMouseEnter={() => { if (!isTouchDevice) setIsHovered(true); }}
-        onMouseLeave={() => { if (!isTouchDevice) { setIsHovered(false); setIsMouseDown(false); } }}
-        onMouseDown={() => { if (!isTouchDevice) setIsMouseDown(true); }}
-        onMouseUp={() => { if (!isTouchDevice) setIsMouseDown(false); }}
-        onClick={() => {
-          setActiveBgIndex(0);
-          setCurrentSlide((prev) => (prev + 1) % heroSlides.length);
-        }}
       >
         
         {/* HERO TAGS (Floating over Hero top) */}
@@ -508,29 +400,10 @@ export default function HomePage() {
             slides={heroSlides.map((s, i) => getResponsiveImage(s, i))}
             currentIndex={currentSlide}
             nextIndex={(currentSlide + 1) % heroSlides.length}
-            isHovered={isHovered}
-            isMouseDown={isMouseDown}
+            isHovered={false}
+            isMouseDown={false}
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-black/40 z-10 pointer-events-none" />
-        </motion.div>
-
-        {/* Layer 2: Massive Particle Typography */}
-        <motion.div 
-          style={{ y: textY }}
-          className="absolute inset-0 z-10 flex items-center justify-center overflow-hidden pb-32 md:pb-20"
-        >
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={currentSlide}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.4 }}
-              className="w-full h-full"
-            >
-              <ParticleText text={heroSlides[currentSlide].title} />
-            </motion.div>
-          </AnimatePresence>
         </motion.div>
 
         {/* Content (Bottom Controls & Right Content) - Top Layer */}
@@ -558,14 +431,19 @@ export default function HomePage() {
             <div className="max-w-md w-full mx-auto md:mx-0 md:ml-auto text-center md:text-left">
               <AnimatePresence mode="wait">
                 <motion.div
-                  key={currentSlide}
+                  key={textSlide}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -20 }}
                   transition={{ duration: 0.5, delay: 0.2 }}
                   className="flex flex-col items-center md:items-start"
                 >
-                  <div className="flex items-center justify-between md:justify-start gap-3 mb-4 md:mb-6 w-full">
+                  <h1 className="flex justify-between w-full font-black text-white uppercase mb-4 md:mb-5 drop-shadow-2xl text-3xl sm:text-4xl md:text-5xl select-none pl-[60px] pr-[60px] md:pl-[68px] md:pr-[68px]">
+                    {heroSlides[textSlide].title.split("").map((char: string, index: number) => (
+                      <span key={index}>{char === " " ? "\u00A0" : char}</span>
+                    ))}
+                  </h1>
+                  <div className="flex items-center justify-between gap-3 mb-4 md:mb-6 w-full">
                     {/* Sound Toggle */}
                     <button
                       onClick={toggleMute}
@@ -580,15 +458,15 @@ export default function HomePage() {
                     </button>
 
                     {/* Action Buttons */}
-                    <div className="flex items-center gap-3 flex-1 md:flex-none">
+                    <div className="flex items-center gap-3 flex-1">
                       <Link 
-                        href="/tours" 
+                        href="/destinations" 
                         className="px-6 py-3 md:px-8 md:py-4 rounded-full bg-white text-black font-bold text-xs md:text-sm hover:bg-gray-100 transition-colors shadow-[0_0_30px_rgba(255,255,255,0.2)] flex-1 text-center"
                       >
                         Discover More
                       </Link>
                       <Link 
-                        href="/tours"
+                        href={`/destinations/${heroSlides[textSlide].title.toLowerCase().trim().replace(/\s+/g, "-")}`}
                         className="h-12 w-12 md:h-14 md:w-14 shrink-0 rounded-full bg-white text-black flex items-center justify-center hover:bg-gray-100 transition-colors shadow-lg group"
                       >
                         <ArrowRight className="h-4 w-4 md:h-5 md:w-5 -rotate-45 group-hover:rotate-0 transition-transform" />
@@ -596,7 +474,7 @@ export default function HomePage() {
                     </div>
                   </div>
                   <p className="text-white/90 text-xs sm:text-sm md:text-base leading-relaxed font-medium px-2 md:px-0">
-                    {heroSlides[currentSlide].subtitle}
+                    {heroSlides[textSlide].subtitle}
                   </p>
                 </motion.div>
               </AnimatePresence>
@@ -607,64 +485,82 @@ export default function HomePage() {
         
         {/* Hidden Audio Element for Mountain Sound */}
         <audio ref={audioRef} src="/audio.mp3" preload="auto" loop />
-      </section>
 
-      {/* 2. MAIN CONTENT AREA with Unified Greenish Gradient Morphism Background */}
-      <div ref={sectionRef} className="relative bg-background overflow-hidden">
-        
-        {/* Exact Cursor Tracker (Parachute) */}
-        <AnimatePresence>
-          {isHoveringSection && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.5 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.5 }}
-              style={{ x: smoothCursorX, y: smoothCursorY }}
-              className="absolute top-0 left-0 z-50 pointer-events-none text-brand-500 drop-shadow-2xl"
-            >
-              <ParachuteIcon className="w-20 h-24" />
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-
-        {/* Unified Glassmorphic Green Background Orbs */}
-        <div className="absolute inset-0 z-0 pointer-events-none">
-          {/* Top Left Green Glow */}
-          <div className="absolute top-0 left-0 w-[600px] h-[600px] bg-brand-500/10 dark:bg-brand-500/20 blur-[120px] rounded-full mix-blend-normal" />
-          {/* Middle Right Emerald Glow */}
-          <div className="absolute top-[30%] right-[-20%] w-[800px] h-[800px] bg-emerald-500/10 dark:bg-emerald-500/15 blur-[150px] rounded-full mix-blend-normal" />
-          {/* Bottom Center Teal Glow */}
-          <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[1000px] h-[600px] bg-teal-500/10 dark:bg-teal-500/15 blur-[150px] rounded-full mix-blend-normal" />
+        {/* Previous and Next Navigation Arrows (Bottom Right Corner) */}
+        <div className="absolute bottom-6 right-6 md:bottom-10 md:right-10 z-40 flex items-center gap-3 pointer-events-auto">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setActiveBgIndex(0);
+              setCurrentSlide((prev) => (prev - 1 + heroSlides.length) % heroSlides.length);
+            }}
+            className="h-11 w-11 rounded-full border border-white/20 bg-black/40 hover:bg-white text-white hover:text-black flex items-center justify-center transition-all backdrop-blur-md shadow-xl hover:scale-105 active:scale-95 cursor-pointer"
+            aria-label="Previous slide"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setActiveBgIndex(0);
+              setCurrentSlide((prev) => (prev + 1) % heroSlides.length);
+            }}
+            className="h-11 w-11 rounded-full border border-white/20 bg-black/40 hover:bg-white text-white hover:text-black flex items-center justify-center transition-all backdrop-blur-md shadow-xl hover:scale-105 active:scale-95 cursor-pointer"
+            aria-label="Next slide"
+          >
+            <ChevronRight className="h-5 w-5" />
+          </button>
         </div>
+      </section>
+      {/* 2. MAIN CONTENT AREA with Unified Greenish Gradient Morphism Background */}
+      <div className="relative bg-background overflow-hidden">
+
+
 
         {/* 3. FEATURED TOURS */}
         <section id="featured" className="py-24 relative z-10 border-y border-border/30">
           <div className="container mx-auto px-4">
-            <div className="flex flex-col md:flex-row md:items-end justify-between mb-16 gap-6">
-              <div className="max-w-2xl">
+            <div className="mb-16">
+              <div className="flex flex-row items-center justify-between gap-4 mb-4">
                 <motion.h2 
                   initial={{ opacity: 0, x: -20 }}
                   whileInView={{ opacity: 1, x: 0 }}
                   viewport={{ once: true }}
-                  className="text-4xl md:text-5xl lg:text-6xl font-black tracking-tight mb-6 uppercase"
+                  className="text-3xl md:text-4xl lg:text-5xl font-black tracking-tight uppercase"
                 >
                   Featured <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-500 to-brand-700">Tours</span>
                 </motion.h2>
-                <motion.p 
-                  initial={{ opacity: 0, x: -20 }}
+                <motion.div
+                  initial={{ opacity: 0, x: 20 }}
                   whileInView={{ opacity: 1, x: 0 }}
                   viewport={{ once: true }}
-                  transition={{ delay: 0.1 }}
-                  className="text-lg md:text-xl text-muted-foreground font-medium leading-relaxed"
+                  className="hidden md:flex justify-end md:w-auto"
                 >
-                  Discover our most popular trekking and tour packages highly rated by our travelers.
-                </motion.p>
+                  <Link 
+                    href="/tours" 
+                    className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-brand-500/10 text-brand-600 dark:text-brand-400 font-bold hover:bg-brand-500 hover:text-white transition-all group border border-brand-500/20 shadow-md backdrop-blur-sm"
+                  >
+                    View All Tours 
+                    <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                  </Link>
+                </motion.div>
               </div>
-              <motion.div
-                initial={{ opacity: 0, x: 20 }}
+              <motion.p 
+                initial={{ opacity: 0, x: -20 }}
                 whileInView={{ opacity: 1, x: 0 }}
                 viewport={{ once: true }}
+                transition={{ delay: 0.1 }}
+                className="text-lg md:text-xl text-muted-foreground font-medium leading-relaxed max-w-4xl"
+              >
+                Discover our most popular trekking and tour packages highly rated by our travelers.
+              </motion.p>
+              
+              {/* Mobile View All Button */}
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                className="flex md:hidden mt-6"
               >
                 <Link 
                   href="/tours" 
@@ -729,31 +625,7 @@ export default function HomePage() {
                         )}
                       </div>
 
-                      {/* Sustainability Tags */}
-                      {tour.tags && tour.tags.length > 0 && (
-                        <div className="flex flex-wrap gap-2 mb-8 mt-auto">
-                          {tour.tags.map((tag: any, idx: number) => {
-                            const isString = typeof tag === 'string';
-                            const label = isString ? tag : tag.label;
-                            const tagStr = label.toLowerCase();
-                            let Icon = Leaf;
-                            if (tagStr.includes('cultur') || tagStr.includes('local') || tagStr.includes('histor')) Icon = Compass;
-                            else if (tagStr.includes('spirit') || tagStr.includes('well') || tagStr.includes('honeymoon')) Icon = Heart;
-                            else if (tagStr.includes('wild') || tagStr.includes('animal')) Icon = Cloud;
-                            else if (tagStr.includes('famil') || tagStr.includes('group')) Icon = Users;
-                            else if (!isString && tag.icon) Icon = tag.icon;
-
-                            return (
-                              <span key={idx} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-background/60 backdrop-blur-md border border-border shadow-sm transition-transform hover:scale-105 cursor-default text-foreground">
-                                <Icon className="h-3.5 w-3.5 opacity-70" /> {label}
-                              </span>
-                            );
-                          })}
-                        </div>
-                      )}
-                      {(!tour.tags || tour.tags.length === 0) && (
-                        <div className="mt-auto mb-8"></div>
-                      )}
+                      <div className="mt-auto mb-4"></div>
 
                       {/* Footer (Price & Button) */}
                       <div className="pt-5 border-t border-border/50 flex items-center justify-between mt-auto">
@@ -787,30 +659,47 @@ export default function HomePage() {
         {/* 3.5. FEATURED TREKKING */}
         <section id="featured-trekking" className="py-24 relative z-10 border-b border-border/30">
           <div className="container mx-auto px-4">
-            <div className="flex flex-col md:flex-row md:items-end justify-between mb-16 gap-6">
-              <div className="max-w-2xl">
+            <div className="mb-16">
+              <div className="flex flex-row items-center justify-between gap-4 mb-4">
                 <motion.h2 
                   initial={{ opacity: 0, x: -20 }}
                   whileInView={{ opacity: 1, x: 0 }}
                   viewport={{ once: true }}
-                  className="text-4xl md:text-5xl lg:text-6xl font-black tracking-tight mb-6 uppercase"
+                  className="text-3xl md:text-4xl lg:text-5xl font-black tracking-tight uppercase"
                 >
                   Featured <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-500 to-brand-700">Trekking</span>
                 </motion.h2>
-                <motion.p 
-                  initial={{ opacity: 0, x: -20 }}
+                <motion.div
+                  initial={{ opacity: 0, x: 20 }}
                   whileInView={{ opacity: 1, x: 0 }}
                   viewport={{ once: true }}
-                  transition={{ delay: 0.1 }}
-                  className="text-lg md:text-xl text-muted-foreground font-medium leading-relaxed"
+                  className="hidden md:flex justify-end md:w-auto"
                 >
-                  Embark on an unforgettable journey through the majestic trails of the Himalayas.
-                </motion.p>
+                  <Link 
+                    href="/trekking" 
+                    className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-brand-500/10 text-brand-600 dark:text-brand-400 font-bold hover:bg-brand-500 hover:text-white transition-all group border border-brand-500/20 shadow-md backdrop-blur-sm"
+                  >
+                    View All Treks 
+                    <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                  </Link>
+                </motion.div>
               </div>
-              <motion.div
-                initial={{ opacity: 0, x: 20 }}
+              <motion.p 
+                initial={{ opacity: 0, x: -20 }}
                 whileInView={{ opacity: 1, x: 0 }}
                 viewport={{ once: true }}
+                transition={{ delay: 0.1 }}
+                className="text-lg md:text-xl text-muted-foreground font-medium leading-relaxed max-w-4xl"
+              >
+                Embark on an unforgettable journey through the majestic trails of the Himalayas.
+              </motion.p>
+              
+              {/* Mobile View All Button */}
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                className="flex md:hidden mt-6"
               >
                 <Link 
                   href="/trekking" 
@@ -875,31 +764,7 @@ export default function HomePage() {
                         )}
                       </div>
 
-                      {/* Sustainability Tags */}
-                      {trek.tags && trek.tags.length > 0 && (
-                        <div className="flex flex-wrap gap-2 mb-8 mt-auto">
-                          {trek.tags.map((tag: any, idx: number) => {
-                            const isString = typeof tag === 'string';
-                            const label = isString ? tag : tag.label;
-                            const tagStr = label.toLowerCase();
-                            let Icon = Leaf;
-                            if (tagStr.includes('cultur') || tagStr.includes('local') || tagStr.includes('histor')) Icon = Compass;
-                            else if (tagStr.includes('spirit') || tagStr.includes('well') || tagStr.includes('honeymoon')) Icon = Heart;
-                            else if (tagStr.includes('wild') || tagStr.includes('animal')) Icon = Cloud;
-                            else if (tagStr.includes('famil') || tagStr.includes('group')) Icon = Users;
-                            else if (!isString && tag.icon) Icon = tag.icon;
-
-                            return (
-                              <span key={idx} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-background/60 backdrop-blur-md border border-border shadow-sm transition-transform hover:scale-105 cursor-default text-foreground">
-                                <Icon className="h-3.5 w-3.5 opacity-70" /> {label}
-                              </span>
-                            );
-                          })}
-                        </div>
-                      )}
-                      {(!trek.tags || trek.tags.length === 0) && (
-                        <div className="mt-auto mb-8"></div>
-                      )}
+                      <div className="mt-auto mb-4"></div>
 
                       {/* Footer (Price & Button) */}
                       <div className="pt-5 border-t border-border/50 flex items-center justify-between mt-auto">
@@ -931,7 +796,7 @@ export default function HomePage() {
         </section>
 
         {/* 4. TREKKING & EXPEDITIONS */}
-        <section className="py-24 relative z-10 border-b border-border/30 bg-brand-500/5">
+        <section className="py-24 relative z-10 border-b border-border/30">
           <div className="container mx-auto px-4">
             <div className="text-center mb-16 max-w-3xl mx-auto">
               <motion.h2 
@@ -1000,11 +865,8 @@ export default function HomePage() {
 
         {/* 5. FEATURED BLOG POSTS */}
         {featuredBlogs.length > 0 && (
-          <section className="py-24 relative z-10 overflow-hidden">
-            {/* Background glow */}
-            <div className="absolute inset-0 -z-10">
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[900px] h-[500px] bg-brand-500/5 rounded-full blur-3xl" />
-            </div>
+          <section className="pt-24 pb-6 relative z-10 overflow-hidden">
+
             <div className="container mx-auto px-4">
               {/* Section Header */}
               <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-14">
@@ -1031,6 +893,7 @@ export default function HomePage() {
                   initial={{ opacity: 0, x: 20 }}
                   whileInView={{ opacity: 1, x: 0 }}
                   viewport={{ once: true }}
+                  className="w-full flex justify-end md:w-auto"
                 >
                   <Link
                     href="/blog"
@@ -1112,7 +975,7 @@ export default function HomePage() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: 0.3 }}
-                className="mt-14 flex justify-center"
+                className="mt-10 flex justify-center"
               >
                 <Link href="/blog#write-for-us"
                   className="group inline-flex items-center gap-3 px-8 py-4 rounded-2xl bg-gradient-to-r from-brand-600 to-brand-700 text-white font-black text-sm shadow-lg shadow-brand-500/30 hover:shadow-brand-500/50 hover:-translate-y-1 transition-all duration-300"
@@ -1126,16 +989,141 @@ export default function HomePage() {
           </section>
         )}
 
+        {/* 5.5. EXPERIENCE THE JOURNEY (Video & Expert Contact Section) */}
+        <section className="pt-6 pb-24 relative z-10 border-b border-border/30">
+          <div className="container mx-auto px-4">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-stretch">
+              
+              {/* Left Column: Video Embed (aspect-video) */}
+              <div className="lg:col-span-7 flex flex-col h-full justify-between">
+                <motion.div 
+                  initial={{ opacity: 0, y: 30 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.6 }}
+                  className="relative aspect-video w-full rounded-[2.5rem] overflow-hidden shadow-2xl border border-border bg-black group"
+                >
+                  <iframe 
+                    src="https://www.youtube.com/embed/U1dORuMjfYM?autoplay=0" 
+                    title="Everest Base Camp Trek (EBC)" 
+                    className="absolute inset-0 w-full h-full object-cover rounded-[2.5rem]"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                    allowFullScreen
+                  ></iframe>
+                </motion.div>
+                <motion.p 
+                  initial={{ opacity: 0 }}
+                  whileInView={{ opacity: 1 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: 0.3 }}
+                  className="text-center text-muted-foreground italic mt-6 text-base font-semibold tracking-wide"
+                >
+                  &ldquo;Experience the journey, culture, and Himalayan spirit&rdquo;
+                </motion.p>
+              </div>
+
+              {/* Right Column: Expert Contact Card */}
+              <div className="lg:col-span-5 flex flex-col">
+                <motion.div 
+                  initial={{ opacity: 0, y: 30 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.6, delay: 0.1 }}
+                  className="bg-card/80 backdrop-blur-md border border-border/50 rounded-[2.5rem] p-6 md:p-8 shadow-xl flex flex-col justify-between h-full relative overflow-hidden flex-1"
+                >
+                  {/* Subtle Background Glow */}
+                  <div className="absolute inset-0 bg-gradient-to-br from-brand-500/5 to-transparent opacity-100 pointer-events-none" />
+
+                  {/* Expert Header Row (Avatar left, Info right) */}
+                  <div className="flex items-center gap-5 w-full relative z-10 text-left mb-6">
+                    {/* Profile Picture */}
+                    <div className="relative w-20 h-20 md:w-24 md:h-24 rounded-full overflow-hidden border-2 border-brand-500/20 shadow-md shrink-0 transition-transform duration-500 hover:scale-105">
+                      <Image 
+                        src="/images/expert-shiva.png" 
+                        alt="Shiva Prasad Silwal" 
+                        fill 
+                        className="object-cover"
+                      />
+                    </div>
+
+                    {/* Info */}
+                    <div>
+                      <span className="text-[10px] md:text-[11px] font-black uppercase tracking-[0.15em] text-[#f97316] dark:text-[#fb923c] block mb-1">
+                        Talk With Our Expert
+                      </span>
+                      <h3 className="text-xl md:text-2xl font-black tracking-tight text-foreground leading-tight">
+                        Shiva Prasad Silwal
+                      </h3>
+                      <p className="text-xs md:text-sm font-semibold text-muted-foreground mt-0.5">
+                        Trekking & Expedition Expert
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Contact Actions Container */}
+                  <div className="flex flex-col gap-4 w-full relative z-10 mt-auto">
+                    {/* WhatsApp Action Button */}
+                    <Link 
+                      href="https://wa.me/9779851126397" 
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-center gap-2.5 w-full py-4 rounded-2xl bg-[#22c55e] hover:bg-[#1fae53] text-white font-black uppercase text-sm tracking-wider shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/40 hover:-translate-y-0.5 transition-all duration-300 mb-2 group/btn"
+                    >
+                      <svg className="w-5 h-5 fill-white" viewBox="0 0 24 24">
+                        <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.003 5.324 5.328 0 11.89 0c3.18 0 6.171 1.242 8.423 3.497 2.253 2.256 3.489 5.253 3.487 8.437-.004 6.568-5.329 11.892-11.892 11.892-2.001-.001-3.97-.51-5.729-1.479L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.725 1.45 5.58-.003 10.118-4.542 10.12-10.122.002-2.702-1.047-5.245-2.957-7.157C16.628 1.413 14.09.363 11.39.363c-5.582 0-10.12 4.538-10.123 10.12-.001 1.785.474 3.528 1.38 5.083L1.648 22.3l6.902-1.81.097-.058.001-.001-.102.163zM9.513 5.673c-.159-.352-.327-.36-.48-.366-.126-.005-.27-.005-.414-.005-.144 0-.379.054-.577.27-.198.216-.757.739-.757 1.8 0 1.062.774 2.09.882 2.234.108.144 1.524 2.327 3.69 3.262 1.802.778 2.169.624 2.565.587.396-.036 1.279-.522 1.459-1.026.18-.504.18-.936.126-1.026-.054-.09-.198-.144-.414-.252-.216-.108-1.279-.631-1.477-.702-.198-.072-.342-.108-.486.108-.144.216-.559.702-.685.846-.126.144-.252.162-.468.054-.216-.108-.912-.336-1.737-1.072-.642-.573-1.075-1.281-1.201-1.497-.126-.216-.013-.333.095-.44l.325-.379c.108-.144.144-.234.216-.396.072-.162.036-.306-.018-.414-.054-.108-.468-1.127-.642-1.547z" />
+                      </svg>
+                      Chat on WhatsApp
+                    </Link>
+
+                    {/* Support Details List */}
+                    <div className="space-y-3.5 w-full">
+                      {/* Call Option */}
+                      <Link 
+                        href="tel:+9779851126397"
+                        className="flex items-center gap-4 p-4 rounded-2xl bg-muted/50 hover:bg-muted border border-border/50 hover:border-brand-500/25 transition-all duration-300 w-full text-left group/item shadow-sm"
+                      >
+                        <div className="h-10 w-10 rounded-xl bg-background border border-border shadow-sm flex items-center justify-center text-[#f97316] dark:text-[#fb923c] group-hover/item:bg-[#f97316] group-hover/item:text-white transition-colors duration-300 shrink-0">
+                          <Phone className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest block mb-0.5">Call Anytime</span>
+                          <span className="text-sm font-black text-foreground group-hover/item:text-brand-600 transition-colors duration-300">+977 9851126397</span>
+                        </div>
+                      </Link>
+
+                      {/* Email Option */}
+                      <Link 
+                        href="mailto:info@ebctreknepal.com"
+                        className="flex items-center gap-4 p-4 rounded-2xl bg-muted/50 hover:bg-muted border border-border/50 hover:border-brand-500/25 transition-all duration-300 w-full text-left group/item shadow-sm"
+                      >
+                        <div className="h-10 w-10 rounded-xl bg-background border border-border shadow-sm flex items-center justify-center text-[#f97316] dark:text-[#fb923c] group-hover/item:bg-[#f97316] group-hover/item:text-white transition-colors duration-300 shrink-0">
+                          <Mail className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest block mb-0.5">Email Us</span>
+                          <span className="text-sm font-black text-foreground group-hover/item:text-brand-600 transition-colors duration-300 break-all">info@ebctreknepal.com</span>
+                        </div>
+                      </Link>
+                    </div>
+                  </div>
+
+                </motion.div>
+              </div>
+
+            </div>
+          </div>
+        </section>
+
         {/* 2. HIGHLIGHTS (Trust Section) */}
         <section className="py-24 relative z-10">
           <div className="container mx-auto px-4">
-            <div className="flex flex-col md:flex-row md:items-end justify-between mb-16 gap-8">
-              <div className="max-w-2xl">
+            <div className="mb-16">
+              <div className="flex flex-row items-center justify-between gap-4 mb-4">
                 <motion.h2
                   initial={{ opacity: 0, x: -20 }}
                   whileInView={{ opacity: 1, x: 0 }}
                   viewport={{ once: true }}
-                  className="text-4xl md:text-5xl lg:text-6xl font-black tracking-tight mb-6 uppercase"
+                  className="text-3xl md:text-4xl lg:text-5xl font-black tracking-tight uppercase"
                 >
                   {whyChoose.title}
                   {whyChoose.titleHighlight && (
@@ -1147,29 +1135,43 @@ export default function HomePage() {
                     </>
                   )}
                 </motion.h2>
-                {whyChoose.description && (
-                  <motion.p
-                    initial={{ opacity: 0, x: -20 }}
-                    whileInView={{ opacity: 1, x: 0 }}
+                
+                {/* Desktop Trust Badge */}
+                {whyChoose.trustBadge && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    whileInView={{ opacity: 1, scale: 1 }}
                     viewport={{ once: true }}
-                    transition={{ delay: 0.1 }}
-                    className="text-lg md:text-xl text-muted-foreground font-medium leading-relaxed"
+                    className="hidden md:flex items-center gap-3 bg-brand-500/10 dark:bg-brand-500/20 border border-brand-500/20 text-brand-700 dark:text-brand-300 px-6 py-4 rounded-full font-bold shadow-lg backdrop-blur-sm shrink-0"
                   >
-                    {whyChoose.description}
-                  </motion.p>
+                    <Star className="h-5 w-5 text-brand-500 fill-brand-500" />
+                    {whyChoose.trustBadge}
+                  </motion.div>
                 )}
               </div>
 
-              {/* Trust Badge */}
+              {whyChoose.description && (
+                <motion.p
+                  initial={{ opacity: 0, x: -20 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: 0.1 }}
+                  className="text-lg md:text-xl text-muted-foreground font-medium leading-relaxed max-w-4xl"
+                >
+                  {whyChoose.description}
+                </motion.p>
+              )}
+
+              {/* Mobile Trust Badge */}
               {whyChoose.trustBadge && (
                 <motion.div
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  whileInView={{ opacity: 1, scale: 1 }}
+                  initial={{ opacity: 0, y: 10 }}
+                  whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
-                  className="hidden md:flex items-center gap-3 bg-brand-500/10 dark:bg-brand-500/20 border border-brand-500/20 text-brand-700 dark:text-brand-300 px-6 py-4 rounded-full font-bold shadow-lg backdrop-blur-sm"
+                  className="flex md:hidden items-center gap-3 bg-brand-500/10 dark:bg-brand-500/20 border border-brand-500/20 text-brand-700 dark:text-brand-300 px-5 py-3 rounded-full font-bold shadow-lg backdrop-blur-sm mt-6 w-fit"
                 >
-                  <Star className="h-5 w-5 text-brand-500 fill-brand-500" />
-                  {whyChoose.trustBadge}
+                  <Star className="h-4 w-4 text-brand-500 fill-brand-500" />
+                  <span className="text-sm">{whyChoose.trustBadge}</span>
                 </motion.div>
               )}
             </div>

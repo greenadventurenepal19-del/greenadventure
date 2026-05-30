@@ -63,12 +63,12 @@ export const TextHoverEffect = ({
           animate={
             hovered
               ? maskPosition
-              : { cx: ["0%", "100%"], cy: "50%" }
+              : { cx: ["0%", "100%", "0%"], cy: "50%" }
           }
           transition={
             hovered
               ? { duration: duration ?? 0, ease: "easeOut" }
-              : { duration: 3, repeat: Infinity, ease: "linear" }
+              : { duration: 6, repeat: Infinity, ease: "easeInOut" }
           }
         >
           <stop offset="0%" stopColor="white" />
@@ -89,9 +89,9 @@ export const TextHoverEffect = ({
         y="50%"
         textAnchor="start"
         dominantBaseline="middle"
-        strokeWidth="1"
+        strokeWidth="1.5"
         fontSize="150"
-        className="fill-transparent stroke-neutral-200 font-[helvetica] font-bold dark:stroke-neutral-800 transition-opacity duration-500"
+        className="fill-transparent stroke-black font-[helvetica] font-bold dark:stroke-white transition-opacity duration-500"
         style={{ opacity: hovered ? 0 : 0 }}
       >
         {text}
@@ -101,15 +101,16 @@ export const TextHoverEffect = ({
         y="50%"
         textAnchor="start"
         dominantBaseline="middle"
-        strokeWidth="1"
+        strokeWidth="1.5"
         fontSize="150"
-        className="fill-transparent stroke-neutral-200 font-[helvetica] font-bold dark:stroke-neutral-800 transition-opacity duration-500"
-        style={{ opacity: hovered ? 0.4 : 0.05 }}
+        className="fill-transparent stroke-black font-[helvetica] font-bold dark:stroke-white transition-opacity duration-500"
+        style={{ opacity: hovered ? 0.95 : 0.75 }}
         initial={{ strokeDashoffset: 1000, strokeDasharray: 1000 }}
-        animate={{
+        whileInView={{
           strokeDashoffset: 0,
           strokeDasharray: 1000,
         }}
+        viewport={{ once: true }}
         transition={{
           duration: 4,
           ease: "easeInOut",
