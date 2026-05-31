@@ -36,9 +36,11 @@ export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
       if (currentUser && currentUser.email) {
         setUser(currentUser);
         
+        const userEmail = currentUser.email.toLowerCase().trim();
+        const superAdminEmail = process.env.NEXT_PUBLIC_SUPER_ADMIN?.toLowerCase().trim();
+        
         // Check if user is Super Admin
-        const superAdminEmail = process.env.NEXT_PUBLIC_SUPER_ADMIN;
-        if (currentUser.email === superAdminEmail) {
+        if (userEmail === superAdminEmail) {
           setIsSuperAdmin(true);
           setIsAdmin(true);
           setLoading(false);
@@ -47,7 +49,7 @@ export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
 
         // Check if user is in Firestore 'admins' collection
         try {
-          const adminDoc = await getDoc(doc(db, "admins", currentUser.email));
+          const adminDoc = await getDoc(doc(db, "admins", userEmail));
           if (adminDoc.exists()) {
             setIsAdmin(true);
             setIsSuperAdmin(false);

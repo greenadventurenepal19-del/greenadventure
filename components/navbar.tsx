@@ -278,9 +278,11 @@ export function Navbar() {
         </nav>
 
         <div className="hidden md:flex items-center">
-          <div className="flex items-center gap-4 pl-4 ml-2 border-l border-border/50">
+          <div className={`flex items-center gap-4 pl-4 ml-2 border-l transition-colors duration-500 ${
+            isTransparent ? "border-white/20" : "border-border/50"
+          }`}>
             <div>
-              <ThemeToggle />
+              <ThemeToggle isTransparent={isTransparent} />
             </div>
             <Link
               href="/contact"
@@ -293,11 +295,13 @@ export function Navbar() {
 
         <div className="flex items-center gap-3 md:hidden">
           <div>
-            <ThemeToggle />
+            <ThemeToggle isTransparent={isTransparent} />
           </div>
           <button
             onClick={() => setIsOpen(!isOpen)}
-            className="p-2 transition-colors text-foreground"
+            className={`p-2 transition-colors ${
+              isTransparent ? "text-white hover:text-white/80" : "text-foreground hover:text-foreground/80"
+            }`}
             aria-label="Toggle menu"
           >
             <Menu className="h-6 w-6" />

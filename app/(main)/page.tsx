@@ -23,9 +23,9 @@ import {
 } from "@/lib/why-choose";
 
 const defaultHeroSlides = [
-  { title: "NEPAL", subtitle: "Discover the breathtaking landscapes, vibrant culture, and ancient heritage of the Himalayas.", image: "/images/hero-nepal.PNG", mobileImage: "", tabletImage: "", upperTags: ["Everest Region", "15 days", "Challenging"], lowerTags: ["Zero Waste", "Low-carbon", "Local Hire", "Inclusive Growth"] },
-  { title: "INDIA", subtitle: "Explore the diverse beauty of the Indian Himalayas, from spiritual journeys to thrilling treks.", image: "/images/hero-india.PNG", mobileImage: "", tabletImage: "", upperTags: ["Ladakh", "15 days", "Challenging"], lowerTags: ["Zero Waste", "Low-carbon", "Local Hire", "Inclusive Growth"] },
-  { title: "BHUTAN", subtitle: "Experience the magic of the Land of the Thunder Dragon, with its pristine landscapes and ancient monasteries.", image: "/images/hero-bhutan.PNG", mobileImage: "", tabletImage: "", upperTags: ["Paro Valley", "7 days", "Moderate"], lowerTags: ["Eco-Friendly", "Cultural Preservation", "Local Hire", "Inclusive Growth"] },
+  { title: "NEPAL", subtitle: "Discover the breathtaking landscapes, vibrant culture, and ancient heritage of the Himalayas.", image: "/images/everest.png", mobileImage: "", tabletImage: "", upperTags: ["Everest Region", "15 days", "Challenging"], lowerTags: ["Zero Waste", "Low-carbon", "Local Hire", "Inclusive Growth"] },
+  { title: "INDIA", subtitle: "Explore the diverse beauty of the Indian Himalayas, from spiritual journeys to thrilling treks.", image: "/images/hero-grass.jpg", mobileImage: "", tabletImage: "", upperTags: ["Ladakh", "15 days", "Challenging"], lowerTags: ["Zero Waste", "Low-carbon", "Local Hire", "Inclusive Growth"] },
+  { title: "BHUTAN", subtitle: "Experience the magic of the Land of the Thunder Dragon, with its pristine landscapes and ancient monasteries.", image: "/images/hero.png", mobileImage: "", tabletImage: "", upperTags: ["Paro Valley", "7 days", "Moderate"], lowerTags: ["Eco-Friendly", "Cultural Preservation", "Local Hire", "Inclusive Growth"] },
 ];
 
 let homeCache = {
@@ -37,6 +37,26 @@ let homeCache = {
   featuredBlogs: null as any,
   dbRegions: null as any,
   approvedReviews: null as any,
+  contactInfo: null as any,
+};
+
+// Helper to determine the first image that will be rendered, to preload it
+const getFirstSlideImage = (slide: any) => {
+  if (!slide) return "";
+  let baseImg = slide.image;
+  let bgList = (Array.isArray(slide.bgImages) && slide.bgImages.length > 0) ? slide.bgImages : [baseImg];
+
+  if (typeof window !== "undefined") {
+    const w = window.innerWidth;
+    if (w < 768) {
+      baseImg = slide.mobileImage || baseImg;
+      bgList = (Array.isArray(slide.mobileBgImages) && slide.mobileBgImages.length > 0) ? slide.mobileBgImages : (slide.mobileImage ? [slide.mobileImage] : bgList);
+    } else if (w < 1024) {
+      baseImg = slide.tabletImage || baseImg;
+      bgList = (Array.isArray(slide.tabletBgImages) && slide.tabletBgImages.length > 0) ? slide.tabletBgImages : (slide.tabletImage ? [slide.tabletImage] : bgList);
+    }
+  }
+  return bgList[0] || baseImg;
 };
 
 export default function HomePage() {
@@ -90,29 +110,147 @@ export default function HomePage() {
   const [approvedReviews, setApprovedReviews] = React.useState<any[]>(homeCache.approvedReviews || []);
   const [showReviewModal, setShowReviewModal] = React.useState(false);
   const [whyChoose, setWhyChoose] = React.useState<WhyChooseSettings>(homeCache.whyChoose || DEFAULT_WHY_CHOOSE);
-  const [pageLoaded, setPageLoaded] = React.useState(true);
+  const [contactInfo, setContactInfo] = React.useState({
+    phonePrimary: "+977 9851126397",
+    phoneWhatsapp: "9779851126397",
+    emailPrimary: "info@ebctreknepal.com",
+  });
+  const [pageLoaded, setPageLoaded] = React.useState(false);
   const loadFlags = React.useRef({ hero: false, why: false, data: false, reviews: false });
   const markLoaded = React.useCallback((key: keyof typeof loadFlags.current) => {
     loadFlags.current[key] = true;
-    if (Object.values(loadFlags.current).every(Boolean)) setPageLoaded(true);
+    if (loadFlags.current.hero) setPageLoaded(true);
+  }, []);
+
+  // Hydrate states from localStorage instantly on client-side mount (before preloader fades)
+  React.useEffect(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const cachedHero = localStorage.getItem("cached_hero_slides");
+        const cachedWhy = localStorage.getItem("cached_why_choose");
+        const cachedTours = localStorage.getItem("cached_featured_tours");
+        const cachedTreks = localStorage.getItem("cached_featured_treks");
+        const cachedRegions = localStorage.getItem("cached_db_regions");
+        const cachedReviews = localStorage.getItem("cached_approved_reviews");
+        const cachedBlogs = localStorage.getItem("cached_featured_blogs");
+        const cachedContact = localStorage.getItem("cached_contact_info");
+
+        if (cachedHero) {
+          const parsed = JSON.parse(cachedHero);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setHeroSlides(parsed);
+            homeCache.heroSlides = parsed;
+          }
+        }
+        if (cachedWhy) {
+          const parsed = JSON.parse(cachedWhy);
+          setWhyChoose(parsed);
+          homeCache.whyChoose = parsed;
+        }
+        if (cachedTours) {
+          const parsed = JSON.parse(cachedTours);
+          setFeaturedTours(parsed);
+          homeCache.featuredTours = parsed;
+        }
+        if (cachedTreks) {
+          const parsed = JSON.parse(cachedTreks);
+          setFeaturedTreks(parsed);
+          homeCache.featuredTreks = parsed;
+        }
+        if (cachedRegions) {
+          const parsed = JSON.parse(cachedRegions);
+          setDbRegions(parsed);
+          homeCache.dbRegions = parsed;
+        }
+        if (cachedReviews) {
+          const parsed = JSON.parse(cachedReviews);
+          setApprovedReviews(parsed);
+          homeCache.approvedReviews = parsed;
+        }
+        if (cachedBlogs) {
+          const parsed = JSON.parse(cachedBlogs);
+          setFeaturedBlogs(parsed);
+          homeCache.featuredBlogs = parsed;
+        }
+        if (cachedContact) {
+          const parsed = JSON.parse(cachedContact);
+          setContactInfo(parsed);
+          homeCache.contactInfo = parsed;
+        }
+      } catch (e) {
+        console.error("Error restoring cached landing data:", e);
+      }
+    }
   }, []);
 
   // Preloader session manager — handles instant caching & safety timeout
   React.useEffect(() => {
-    const shown = typeof window !== "undefined" ? sessionStorage.getItem("preloader_shown") : null;
-    if (shown === "true" || homeCache.isLoaded) {
+    if (homeCache.isLoaded) {
       setPageLoaded(true);
-    } else {
-      setPageLoaded(false);
-      // Safety timeout: transition after 1.8 seconds max to keep performance instant
-      const timer = setTimeout(() => {
-        setPageLoaded(true);
-        if (typeof window !== "undefined") {
-          sessionStorage.setItem("preloader_shown", "true");
-        }
-      }, 1800);
-      return () => clearTimeout(timer);
+      return;
     }
+
+    let isMounted = true;
+    let timer: NodeJS.Timeout;
+
+    // Safety timeout: transition after 450ms max if cached, or 1200ms max on fresh load
+    const startPreloaderTimer = (delay: number) => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => {
+        if (isMounted) {
+          setPageLoaded(true);
+        }
+      }, delay);
+    };
+
+    // Check if we have cached slides in localStorage
+    let hasCache = false;
+    if (typeof window !== "undefined") {
+      try {
+        const cachedHero = localStorage.getItem("cached_hero_slides");
+        if (cachedHero) {
+          const parsed = JSON.parse(cachedHero);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            hasCache = true;
+            // Preload the first image immediately
+            const firstImgUrl = getFirstSlideImage(parsed[0]);
+            if (firstImgUrl) {
+              const img = new window.Image();
+              img.src = firstImgUrl;
+              const handleLoad = () => {
+                if (isMounted) {
+                  // Small timeout for visual smoothness
+                  setTimeout(() => {
+                    if (isMounted) setPageLoaded(true);
+                  }, 120);
+                }
+              };
+              if (img.complete) {
+                handleLoad();
+              } else {
+                img.onload = handleLoad;
+                img.onerror = handleLoad;
+              }
+            } else {
+              setPageLoaded(true);
+            }
+          }
+        }
+      } catch (e) {
+        console.error("Error reading preloader cache:", e);
+      }
+    }
+
+    if (hasCache) {
+      startPreloaderTimer(450); // fast fallback if preloading takes slightly longer or hangs
+    } else {
+      startPreloaderTimer(1200); // safety fallback for first visit
+    }
+
+    return () => {
+      isMounted = false;
+      if (timer) clearTimeout(timer);
+    };
   }, []);
 
   React.useEffect(() => {
@@ -124,6 +262,7 @@ export default function HomePage() {
       setFeaturedBlogs(homeCache.featuredBlogs || []);
       setDbRegions(homeCache.dbRegions || []);
       setApprovedReviews(homeCache.approvedReviews || []);
+      if (homeCache.contactInfo) setContactInfo(homeCache.contactInfo);
       setPageLoaded(true);
       return;
     }
@@ -134,15 +273,16 @@ export default function HomePage() {
         if (docSnap.exists()) {
           const data = docSnap.data() as any;
           if (Array.isArray(data.slides) && data.slides.length > 0) {
-            const defaultImages = ["/images/hero-nepal.PNG", "/images/hero-india.PNG", "/images/hero-bhutan.PNG"];
+            const defaultImages = ["/images/everest.png", "/images/hero-grass.jpg", "/images/hero.png"];
             const slides = data.slides.map((s: any, i: number) => ({
               ...s,
               image: s.image || defaultImages[i] || defaultImages[0],
             }));
             setHeroSlides(slides);
             homeCache.heroSlides = slides;
+            localStorage.setItem("cached_hero_slides", JSON.stringify(slides));
           } else if (data.slide1Title) {
-            const defaultImages = ["/images/hero-india.PNG", "/images/hero-nepal.PNG", "/images/hero-bhutan.PNG"];
+            const defaultImages = ["/images/hero-grass.jpg", "/images/everest.png", "/images/hero.png"];
             const migrated = [];
             let i = 1;
             while (data[`slide${i}Title`]) {
@@ -158,6 +298,7 @@ export default function HomePage() {
             if (migrated.length > 0) {
               setHeroSlides(migrated);
               homeCache.heroSlides = migrated;
+              localStorage.setItem("cached_hero_slides", JSON.stringify(migrated));
             }
           }
         }
@@ -180,6 +321,7 @@ export default function HomePage() {
               features: Array.isArray(data.features) && data.features.length > 0 ? data.features : prev.features,
             };
             homeCache.whyChoose = newState;
+            localStorage.setItem("cached_why_choose", JSON.stringify(newState));
             return newState;
           });
         }
@@ -202,6 +344,8 @@ export default function HomePage() {
         setFeaturedTreks(treks);
         homeCache.featuredTours = tours;
         homeCache.featuredTreks = treks;
+        localStorage.setItem("cached_featured_tours", JSON.stringify(tours));
+        localStorage.setItem("cached_featured_treks", JSON.stringify(treks));
 
         const qRegions = query(collection(db, "regions"));
         const regionsSnap = await getDocs(qRegions);
@@ -210,6 +354,7 @@ export default function HomePage() {
           const sortedRegions = regionsData.sort((a: any, b: any) => (a.order || 0) - (b.order || 0));
           setDbRegions(sortedRegions);
           homeCache.dbRegions = sortedRegions;
+          localStorage.setItem("cached_db_regions", JSON.stringify(sortedRegions));
         }
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -233,6 +378,7 @@ export default function HomePage() {
           });
         setApprovedReviews(data);
         homeCache.approvedReviews = data;
+        localStorage.setItem("cached_approved_reviews", JSON.stringify(data));
       } catch (err) {
         console.error("Error fetching reviews:", err);
       } finally {
@@ -252,23 +398,71 @@ export default function HomePage() {
         const blogs = data.slice(0, 3);
         setFeaturedBlogs(blogs);
         homeCache.featuredBlogs = blogs;
+        localStorage.setItem("cached_featured_blogs", JSON.stringify(blogs));
       } catch {
         setFeaturedBlogs([]);
       }
     }
 
-    Promise.all([
-      fetchHeroSettings(),
-      fetchWhyChoose(),
-      fetchData(),
-      fetchReviews(),
-      fetchFeaturedBlogsData()
-    ]).then(() => {
-      homeCache.isLoaded = true;
+    async function fetchContactInfo() {
+      try {
+        const docSnap = await getDoc(doc(db, "settings", "contact_info"));
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          const info = {
+            phonePrimary: data.phonePrimary || "+977 9851126397",
+            phoneWhatsapp: data.phoneWhatsapp || "9779851126397",
+            emailPrimary: data.emailPrimary || "info@ebctreknepal.com",
+          };
+          setContactInfo(info);
+          homeCache.contactInfo = info;
+          localStorage.setItem("cached_contact_info", JSON.stringify(info));
+        }
+      } catch (error) {
+        console.error("Error fetching contact info settings:", error);
+      }
+    }
+
+    fetchHeroSettings().then(() => {
+      if (typeof window !== "undefined") {
+        try {
+          const currentSlides = homeCache.heroSlides || [];
+          if (currentSlides.length > 0) {
+            const firstImgUrl = getFirstSlideImage(currentSlides[0]);
+            if (firstImgUrl) {
+              const img = new window.Image();
+              img.src = firstImgUrl;
+              const handleFirstLoad = () => {
+                setPageLoaded(true);
+                sessionStorage.setItem("preloader_shown", "true");
+              };
+              if (img.complete) {
+                handleFirstLoad();
+              } else {
+                img.onload = handleFirstLoad;
+                img.onerror = handleFirstLoad;
+              }
+              return;
+            }
+          }
+        } catch (e) {
+          console.error("Error during first load image preloading:", e);
+        }
+      }
       setPageLoaded(true);
       if (typeof window !== "undefined") {
         sessionStorage.setItem("preloader_shown", "true");
       }
+    });
+
+    Promise.all([
+      fetchWhyChoose(),
+      fetchData(),
+      fetchReviews(),
+      fetchFeaturedBlogsData(),
+      fetchContactInfo()
+    ]).then(() => {
+      homeCache.isLoaded = true;
     });
 
   }, []);
@@ -1040,7 +1234,7 @@ export default function HomePage() {
                     <div className="relative w-20 h-20 md:w-24 md:h-24 rounded-full overflow-hidden border-2 border-brand-500/20 shadow-md shrink-0 transition-transform duration-500 hover:scale-105">
                       <Image 
                         src="/images/expert-shiva.png" 
-                        alt="Shiva Prasad Silwal" 
+                        alt="Raj Dahal" 
                         fill 
                         className="object-cover"
                       />
@@ -1052,10 +1246,10 @@ export default function HomePage() {
                         Talk With Our Expert
                       </span>
                       <h3 className="text-xl md:text-2xl font-black tracking-tight text-foreground leading-tight">
-                        Shiva Prasad Silwal
+                        Raj Dahal
                       </h3>
                       <p className="text-xs md:text-sm font-semibold text-muted-foreground mt-0.5">
-                        Trekking & Expedition Expert
+                        Tour/Trek Organizer
                       </p>
                     </div>
                   </div>
@@ -1064,7 +1258,7 @@ export default function HomePage() {
                   <div className="flex flex-col gap-4 w-full relative z-10 mt-auto">
                     {/* WhatsApp Action Button */}
                     <Link 
-                      href="https://wa.me/9779851126397" 
+                      href={`https://wa.me/${contactInfo.phoneWhatsapp.replace(/[^0-9]/g, "")}`} 
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex items-center justify-center gap-2.5 w-full py-4 rounded-2xl bg-[#22c55e] hover:bg-[#1fae53] text-white font-black uppercase text-sm tracking-wider shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/40 hover:-translate-y-0.5 transition-all duration-300 mb-2 group/btn"
@@ -1079,7 +1273,7 @@ export default function HomePage() {
                     <div className="space-y-3.5 w-full">
                       {/* Call Option */}
                       <Link 
-                        href="tel:+9779851126397"
+                        href={`tel:${contactInfo.phonePrimary.replace(/[^0-9+]/g, "")}`}
                         className="flex items-center gap-4 p-4 rounded-2xl bg-muted/50 hover:bg-muted border border-border/50 hover:border-brand-500/25 transition-all duration-300 w-full text-left group/item shadow-sm"
                       >
                         <div className="h-10 w-10 rounded-xl bg-background border border-border shadow-sm flex items-center justify-center text-[#f97316] dark:text-[#fb923c] group-hover/item:bg-[#f97316] group-hover/item:text-white transition-colors duration-300 shrink-0">
@@ -1087,13 +1281,13 @@ export default function HomePage() {
                         </div>
                         <div>
                           <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest block mb-0.5">Call Anytime</span>
-                          <span className="text-sm font-black text-foreground group-hover/item:text-brand-600 transition-colors duration-300">+977 9851126397</span>
+                          <span className="text-sm font-black text-foreground group-hover/item:text-brand-600 transition-colors duration-300">{contactInfo.phonePrimary}</span>
                         </div>
                       </Link>
 
                       {/* Email Option */}
                       <Link 
-                        href="mailto:info@ebctreknepal.com"
+                        href={`mailto:${contactInfo.emailPrimary}`}
                         className="flex items-center gap-4 p-4 rounded-2xl bg-muted/50 hover:bg-muted border border-border/50 hover:border-brand-500/25 transition-all duration-300 w-full text-left group/item shadow-sm"
                       >
                         <div className="h-10 w-10 rounded-xl bg-background border border-border shadow-sm flex items-center justify-center text-[#f97316] dark:text-[#fb923c] group-hover/item:bg-[#f97316] group-hover/item:text-white transition-colors duration-300 shrink-0">
@@ -1101,7 +1295,7 @@ export default function HomePage() {
                         </div>
                         <div>
                           <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest block mb-0.5">Email Us</span>
-                          <span className="text-sm font-black text-foreground group-hover/item:text-brand-600 transition-colors duration-300 break-all">info@ebctreknepal.com</span>
+                          <span className="text-sm font-black text-foreground group-hover/item:text-brand-600 transition-colors duration-300 break-all">{contactInfo.emailPrimary}</span>
                         </div>
                       </Link>
                     </div>

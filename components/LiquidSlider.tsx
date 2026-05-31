@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useState, useEffect, useRef as useRefAlias } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import { motion, useMotionValue, useSpring, useTransform, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 
@@ -181,8 +181,8 @@ export default function LiquidSlider({
   return (
     <div ref={ref} className="absolute inset-0 z-0 overflow-hidden bg-black pointer-events-none">
       
-      {/* SVG Definitions for Gooey Water Splash Mask */}
-      <svg className="absolute w-0 h-0 pointer-events-none">
+      {/* SVG Definitions for Gooey Water Splash Mask — explicitly zero dimensions and fully hidden */}
+      <svg width="0" height="0" style={{ position: "absolute", width: 0, height: 0, opacity: 0, overflow: "hidden", pointerEvents: "none" }} aria-hidden="true">
         <defs>
           <filter id="liquid-splash" x="-20%" y="-20%" width="140%" height="140%">
             {/* Generate random amoeba-like noise */}
@@ -260,8 +260,10 @@ export default function LiquidSlider({
         <motion.div 
           className="absolute inset-0 w-full h-full z-10"
           style={{ 
-            mask: "url(#splash-mask)", 
-            WebkitMask: "url(#splash-mask)",
+            maskImage: "url(#splash-mask)", 
+            WebkitMaskImage: "url(#splash-mask)",
+            maskSize: "cover",
+            WebkitMaskSize: "cover",
             filter: "drop-shadow(0 20px 40px rgba(0,0,0,0.6)) drop-shadow(0 8px 16px rgba(0,0,0,0.4)) drop-shadow(0 0 2px rgba(0,0,0,0.8))"
           }}
         >

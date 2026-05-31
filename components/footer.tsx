@@ -132,7 +132,11 @@ export function Footer() {
           --f-grad-mid: rgba(250, 250, 250, 0.1);
           --f-grad-top: rgba(250, 250, 250, 0.0);
           --f-image-op: 0.85;
-          --f-blend: multiply;
+          --f-blend: normal;
+          --f-stroke: rgba(0, 0, 0, 0.12);
+          --f-tri-color: #0284c7; /* sky-600 */
+          --f-techies-color: #0f172a; /* slate-900 (black) */
+          --f-arrow-color: #64748b; /* slate-500 */
           background-color: var(--f-bg);
           color: var(--f-text);
           border-color: var(--f-border);
@@ -152,20 +156,95 @@ export function Footer() {
           --f-grad-top: rgba(5, 12, 5, 0.1);
           --f-image-op: 0.7;
           --f-blend: lighten;
+          --f-stroke: rgba(255, 255, 255, 0.35);
+          --f-tri-color: #38bdf8; /* sky-400 */
+          --f-techies-color: #fafafa; /* slate-50 (white) */
+          --f-arrow-color: #94a3b8; /* slate-400 */
+        }
+
+        .tritechies-btn {
+          background-color: transparent !important;
+          border-color: var(--f-border) !important;
+          transition: all 0.3s ease !important;
+        }
+        .tritechies-btn:hover {
+          border-color: var(--f-card-hover) !important;
+          transform: scale(1.03) !important;
+        }
+        .tritechies-arrow {
+          color: var(--f-arrow-color);
+          transition: all 0.3s ease !important;
+        }
+        .tritechies-btn:hover .tritechies-arrow {
+          color: var(--f-card-hover);
+          transform: translate(2px, -2px) !important;
+        }
+
+        .footer-bg-desktop-light { display: none; }
+        .footer-bg-desktop-dark { display: none; }
+        .footer-bg-mobile-light { display: block; }
+        .footer-bg-mobile-dark { display: none; }
+
+        .dark .footer-bg-mobile-light { display: none; }
+        .dark .footer-bg-mobile-dark { display: block; }
+
+        @media (min-width: 768px) {
+          .footer-bg-desktop-light { display: block; }
+          .footer-bg-desktop-dark { display: none; }
+          .footer-bg-mobile-light { display: none; }
+          .footer-bg-mobile-dark { display: none; }
+
+          .dark .footer-bg-desktop-light { display: none; }
+          .dark .footer-bg-desktop-dark { display: block; }
+          .dark .footer-bg-mobile-light { display: none; }
+          .dark .footer-bg-mobile-dark { display: none; }
         }
       `}</style>
 
-      {/* Background Image — visible in both modes, appropriately masked */}
+      {/* Background Images — responsive to media (mobile/desktop) and theme (light/dark) */}
       <div 
         className="absolute inset-0 z-0 pointer-events-none transition-all duration-500"
         style={{ opacity: 'var(--f-image-op)', mixBlendMode: 'var(--f-blend)' as any }}
       >
-        <Image 
-          src="/images/footer-bg-green.png" 
-          alt="Green Mountain Background" 
-          fill 
-          className="object-cover object-bottom"
-        />
+        {/* Desktop Light Mode Background */}
+        <div className="footer-bg-desktop-light absolute inset-0">
+          <Image 
+            src="/images/footer-desktop-light.png" 
+            alt="Mountain Background" 
+            fill 
+            className="object-cover object-bottom"
+          />
+        </div>
+        
+        {/* Desktop Dark Mode Background */}
+        <div className="footer-bg-desktop-dark absolute inset-0">
+          <Image 
+            src="/images/footer-desktop-dark.png" 
+            alt="Mountain Background" 
+            fill 
+            className="object-cover object-bottom"
+          />
+        </div>
+
+        {/* Mobile Light Mode Background */}
+        <div className="footer-bg-mobile-light absolute inset-0">
+          <Image 
+            src="/images/footer-mobile-light.png" 
+            alt="Mountain Background" 
+            fill 
+            className="object-cover object-bottom"
+          />
+        </div>
+
+        {/* Mobile Dark Mode Background */}
+        <div className="footer-bg-mobile-dark absolute inset-0">
+          <Image 
+            src="/images/footer-mobile-dark.png" 
+            alt="Mountain Background" 
+            fill 
+            className="object-cover object-bottom"
+          />
+        </div>
       </div>
       
       {/* Gradient Mask to ensure text readability */}
@@ -334,7 +413,8 @@ export function Footer() {
 
         {/* Footer Bottom */}
         <div 
-          className="mt-6 p-6 md:p-8 rounded-3xl bg-white/60 dark:bg-black/35 backdrop-blur-md border border-white/80 dark:border-white/5 flex flex-col md:flex-row items-center justify-between gap-6 relative z-10 shadow-lg shadow-brand-900/5"
+          className="mt-6 p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6 relative z-10 border-t"
+          style={{ borderColor: 'var(--f-border)' }}
         >
           <p className="text-sm font-black tracking-wide" style={{ color: 'var(--f-text)' }}>
             © {new Date().getFullYear()} Green Adventure Treks &amp; Expeditions. All rights reserved.
@@ -345,21 +425,13 @@ export function Footer() {
               href="http://tritechies.vercel.app/" 
               target="_blank" 
               rel="noopener noreferrer"
-              className="group flex items-center gap-1.5 px-5 py-2.5 border rounded-2xl text-sm font-black transition-all shadow-sm shrink-0"
-              style={{ backgroundColor: 'var(--f-card-bg)', borderColor: 'var(--f-border)', color: 'var(--f-text)' }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = 'var(--f-card-hover)';
-                e.currentTarget.style.color = '#ffffff';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'var(--f-card-bg)';
-                e.currentTarget.style.color = 'var(--f-text)';
-              }}
+              className="tritechies-btn group flex items-center gap-1.5 px-5 py-2.5 border rounded-2xl text-sm font-black shadow-sm shrink-0"
             >
-              <span className="text-emerald-700 dark:text-emerald-400 group-hover:text-white transition-colors drop-shadow-sm">
-                tritechies.
+              <span className="font-extrabold tracking-tight transition-colors">
+                <span className="transition-colors" style={{ color: 'var(--f-tri-color)' }}>tri</span>
+                <span className="transition-colors" style={{ color: 'var(--f-techies-color)' }}>Techies.</span>
               </span>
-              <ArrowUpRight className="w-4 h-4 text-brand-600 dark:text-brand-500 group-hover:text-white transition-all shrink-0" />
+              <ArrowUpRight className="tritechies-arrow w-4 h-4 shrink-0" />
             </a>
           </div>
         </div>

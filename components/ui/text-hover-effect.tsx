@@ -89,9 +89,10 @@ export const TextHoverEffect = ({
         y="50%"
         textAnchor="start"
         dominantBaseline="middle"
+        stroke="var(--f-stroke, currentColor)"
         strokeWidth="1.5"
         fontSize="150"
-        className="fill-transparent stroke-black font-[helvetica] font-bold dark:stroke-white transition-opacity duration-500"
+        className="fill-transparent text-black/20 dark:text-white/30 font-[helvetica] font-bold transition-opacity duration-500"
         style={{ opacity: hovered ? 0 : 0 }}
       >
         {text}
@@ -101,9 +102,10 @@ export const TextHoverEffect = ({
         y="50%"
         textAnchor="start"
         dominantBaseline="middle"
+        stroke="var(--f-stroke, currentColor)"
         strokeWidth="1.5"
         fontSize="150"
-        className="fill-transparent stroke-black font-[helvetica] font-bold dark:stroke-white transition-opacity duration-500"
+        className="fill-transparent text-black/20 dark:text-white/30 font-[helvetica] font-bold transition-opacity duration-500"
         style={{ opacity: hovered ? 0.95 : 0.75 }}
         initial={{ strokeDashoffset: 1000, strokeDasharray: 1000 }}
         whileInView={{
