@@ -261,8 +261,10 @@ export default function LiquidSlider({
               src={baseImage}
               alt="Base slider image"
               fill
+              sizes="100vw"
               className="object-cover"
               priority
+              unoptimized
             />
           </motion.div>
         </AnimatePresence>
@@ -284,8 +286,10 @@ export default function LiquidSlider({
             src={revealImage}
             alt="Reveal slider image"
             fill
+            sizes="100vw"
             className="object-cover"
             priority
+            unoptimized
           />
         </motion.div>
       )}

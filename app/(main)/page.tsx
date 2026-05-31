@@ -101,21 +101,36 @@ export default function HomePage() {
       return () => clearInterval(interval);
     }
   }, [currentSlide, heroSlides, deviceType]);
-  // Stable image array for the liquid slider — ONLY changes when heroSlides data or device type changes.
-  // Key fix: do NOT depend on currentSlide or activeBgIndex so the array reference stays stable
-  // across renders caused by other state changes (isMuted, textSlide, etc.) which previously
-  // caused LiquidSlider's useEffect to misfire and fight the in-progress transition.
-  const liquidSlides = React.useMemo(() =>
-    heroSlides.map((s: any) => {
+  // displaySlides: the image shown in LiquidSlider for each slide position.
+  // — For the ACTIVE slide: cycles through bgImages every 5s using activeBgIndex.
+  // — For all other slides: always shows their first/primary image (no cycling).
+  // Using useMemo (NOT an inline .map in JSX) is critical — it returns a stable array
+  // reference that only changes when real data deps change. This prevents LiquidSlider's
+  // useEffect from firing on every unrelated re-render (mute toggle, textSlide delay, etc.)
+  // while still enabling the auto-cycle crossfade feature for the active slide.
+  const displaySlides = React.useMemo(() =>
+    heroSlides.map((s: any, i: number) => {
       const baseImg = s.image || "";
-      const bgList = (Array.isArray(s.bgImages) && s.bgImages.length > 0) ? s.bgImages : [baseImg];
-      const firstBg = bgList[0] || baseImg;
-      if (deviceType === "mobile") return s.mobileImage || firstBg;
-      if (deviceType === "tablet") return s.tabletImage || firstBg;
-      return firstBg;
+      // Build the full bg image list for this slide + device type
+      let bgList: string[];
+      if (deviceType === "mobile") {
+        bgList = (Array.isArray(s.mobileBgImages) && s.mobileBgImages.length > 0)
+          ? s.mobileBgImages
+          : (s.mobileImage ? [s.mobileImage] : (Array.isArray(s.bgImages) && s.bgImages.length > 0 ? s.bgImages : [baseImg]));
+      } else if (deviceType === "tablet") {
+        bgList = (Array.isArray(s.tabletBgImages) && s.tabletBgImages.length > 0)
+          ? s.tabletBgImages
+          : (s.tabletImage ? [s.tabletImage] : (Array.isArray(s.bgImages) && s.bgImages.length > 0 ? s.bgImages : [baseImg]));
+      } else {
+        bgList = (Array.isArray(s.bgImages) && s.bgImages.length > 0) ? s.bgImages : [baseImg];
+      }
+      // Only cycle images for the currently active slide
+      const bgIdx = i === currentSlide ? (activeBgIndex % bgList.length) : 0;
+      return bgList[bgIdx] || baseImg;
     }),
-    [heroSlides, deviceType]
+    [heroSlides, deviceType, currentSlide, activeBgIndex]
   );
+
 
   const [featuredTours, setFeaturedTours] = React.useState<any[]>(homeCache.featuredTours || []);
   const [featuredTreks, setFeaturedTreks] = React.useState<any[]>(homeCache.featuredTreks || []);
@@ -131,9 +146,8 @@ export default function HomePage() {
   });
   const [pageLoaded, setPageLoaded] = React.useState(false);
   const [sliderReady, setSliderReady] = React.useState(false);
-  React.useEffect(() => {
-    setSliderReady(true);
-  }, []);
+  // NOTE: sliderReady is NOT set here — it's set inside the deviceType detection useEffect below,
+  // so LiquidSlider only mounts AFTER deviceType is known (prevents black-screen on mobile).
   const loadFlags = React.useRef({ hero: false, why: false, data: false, reviews: false });
   const markLoaded = React.useCallback((key: keyof typeof loadFlags.current) => {
     loadFlags.current[key] = true;
@@ -515,7 +529,10 @@ export default function HomePage() {
   }, []);
 
 
-  // Detect device type on mount and resize for responsive hero images
+  // Detect device type on mount and resize for responsive hero images.
+  // IMPORTANT: setSliderReady(true) is called here (not in a separate effect) so that
+  // LiquidSlider only mounts AFTER deviceType is correct. This prevents the black-screen
+  // flash on mobile where the slider used to mount as 'desktop' then re-detect as 'mobile'.
   React.useEffect(() => {
     const checkDevice = () => {
       const w = window.innerWidth;
@@ -523,14 +540,16 @@ export default function HomePage() {
       else if (w < 1024) setDeviceType("tablet");
       else setDeviceType("desktop");
     };
+    // Detect device type first, then mark slider as ready in the same microtask
     checkDevice();
+    setSliderReady(true);
     window.addEventListener("resize", checkDevice);
     return () => window.removeEventListener("resize", checkDevice);
   }, []);
 
-  // Note: getResponsiveImage was removed — replaced by liquidSlides useMemo above
-  // which uses a stable reference that only changes when heroSlides or deviceType change.
-  // This prevents LiquidSlider's useEffect from constantly misfiring on every render.
+  // Note: getResponsiveImage was removed — replaced by displaySlides useMemo above
+  // which is stable (useMemo) so LiquidSlider's useEffect only fires on real data changes,
+  // not on every unrelated re-render (mute toggle, text fade timer, etc.)
 
   React.useEffect(() => {
     // Liquid slider is now user-controlled via hover and click, 
@@ -641,7 +660,7 @@ export default function HomePage() {
         <motion.div style={{ y: bgY }} className="absolute -inset-[10%] z-0 pointer-events-none">
           {sliderReady && (
             <LiquidSlider 
-              slides={liquidSlides}
+              slides={displaySlides}
               currentIndex={currentSlide}
               nextIndex={(currentSlide + 1) % Math.max(heroSlides.length, 1)}
               isHovered={false}
