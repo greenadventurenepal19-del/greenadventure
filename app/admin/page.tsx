@@ -321,9 +321,9 @@ export default function AdminPage() {
 
   // Hero settings state — array-based slides
   const defaultSlides = [
-    { title: "NEPAL", subtitle: "Discover the breathtaking landscapes, vibrant culture, and ancient heritage of the Himalayas.", image: "", bgImages: [], mobileBgImages: [], tabletBgImages: [], upperTags: ["Everest Region", "15 days", "Challenging"], lowerTags: ["Zero Waste", "Low-carbon", "Local Hire", "Inclusive Growth"] },
-    { title: "INDIA", subtitle: "Explore the diverse beauty of the Indian Himalayas, from spiritual journeys to thrilling treks.", image: "", bgImages: [], mobileBgImages: [], tabletBgImages: [], upperTags: ["Ladakh", "15 days", "Challenging"], lowerTags: ["Zero Waste", "Low-carbon", "Local Hire", "Inclusive Growth"] },
-    { title: "BHUTAN", subtitle: "Experience the magic of the Land of the Thunder Dragon, with its pristine landscapes and ancient monasteries.", image: "", bgImages: [], mobileBgImages: [], tabletBgImages: [], upperTags: ["Paro Valley", "7 days", "Moderate"], lowerTags: ["Eco-Friendly", "Cultural Preservation", "Local Hire", "Inclusive Growth"] },
+    { title: "NEPAL", subtitle: "Discover the breathtaking landscapes, vibrant culture, and ancient heritage of the Himalayas.", image: "/images/everest.png", mobileImage: "", tabletImage: "", bgImages: [], mobileBgImages: [], tabletBgImages: [], upperTags: ["Everest Region", "15 days", "Challenging"], lowerTags: ["Zero Waste", "Low-carbon", "Local Hire", "Inclusive Growth"] },
+    { title: "INDIA", subtitle: "Explore the diverse beauty of the Indian Himalayas, from spiritual journeys to thrilling treks.", image: "/images/hero.png", mobileImage: "", tabletImage: "", bgImages: [], mobileBgImages: [], tabletBgImages: [], upperTags: ["Ladakh", "15 days", "Challenging"], lowerTags: ["Zero Waste", "Low-carbon", "Local Hire", "Inclusive Growth"] },
+    { title: "BHUTAN", subtitle: "Experience the magic of the Land of the Thunder Dragon, with its pristine landscapes and ancient monasteries.", image: "/images/hero-grass.jpg", mobileImage: "", tabletImage: "", bgImages: [], mobileBgImages: [], tabletBgImages: [], upperTags: ["Paro Valley", "7 days", "Moderate"], lowerTags: ["Eco-Friendly", "Cultural Preservation", "Local Hire", "Inclusive Growth"] },
   ];
   const [heroSlides, setHeroSlides] = useState<any[]>(defaultSlides);
   const [heroTagInput, setHeroTagInput] = useState<{ [key: string]: string }>({});
@@ -438,16 +438,51 @@ export default function AdminPage() {
         const data = docSnap.data() as any;
         // Support new array format
         if (Array.isArray(data.slides)) {
-          setHeroSlides(data.slides);
+          const defaultImages = ["/images/everest.png", "/images/hero.png", "/images/hero-grass.jpg"];
+          const corrected = data.slides.map((s: any, idx: number) => {
+            let img = s.image || "";
+            const lowerTitle = (s.title || "").toLowerCase();
+            if (!img || img === "/images/everest.png" || img === "/images/hero-grass.jpg" || img === "/images/hero.png" || img === "/images/hero-nepal.PNG" || img === "/images/hero-india.PNG" || img === "/images/hero-bhutan.PNG") {
+              if (lowerTitle.includes("nepal")) {
+                img = "/images/everest.png";
+              } else if (lowerTitle.includes("india")) {
+                img = "/images/hero.png";
+              } else if (lowerTitle.includes("bhutan")) {
+                img = "/images/hero-grass.jpg";
+              } else {
+                img = defaultImages[idx] || defaultImages[0];
+              }
+            }
+            return {
+              ...s,
+              image: img
+            };
+          });
+          setHeroSlides(corrected);
         } else if (data.slide1Title) {
           // Migrate old flat format to array
+          const defaultImages = ["/images/everest.png", "/images/hero.png", "/images/hero-grass.jpg"];
           const migrated = [];
           let i = 1;
           while (data[`slide${i}Title`]) {
+            const title = data[`slide${i}Title`] || "";
+            const lowerTitle = title.toLowerCase();
+            let img = data[`slide${i}Image`] || "";
+            if (!img || img === "/images/everest.png" || img === "/images/hero-grass.jpg" || img === "/images/hero.png" || img === "/images/hero-nepal.PNG" || img === "/images/hero-india.PNG" || img === "/images/hero-bhutan.PNG") {
+              if (lowerTitle.includes("nepal")) {
+                img = "/images/everest.png";
+              } else if (lowerTitle.includes("india")) {
+                img = "/images/hero.png";
+              } else if (lowerTitle.includes("bhutan")) {
+                img = "/images/hero-grass.jpg";
+              } else {
+                img = defaultImages[i - 1] || defaultImages[0];
+              }
+            }
             migrated.push({
-              title: data[`slide${i}Title`] || "",
+              title,
               subtitle: data[`slide${i}Subtitle`] || "",
-              image: data[`slide${i}Image`] || "",
+              image: img,
               upperTags: data[`slide${i}UpperTags`] || [],
               lowerTags: data[`slide${i}LowerTags`] || [], bgImages: data[`slide${i}BgImages`] || [], mobileBgImages: data[`slide${i}MobileBgImages`] || [], tabletBgImages: data[`slide${i}TabletBgImages`] || [],
             });

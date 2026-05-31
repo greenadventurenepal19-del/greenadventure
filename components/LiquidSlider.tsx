@@ -64,6 +64,13 @@ export default function LiquidSlider({
       prevCurrentIndex.current = currentIndex;
       prevSlides.current = slides;
 
+      // Force-center transition coordinates to ensure a perfectly balanced, symmetrical full-screen wave
+      // This also cuts the required expansion radius in half, guaranteeing coverage on all screen sizes
+      if (typeof window !== "undefined") {
+        mouseX.set(window.innerWidth / 2);
+        mouseY.set(window.innerHeight / 2);
+      }
+
       // The reveal layer should already show the image for currentIndex (it was the "next" preview)
       // Make sure it has the correct image right now
       setRevealImage(slides[currentIndex] || "");
@@ -74,6 +81,7 @@ export default function LiquidSlider({
       size.set(maxRadius);
 
       // After circle covers screen, atomically swap base→current, reveal→next
+      // Reduced timeout to 450ms to match the new snappy spring
       const timeout = setTimeout(() => {
         setIsResetting(true);
         // Swap: base becomes the newly revealed slide
@@ -83,16 +91,19 @@ export default function LiquidSlider({
 
         // Collapse circle immediately (jump, no spring)
         size.set(isHovered ? 180 : 0);
-        if (typeof smoothSize.jump === "function") {
-          smoothSize.jump(isHovered ? 180 : 0);
-        }
+        smoothSize.set(isHovered ? 180 : 0);
+        try {
+          if (typeof smoothSize.jump === "function") {
+            smoothSize.jump(isHovered ? 180 : 0);
+          }
+        } catch (e) {}
 
         // Brief pause so the image swap doesn't create a visible flicker
         setTimeout(() => {
           setIsResetting(false);
           setIsTransitioning(false);
         }, 50);
-      }, 700);
+      }, 450);
 
       return () => clearTimeout(timeout);
     } else if (didSlidesChange) {
@@ -121,9 +132,9 @@ export default function LiquidSlider({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isHovered, isMouseDown, isResetting, isTransitioning, isTouchDevice]);
 
-  // Circle radius
+  // Circle radius - tuned to be fast and snappy (reach target in <350ms)
   const size = useMotionValue(0);
-  const smoothSize = useSpring(size, { stiffness: 60, damping: 15, mass: 0.5 });
+  const smoothSize = useSpring(size, { stiffness: 180, damping: 25, mass: 0.4 });
   const sizeScale = useTransform(smoothSize, s => Math.max(0, s / 100));
   
   // Trail droplets for liquid splash effect
@@ -181,8 +192,10 @@ export default function LiquidSlider({
   return (
     <div ref={ref} className="absolute inset-0 z-0 overflow-hidden bg-black pointer-events-none">
       
-      {/* SVG Definitions for Gooey Water Splash Mask — explicitly zero dimensions and fully hidden */}
-      <svg width="0" height="0" style={{ position: "absolute", width: 0, height: 0, opacity: 0, overflow: "hidden", pointerEvents: "none" }} aria-hidden="true">
+      {/* SVG Definitions for Gooey Water Splash Mask — explicitly set to 1px by 1px layout dimensions */}
+      {/* Rationale: width="0" height="0" or display: none often causes modern browsers (Chrome/Safari) to exclude this block */}
+      {/* from the render tree, which completely breaks or disables the SVG filter/mask. */}
+      <svg width="1" height="1" style={{ position: "absolute", width: "1px", height: "1px", opacity: 0, overflow: "hidden", pointerEvents: "none" }} aria-hidden="true">
         <defs>
           <filter id="liquid-splash" x="-20%" y="-20%" width="140%" height="140%">
             {/* Generate random amoeba-like noise */}

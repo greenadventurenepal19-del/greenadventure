@@ -38,8 +38,7 @@ export default function PageLoader({ isLoading }: PageLoaderProps) {
           key="page-loader"
           initial={{ opacity: 1 }}
           exit={{ opacity: 0, transition: { duration: 0.7, ease: "easeInOut" } }}
-          className="fixed inset-0 z-[9999] flex flex-col items-center justify-center overflow-hidden"
-          style={{ backgroundColor: isDark ? "#050a0a" : "#ffffff" }}
+          className="fixed inset-0 z-[9999] flex flex-col items-center justify-center overflow-hidden bg-[#ffffff] dark:bg-[#050a0a]"
         >
           {/* Background subtle gradient orbs */}
           <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -56,8 +55,7 @@ export default function PageLoader({ isLoading }: PageLoaderProps) {
           >
             <div className="flex items-baseline gap-2">
               <span
-                className="text-3xl md:text-4xl font-black tracking-tighter"
-                style={{ color: isDark ? "#ffffff" : "#0f172a" }}
+                className="text-3xl md:text-4xl font-black tracking-tighter text-[#0f172a] dark:text-[#ffffff]"
               >
                 Green
               </span>
@@ -95,8 +93,7 @@ export default function PageLoader({ isLoading }: PageLoaderProps) {
             className="relative z-10 flex flex-col items-center gap-4 -mt-4"
           >
             <p
-              className="text-sm font-bold md:font-medium tracking-[0.2em] uppercase"
-              style={{ color: isDark ? "rgba(255,255,255,0.6)" : "#475569" }}
+              className="text-sm font-bold md:font-medium tracking-[0.2em] uppercase text-[#475569] dark:text-white/60"
             >
               Preparing your adventure
               <LoadingDots />
@@ -104,8 +101,7 @@ export default function PageLoader({ isLoading }: PageLoaderProps) {
 
             {/* Progress bar */}
             <div
-              className="w-48 md:w-64 h-0.5 rounded-full overflow-hidden"
-              style={{ backgroundColor: isDark ? "rgba(255,255,255,0.1)" : "#e2e8f0" }}
+              className="w-48 md:w-64 h-0.5 rounded-full overflow-hidden bg-[#e2e8f0] dark:bg-white/10"
             >
               <motion.div
                 initial={{ x: "-100%" }}

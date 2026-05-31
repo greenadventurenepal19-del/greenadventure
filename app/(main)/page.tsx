@@ -24,8 +24,8 @@ import {
 
 const defaultHeroSlides = [
   { title: "NEPAL", subtitle: "Discover the breathtaking landscapes, vibrant culture, and ancient heritage of the Himalayas.", image: "/images/everest.png", mobileImage: "", tabletImage: "", upperTags: ["Everest Region", "15 days", "Challenging"], lowerTags: ["Zero Waste", "Low-carbon", "Local Hire", "Inclusive Growth"] },
-  { title: "INDIA", subtitle: "Explore the diverse beauty of the Indian Himalayas, from spiritual journeys to thrilling treks.", image: "/images/hero-grass.jpg", mobileImage: "", tabletImage: "", upperTags: ["Ladakh", "15 days", "Challenging"], lowerTags: ["Zero Waste", "Low-carbon", "Local Hire", "Inclusive Growth"] },
-  { title: "BHUTAN", subtitle: "Experience the magic of the Land of the Thunder Dragon, with its pristine landscapes and ancient monasteries.", image: "/images/hero.png", mobileImage: "", tabletImage: "", upperTags: ["Paro Valley", "7 days", "Moderate"], lowerTags: ["Eco-Friendly", "Cultural Preservation", "Local Hire", "Inclusive Growth"] },
+  { title: "INDIA", subtitle: "Explore the diverse beauty of the Indian Himalayas, from spiritual journeys to thrilling treks.", image: "/images/hero.png", mobileImage: "", tabletImage: "", upperTags: ["Ladakh", "15 days", "Challenging"], lowerTags: ["Zero Waste", "Low-carbon", "Local Hire", "Inclusive Growth"] },
+  { title: "BHUTAN", subtitle: "Experience the magic of the Land of the Thunder Dragon, with its pristine landscapes and ancient monasteries.", image: "/images/hero-grass.jpg", mobileImage: "", tabletImage: "", upperTags: ["Paro Valley", "7 days", "Moderate"], lowerTags: ["Eco-Friendly", "Cultural Preservation", "Local Hire", "Inclusive Growth"] },
 ];
 
 let homeCache = {
@@ -73,7 +73,7 @@ export default function HomePage() {
   React.useEffect(() => {
     const timer = setTimeout(() => {
       setTextSlide(currentSlide);
-    }, 300);
+    }, 200); // Tuned to 200ms to perfectly synchronize with the faster 450ms liquid slide transition
     return () => clearTimeout(timer);
   }, [currentSlide]);
 
@@ -101,7 +101,21 @@ export default function HomePage() {
       return () => clearInterval(interval);
     }
   }, [currentSlide, heroSlides, deviceType]);
-
+  // Stable image array for the liquid slider — ONLY changes when heroSlides data or device type changes.
+  // Key fix: do NOT depend on currentSlide or activeBgIndex so the array reference stays stable
+  // across renders caused by other state changes (isMuted, textSlide, etc.) which previously
+  // caused LiquidSlider's useEffect to misfire and fight the in-progress transition.
+  const liquidSlides = React.useMemo(() =>
+    heroSlides.map((s: any) => {
+      const baseImg = s.image || "";
+      const bgList = (Array.isArray(s.bgImages) && s.bgImages.length > 0) ? s.bgImages : [baseImg];
+      const firstBg = bgList[0] || baseImg;
+      if (deviceType === "mobile") return s.mobileImage || firstBg;
+      if (deviceType === "tablet") return s.tabletImage || firstBg;
+      return firstBg;
+    }),
+    [heroSlides, deviceType]
+  );
 
   const [featuredTours, setFeaturedTours] = React.useState<any[]>(homeCache.featuredTours || []);
   const [featuredTreks, setFeaturedTreks] = React.useState<any[]>(homeCache.featuredTreks || []);
@@ -116,6 +130,10 @@ export default function HomePage() {
     emailPrimary: "info@ebctreknepal.com",
   });
   const [pageLoaded, setPageLoaded] = React.useState(false);
+  const [sliderReady, setSliderReady] = React.useState(false);
+  React.useEffect(() => {
+    setSliderReady(true);
+  }, []);
   const loadFlags = React.useRef({ hero: false, why: false, data: false, reviews: false });
   const markLoaded = React.useCallback((key: keyof typeof loadFlags.current) => {
     loadFlags.current[key] = true;
@@ -273,23 +291,52 @@ export default function HomePage() {
         if (docSnap.exists()) {
           const data = docSnap.data() as any;
           if (Array.isArray(data.slides) && data.slides.length > 0) {
-            const defaultImages = ["/images/everest.png", "/images/hero-grass.jpg", "/images/hero.png"];
-            const slides = data.slides.map((s: any, i: number) => ({
-              ...s,
-              image: s.image || defaultImages[i] || defaultImages[0],
-            }));
+            const defaultImages = ["/images/everest.png", "/images/hero.png", "/images/hero-grass.jpg"];
+            const slides = data.slides.map((s: any, i: number) => {
+              let img = s.image || "";
+              const lowerTitle = (s.title || "").toLowerCase();
+              if (!img || img === "/images/everest.png" || img === "/images/hero-grass.jpg" || img === "/images/hero.png" || img === "/images/hero-nepal.PNG" || img === "/images/hero-india.PNG" || img === "/images/hero-bhutan.PNG") {
+                if (lowerTitle.includes("nepal")) {
+                  img = "/images/everest.png";
+                } else if (lowerTitle.includes("india")) {
+                  img = "/images/hero.png";
+                } else if (lowerTitle.includes("bhutan")) {
+                  img = "/images/hero-grass.jpg";
+                } else {
+                  img = defaultImages[i] || defaultImages[0];
+                }
+              }
+              return {
+                ...s,
+                image: img,
+              };
+            });
             setHeroSlides(slides);
             homeCache.heroSlides = slides;
             localStorage.setItem("cached_hero_slides", JSON.stringify(slides));
           } else if (data.slide1Title) {
-            const defaultImages = ["/images/hero-grass.jpg", "/images/everest.png", "/images/hero.png"];
+            const defaultImages = ["/images/everest.png", "/images/hero.png", "/images/hero-grass.jpg"];
             const migrated = [];
             let i = 1;
             while (data[`slide${i}Title`]) {
+              const title = data[`slide${i}Title`] || "";
+              const lowerTitle = title.toLowerCase();
+              let img = data[`slide${i}Image`] || "";
+              if (!img || img === "/images/everest.png" || img === "/images/hero-grass.jpg" || img === "/images/hero.png" || img === "/images/hero-nepal.PNG" || img === "/images/hero-india.PNG" || img === "/images/hero-bhutan.PNG") {
+                if (lowerTitle.includes("nepal")) {
+                  img = "/images/everest.png";
+                } else if (lowerTitle.includes("india")) {
+                  img = "/images/hero.png";
+                } else if (lowerTitle.includes("bhutan")) {
+                  img = "/images/hero-grass.jpg";
+                } else {
+                  img = defaultImages[i - 1] || defaultImages[0];
+                }
+              }
               migrated.push({
-                title: data[`slide${i}Title`] || "",
+                title,
                 subtitle: data[`slide${i}Subtitle`] || "",
-                image: data[`slide${i}Image`] || defaultImages[i - 1] || defaultImages[0],
+                image: img,
                 upperTags: data[`slide${i}UpperTags`] || [],
                 lowerTags: data[`slide${i}LowerTags`] || [],
               });
@@ -481,30 +528,32 @@ export default function HomePage() {
     return () => window.removeEventListener("resize", checkDevice);
   }, []);
 
-  // Helper to pick the right image per slide based on device
-  const getResponsiveImage = React.useCallback((slide: any, slideIdx: number) => {
-    let baseImg = slide.image;
-    let bgList = (Array.isArray(slide.bgImages) && slide.bgImages.length > 0) ? slide.bgImages : [baseImg];
-    
-    if (deviceType === "mobile") {
-      baseImg = slide.mobileImage || baseImg;
-      bgList = (Array.isArray(slide.mobileBgImages) && slide.mobileBgImages.length > 0) ? slide.mobileBgImages : (slide.mobileImage ? [slide.mobileImage] : bgList);
-    } else if (deviceType === "tablet") {
-      baseImg = slide.tabletImage || baseImg;
-      bgList = (Array.isArray(slide.tabletBgImages) && slide.tabletBgImages.length > 0) ? slide.tabletBgImages : (slide.tabletImage ? [slide.tabletImage] : bgList);
-    }
-    
-    if (slideIdx === currentSlide) {
-      return bgList[activeBgIndex % bgList.length] || baseImg;
-    } else {
-      return bgList[0] || baseImg;
-    }
-  }, [deviceType, currentSlide, activeBgIndex]);
+  // Note: getResponsiveImage was removed — replaced by liquidSlides useMemo above
+  // which uses a stable reference that only changes when heroSlides or deviceType change.
+  // This prevents LiquidSlider's useEffect from constantly misfiring on every render.
 
   React.useEffect(() => {
     // Liquid slider is now user-controlled via hover and click, 
     // no auto-sliding interval.
   }, []);
+
+  const lastClickTime = React.useRef(0);
+  const handleSlideChange = (target: "next" | "prev" | number) => {
+    const now = Date.now();
+    if (now - lastClickTime.current < 550) {
+      return; // Ignore rapid clicks to protect transition animation state (550ms allows snappy successive clicks)
+    }
+    lastClickTime.current = now;
+
+    setActiveBgIndex(0);
+    if (target === "next") {
+      setCurrentSlide((prev) => (prev + 1) % heroSlides.length);
+    } else if (target === "prev") {
+      setCurrentSlide((prev) => (prev - 1 + heroSlides.length) % heroSlides.length);
+    } else if (typeof target === "number") {
+      setCurrentSlide(target);
+    }
+  };
 
   const toggleMute = () => {
     const newMuted = !isMuted;
@@ -590,13 +639,15 @@ export default function HomePage() {
         </div>
         {/* Layer 1: Background Liquid Slider */}
         <motion.div style={{ y: bgY }} className="absolute -inset-[10%] z-0 pointer-events-none">
-          <LiquidSlider 
-            slides={heroSlides.map((s, i) => getResponsiveImage(s, i))}
-            currentIndex={currentSlide}
-            nextIndex={(currentSlide + 1) % heroSlides.length}
-            isHovered={false}
-            isMouseDown={false}
-          />
+          {sliderReady && (
+            <LiquidSlider 
+              slides={liquidSlides}
+              currentIndex={currentSlide}
+              nextIndex={(currentSlide + 1) % Math.max(heroSlides.length, 1)}
+              isHovered={false}
+              isMouseDown={false}
+            />
+          )}
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-black/40 z-10 pointer-events-none" />
         </motion.div>
 
@@ -611,7 +662,7 @@ export default function HomePage() {
                 {heroSlides.map((_, i) => (
                   <button
                     key={i}
-                    onClick={() => { setActiveBgIndex(0); setCurrentSlide(i); }}
+                    onClick={() => handleSlideChange(i)}
                     className={`h-1.5 md:h-1.5 rounded-full transition-all duration-500 ${
                       i === currentSlide ? "w-8 md:w-12 bg-white" : "w-3 md:w-4 bg-white/40 hover:bg-white/60"
                     }`}
@@ -633,7 +684,7 @@ export default function HomePage() {
                   className="flex flex-col items-center md:items-start"
                 >
                   <h1 className="flex justify-between w-full font-black text-white uppercase mb-4 md:mb-5 drop-shadow-2xl text-3xl sm:text-4xl md:text-5xl select-none pl-[60px] pr-[60px] md:pl-[68px] md:pr-[68px]">
-                    {heroSlides[textSlide].title.split("").map((char: string, index: number) => (
+                    {(heroSlides[textSlide]?.title || "").split("").map((char: string, index: number) => (
                       <span key={index}>{char === " " ? "\u00A0" : char}</span>
                     ))}
                   </h1>
@@ -660,7 +711,7 @@ export default function HomePage() {
                         Discover More
                       </Link>
                       <Link 
-                        href={`/destinations/${heroSlides[textSlide].title.toLowerCase().trim().replace(/\s+/g, "-")}`}
+                        href={`/destinations/${(heroSlides[textSlide]?.title || "").toLowerCase().trim().replace(/\s+/g, "-")}`}
                         className="h-12 w-12 md:h-14 md:w-14 shrink-0 rounded-full bg-white text-black flex items-center justify-center hover:bg-gray-100 transition-colors shadow-lg group"
                       >
                         <ArrowRight className="h-4 w-4 md:h-5 md:w-5 -rotate-45 group-hover:rotate-0 transition-transform" />
@@ -668,7 +719,7 @@ export default function HomePage() {
                     </div>
                   </div>
                   <p className="text-white/90 text-xs sm:text-sm md:text-base leading-relaxed font-medium px-2 md:px-0">
-                    {heroSlides[textSlide].subtitle}
+                    {heroSlides[textSlide]?.subtitle}
                   </p>
                 </motion.div>
               </AnimatePresence>
@@ -685,8 +736,7 @@ export default function HomePage() {
           <button
             onClick={(e) => {
               e.stopPropagation();
-              setActiveBgIndex(0);
-              setCurrentSlide((prev) => (prev - 1 + heroSlides.length) % heroSlides.length);
+              handleSlideChange("prev");
             }}
             className="h-11 w-11 rounded-full border border-white/20 bg-black/40 hover:bg-white text-white hover:text-black flex items-center justify-center transition-all backdrop-blur-md shadow-xl hover:scale-105 active:scale-95 cursor-pointer"
             aria-label="Previous slide"
@@ -696,8 +746,7 @@ export default function HomePage() {
           <button
             onClick={(e) => {
               e.stopPropagation();
-              setActiveBgIndex(0);
-              setCurrentSlide((prev) => (prev + 1) % heroSlides.length);
+              handleSlideChange("next");
             }}
             className="h-11 w-11 rounded-full border border-white/20 bg-black/40 hover:bg-white text-white hover:text-black flex items-center justify-center transition-all backdrop-blur-md shadow-xl hover:scale-105 active:scale-95 cursor-pointer"
             aria-label="Next slide"

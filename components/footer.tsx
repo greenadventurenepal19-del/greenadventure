@@ -306,50 +306,54 @@ export function Footer() {
             </div>
           </div>
 
-          {/* Explore */}
-          <div className="lg:col-span-2">
-            <h3 className="font-bold tracking-wide uppercase text-sm mb-6 flex items-center gap-2" style={{ color: 'var(--f-heading)' }}>
-              <Tent className="w-4 h-4 text-brand-600 dark:text-brand-500" /> Explore
-            </h3>
-            <ul className="space-y-4">
-              {[
-                { name: "About Us", href: "/about" },
-                { name: "Destinations", href: "/destinations" },
-                { name: "Trekking Packages", href: "/trekking" },
-                { name: "Tour Packages", href: "/tours" },
-                { name: "Travel Blog", href: "/blog" },
-                { name: "Contact Us", href: "/contact" },
-              ].map((link) => (
-                <li key={link.name}>
-                  <Link href={link.href} className="hover:text-brand-600 dark:hover:text-white hover:translate-x-1 inline-block font-medium text-sm transition-all" style={{ color: 'var(--f-muted)' }}>
-                    {link.name}
-                  </Link>
-                </li>
-              ))}
-            </ul>
+          {/* Explore + Support — side-by-side on mobile, separate cols on desktop */}
+          <div className="grid grid-cols-2 gap-8 lg:contents">
+            {/* Explore */}
+            <div className="lg:col-span-2">
+              <h3 className="font-bold tracking-wide uppercase text-sm mb-6 flex items-center gap-2" style={{ color: 'var(--f-heading)' }}>
+                <Tent className="w-4 h-4 text-brand-600 dark:text-brand-500" /> Explore
+              </h3>
+              <ul className="space-y-4">
+                {[
+                  { name: "About Us", href: "/about" },
+                  { name: "Destinations", href: "/destinations" },
+                  { name: "Trekking Packages", href: "/trekking" },
+                  { name: "Tour Packages", href: "/tours" },
+                  { name: "Travel Blog", href: "/blog" },
+                  { name: "Contact Us", href: "/contact" },
+                ].map((link) => (
+                  <li key={link.name}>
+                    <Link href={link.href} className="hover:text-brand-600 dark:hover:text-white hover:translate-x-1 inline-block font-medium text-sm transition-all" style={{ color: 'var(--f-muted)' }}>
+                      {link.name}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Support */}
+            <div className="lg:col-span-2">
+              <h3 className="font-bold tracking-wide uppercase text-sm mb-6 flex items-center gap-2" style={{ color: 'var(--f-heading)' }}>
+                <Compass className="w-4 h-4 text-brand-600 dark:text-brand-500" /> Support
+              </h3>
+              <ul className="space-y-4">
+                {[
+                  { name: "FAQs", href: "/faqs" },
+                  { name: "Booking Terms", href: "/booking-terms" },
+                  { name: "Cancellation Policy", href: "/cancellation-policy" },
+                  { name: "Privacy Policy", href: "/privacy-policy" },
+                  { name: "Visa Info", href: "/visa-info" },
+                ].map((link) => (
+                  <li key={link.name}>
+                    <Link href={link.href} className="hover:text-brand-600 dark:hover:text-white hover:translate-x-1 inline-block font-medium text-sm transition-all" style={{ color: 'var(--f-muted)' }}>
+                      {link.name}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
 
-          {/* Support */}
-          <div className="lg:col-span-2">
-            <h3 className="font-bold tracking-wide uppercase text-sm mb-6 flex items-center gap-2" style={{ color: 'var(--f-heading)' }}>
-              <Compass className="w-4 h-4 text-brand-600 dark:text-brand-500" /> Support
-            </h3>
-            <ul className="space-y-4">
-              {[
-                { name: "FAQs", href: "/faqs" },
-                { name: "Booking Terms", href: "/booking-terms" },
-                { name: "Cancellation Policy", href: "/cancellation-policy" },
-                { name: "Privacy Policy", href: "/privacy-policy" },
-                { name: "Visa Info", href: "/visa-info" },
-              ].map((link) => (
-                <li key={link.name}>
-                  <Link href={link.href} className="hover:text-brand-600 dark:hover:text-white hover:translate-x-1 inline-block font-medium text-sm transition-all" style={{ color: 'var(--f-muted)' }}>
-                    {link.name}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
 
           {/* Contact */}
           <div className="lg:col-span-3">
