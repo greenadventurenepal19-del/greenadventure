@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { db } from "@/lib/firebase";
 import {
-  collection, query, where, orderBy, onSnapshot, doc,
+  collection, query, where, onSnapshot, doc,
   addDoc, serverTimestamp,
 } from "firebase/firestore";
 
@@ -39,6 +39,8 @@ function SubmitStoryModal({ onClose }: { onClose: () => void }) {
   });
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
+  const [uploadingCover, setUploadingCover] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
   const set = (k: string, v: any) => setForm(p => ({ ...p, [k]: v }));
 
@@ -53,6 +55,33 @@ function SubmitStoryModal({ onClose }: { onClose: () => void }) {
     [arr[i], arr[j]] = [arr[j], arr[i]];
     set("sections", arr);
   };
+
+  const handleUpload = async (
+    file: File,
+    setLoading: (v: boolean) => void,
+    onSuccess: (url: string) => void,
+    inputRef: React.RefObject<HTMLInputElement>
+  ) => {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/upload?filename=${encodeURIComponent(file.name)}`, {
+        method: "POST",
+        body: file,
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const { url } = await res.json();
+      onSuccess(url);
+    } catch (err) {
+      console.error("Upload failed:", err);
+      alert("Image upload failed. Please try again or paste a URL.");
+    } finally {
+      setLoading(false);
+      if (inputRef.current) inputRef.current.value = "";
+    }
+  };
+
+  const coverInputRef = React.useRef<HTMLInputElement>(null);
+  const photoInputRef = React.useRef<HTMLInputElement>(null);
 
   const autoSlug = form.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 
@@ -147,11 +176,26 @@ function SubmitStoryModal({ onClose }: { onClose: () => void }) {
                       placeholder="you@email.com" />
                   </div>
                 </div>
+                {/* Profile Photo — Upload or URL */}
                 <div>
-                  <label className="text-xs font-semibold text-muted-foreground block mb-1">Profile Photo URL (optional)</label>
-                  <input value={form.photoURL} onChange={e => set("photoURL", e.target.value)}
-                    className="w-full bg-background border border-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-brand-500"
-                    placeholder="https://..." />
+                  <label className="text-xs font-semibold text-muted-foreground block mb-1">Profile Photo (optional)</label>
+                  <div className="flex gap-2">
+                    <input value={form.photoURL} onChange={e => set("photoURL", e.target.value)}
+                      className="flex-1 bg-background border border-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-brand-500"
+                      placeholder="https://... (optional URL)" />
+                    <label className={`shrink-0 inline-flex items-center gap-1.5 px-3 py-2 rounded-xl cursor-pointer text-xs font-bold border transition-all ${uploadingPhoto ? "opacity-50 cursor-not-allowed border-border text-muted-foreground" : "border-brand-500/40 text-brand-600 dark:text-brand-400 hover:bg-brand-500/10"}`}>
+                      {uploadingPhoto ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ArrowRight className="w-3.5 h-3.5 rotate-[-90deg]" />}
+                      {uploadingPhoto ? "Uploading…" : "Upload"}
+                      <input ref={photoInputRef} type="file" accept="image/*" className="hidden" disabled={uploadingPhoto}
+                        onChange={e => { const f = e.target.files?.[0]; if (f) handleUpload(f, setUploadingPhoto, (url) => set("photoURL", url), photoInputRef as React.RefObject<HTMLInputElement>); }} />
+                    </label>
+                  </div>
+                  {form.photoURL && (
+                    <div className="mt-2 flex items-center gap-2">
+                      <Image src={form.photoURL} alt="profile preview" width={36} height={36} className="rounded-full object-cover border border-border" unoptimized />
+                      <span className="text-xs text-muted-foreground truncate max-w-[200px]">{form.photoURL}</span>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -164,11 +208,25 @@ function SubmitStoryModal({ onClose }: { onClose: () => void }) {
                 {form.title && <p className="text-[10px] text-muted-foreground mt-1 pl-1">Slug: /blog/{autoSlug}</p>}
               </div>
 
+              {/* Cover Image — Upload or URL */}
               <div>
-                <label className="text-xs font-semibold text-muted-foreground block mb-1">Cover Image URL</label>
-                <input value={form.image} onChange={e => set("image", e.target.value)}
-                  className="w-full bg-background border border-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-brand-500"
-                  placeholder="https://..." />
+                <label className="text-xs font-semibold text-muted-foreground block mb-1">Cover Image (optional)</label>
+                <div className="flex gap-2">
+                  <input value={form.image} onChange={e => set("image", e.target.value)}
+                    className="flex-1 bg-background border border-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-brand-500"
+                    placeholder="https://... (optional URL)" />
+                  <label className={`shrink-0 inline-flex items-center gap-1.5 px-3 py-2 rounded-xl cursor-pointer text-xs font-bold border transition-all ${uploadingCover ? "opacity-50 cursor-not-allowed border-border text-muted-foreground" : "border-brand-500/40 text-brand-600 dark:text-brand-400 hover:bg-brand-500/10"}`}>
+                    {uploadingCover ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ArrowRight className="w-3.5 h-3.5 rotate-[-90deg]" />}
+                    {uploadingCover ? "Uploading…" : "Upload Photo"}
+                    <input ref={coverInputRef} type="file" accept="image/*" className="hidden" disabled={uploadingCover}
+                      onChange={e => { const f = e.target.files?.[0]; if (f) handleUpload(f, setUploadingCover, (url) => set("image", url), coverInputRef as React.RefObject<HTMLInputElement>); }} />
+                  </label>
+                </div>
+                {form.image && (
+                  <div className="mt-2 relative h-24 w-full rounded-xl overflow-hidden border border-border">
+                    <Image src={form.image} alt="cover preview" fill className="object-cover" unoptimized />
+                  </div>
+                )}
               </div>
 
               <div className="grid grid-cols-3 gap-3">
@@ -239,7 +297,7 @@ function SubmitStoryModal({ onClose }: { onClose: () => void }) {
 
             {/* Sticky submit bar */}
             <div className="sticky bottom-0 bg-card border-t border-border px-6 py-4 shrink-0">
-              <button type="submit" disabled={submitting}
+              <button type="submit" disabled={submitting || uploadingCover || uploadingPhoto}
                 className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-brand-600 hover:bg-brand-500 text-white font-black transition-all disabled:opacity-60 text-sm">
                 {submitting ? <><Loader2 className="w-4 h-4 animate-spin" /> Submitting...</> : <><Send className="w-4 h-4" /> Submit for Review</>}
               </button>
@@ -366,22 +424,33 @@ export default function BlogPage() {
       }
     });
 
-    // Only published posts
+    // Fetch ALL published blogs — no orderBy here to avoid requiring a composite
+    // Firestore index (status + createdAt). Sort client-side instead.
     const q = query(
       collection(db, "blogs"),
-      where("status", "==", "published"),
-      orderBy("createdAt", "desc")
+      where("status", "==", "published")
     );
     const unsub = onSnapshot(q,
       (snap) => {
-        setPosts(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        const all = snap.docs.map(d => ({ id: d.id, ...d.data() as any }));
+        // Sort newest-first by createdAt (Firestore Timestamp or ISO string)
+        all.sort((a, b) => {
+          const aTime = a.createdAt?.seconds ?? (new Date(a.createdAt ?? 0).getTime() / 1000);
+          const bTime = b.createdAt?.seconds ?? (new Date(b.createdAt ?? 0).getTime() / 1000);
+          return bTime - aTime;
+        });
+        setPosts(all);
         setLoading(false);
       },
-      () => { setLoading(false); }
+      (err) => {
+        console.error("Blog fetch error:", err);
+        setLoading(false);
+      }
     );
 
     return () => { unsubHero(); unsub(); };
   }, []);
+
 
   const filtered = posts.filter(p => {
     const matchCat = activeCategory === "All" || p.category === activeCategory;

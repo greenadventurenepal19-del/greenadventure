@@ -754,17 +754,23 @@ export default function AdminPage() {
     if (!file) return;
     setUploadingBlogImage(true);
     try {
-      const storageRef = ref(storage, `blogs/${Date.now()}_${file.name}`);
-      const snap = await uploadBytes(storageRef, file);
-      const url = await getDownloadURL(snap.ref);
+      const res = await fetch(`/api/upload?filename=${encodeURIComponent(file.name)}`, {
+        method: "POST",
+        body: file,
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const { url } = await res.json();
       setBlogFormData((prev) => ({ ...prev, image: url }));
     } catch (err) {
       console.error("Error uploading blog image:", err);
-      alert("Image upload failed.");
+      alert("Image upload failed. Please try again.");
     } finally {
       setUploadingBlogImage(false);
+      // Reset the input so the same file can be re-selected after an error
+      e.target.value = "";
     }
   };
+
 
 
 

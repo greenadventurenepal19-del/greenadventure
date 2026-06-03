@@ -1256,14 +1256,14 @@ export default function HomePage() {
           <div className="container mx-auto px-4">
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-stretch">
               
-              {/* Left Column: Video Embed (aspect-video) */}
-              <div className="lg:col-span-7 flex flex-col h-full justify-between">
+              {/* Left Column: Video Embed — fills full grid row height */}
+              <div className="lg:col-span-7 flex flex-col h-full">
                 <motion.div 
                   initial={{ opacity: 0, y: 30 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                   transition={{ duration: 0.6 }}
-                  className="relative aspect-video w-full rounded-[2.5rem] overflow-hidden shadow-2xl border border-border bg-black group"
+                  className="relative aspect-video w-full rounded-[2.5rem] overflow-hidden shadow-2xl border border-border bg-black group h-full"
                 >
                   <iframe 
                     src="https://www.youtube.com/embed/U1dORuMjfYM?autoplay=0" 
@@ -1273,25 +1273,16 @@ export default function HomePage() {
                     allowFullScreen
                   ></iframe>
                 </motion.div>
-                <motion.p 
-                  initial={{ opacity: 0 }}
-                  whileInView={{ opacity: 1 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: 0.3 }}
-                  className="text-center text-muted-foreground italic mt-6 text-base font-semibold tracking-wide"
-                >
-                  &ldquo;Experience the journey, culture, and Himalayan spirit&rdquo;
-                </motion.p>
               </div>
 
-              {/* Right Column: Expert Contact Card */}
-              <div className="lg:col-span-5 flex flex-col">
+              {/* Right Column: Expert Contact Card + Quote below */}
+              <div className="lg:col-span-5 flex flex-col gap-5">
                 <motion.div 
                   initial={{ opacity: 0, y: 30 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                   transition={{ duration: 0.6, delay: 0.1 }}
-                  className="bg-card/80 backdrop-blur-md border border-border/50 rounded-[2.5rem] p-6 md:p-8 shadow-xl flex flex-col justify-between h-full relative overflow-hidden flex-1"
+                  className="bg-card/80 backdrop-blur-md border border-border/50 rounded-[2.5rem] p-6 md:p-8 shadow-xl flex flex-col justify-between relative overflow-hidden flex-1"
                 >
                   {/* Subtle Background Glow */}
                   <div className="absolute inset-0 bg-gradient-to-br from-brand-500/5 to-transparent opacity-100 pointer-events-none" />
@@ -1370,7 +1361,19 @@ export default function HomePage() {
                   </div>
 
                 </motion.div>
+
+                {/* Quote — sits below the contact card, aligned under the right column */}
+                <motion.p
+                  initial={{ opacity: 0, y: 10 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: 0.4 }}
+                  className="text-center text-muted-foreground italic text-sm font-semibold tracking-wide px-2"
+                >
+                  &ldquo;The mountains are calling — and we&apos;ll make sure you answer.&rdquo;
+                </motion.p>
               </div>
+
 
             </div>
           </div>
