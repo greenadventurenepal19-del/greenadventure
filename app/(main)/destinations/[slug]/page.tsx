@@ -286,7 +286,7 @@ export default function DestinationDynamicPage() {
       </section>
 
       {/* 2. OVERVIEW & BENTO BOX HIGHLIGHTS */}
-      <section className="py-32 relative z-20">
+      <section className="pt-10 md:pt-12 pb-2 relative z-20">
         <div className="container mx-auto px-4">
           <div className="flex flex-col xl:flex-row gap-20">
             <div className="xl:w-5/12 flex flex-col justify-center">
@@ -350,7 +350,7 @@ export default function DestinationDynamicPage() {
       </section>
 
       {/* 3. FEATURED TRIPS — uses shared TripCard, filtered by admin selection */}
-      <section className="py-32 bg-muted/20 border-y border-border/50 relative overflow-hidden">
+      <section className="pt-6 md:pt-8 pb-10 md:pb-12 bg-muted/20 border-y border-border/50 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-1/3 h-[500px] bg-brand-500/10 blur-[150px] rounded-full pointer-events-none" />
         <div className="absolute bottom-0 left-0 w-1/4 h-[400px] bg-emerald-500/10 blur-[120px] rounded-full pointer-events-none" />
 
@@ -440,7 +440,7 @@ export default function DestinationDynamicPage() {
       </section>
 
       {/* 4. CALL TO ACTION (WITH ANIMATED BG) */}
-      <section className="p-8 md:p-12 lg:px-16 relative overflow-hidden z-[70] rounded-[3rem] mx-4 md:max-w-5xl md:mx-auto mb-12 shadow-2xl bg-card border border-border group">
+      <section className="p-8 md:p-12 lg:px-16 relative overflow-hidden z-30 rounded-[3rem] mx-4 md:max-w-5xl md:mx-auto mb-12 shadow-2xl bg-card border border-border group">
         <div className="absolute -top-32 -right-12 text-slate-100 dark:text-white/5 rotate-12 group-hover:rotate-45 group-hover:scale-110 transition-transform duration-1000 ease-out z-0">
           <Mountain className="w-[500px] h-[500px]" />
         </div>
@@ -450,21 +450,20 @@ export default function DestinationDynamicPage() {
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="flex flex-col xl:flex-row items-center justify-between gap-8"
+            className="flex flex-col md:flex-row items-center justify-between gap-8 text-center md:text-left"
           >
-            <div className="relative z-10 max-w-2xl xl:max-w-4xl text-center xl:text-left">
+            <div className="relative z-10 max-w-2xl md:max-w-3xl">
               <h2 className="text-3xl md:text-[3.25rem] xl:text-[3.5rem] font-black tracking-tight mb-4 text-foreground uppercase leading-[1.1]">
-                <span className="block md:inline whitespace-normal md:whitespace-nowrap">START YOUR <span className="text-brand-600 dark:text-[#22c55e]">{data.name}</span></span><br className="hidden md:block" />
-                <span className="block md:inline mt-2 md:mt-0">ADVENTURE</span>
+                START YOUR <span className="text-brand-600 dark:text-[#22c55e]">{data.name}</span><br className="hidden md:block" /> ADVENTURE
               </h2>
-              <p className="text-muted-foreground text-base md:text-lg font-medium leading-relaxed max-w-xl mx-auto xl:mx-0">
+              <p className="text-muted-foreground text-base md:text-lg font-medium leading-relaxed max-w-xl mx-auto md:mx-0">
                 Get in touch with our experts to plan your perfect {data.name} itinerary. Make memories that will last a lifetime.
               </p>
             </div>
-            <div className="relative z-10 shrink-0 mt-8 xl:mt-0 w-full sm:w-auto flex justify-center xl:justify-end">
+            <div className="relative z-10 shrink-0 mt-4 w-full sm:w-auto flex justify-center md:justify-end">
               <Link 
                 href="/contact" 
-                className="inline-flex items-center justify-center gap-2 px-6 py-4 md:px-10 md:py-5 rounded-full bg-[#22c55e] hover:bg-[#1fae53] text-white font-black tracking-wide uppercase text-xs md:text-sm group/btn hover:scale-105 active:scale-95 transition-all w-full sm:w-auto"
+                className="inline-flex items-center justify-center gap-2 px-8 py-4 md:px-10 md:py-5 rounded-full bg-[#22c55e] hover:bg-[#1fae53] text-white font-black tracking-wide uppercase text-xs md:text-sm group/btn hover:scale-105 active:scale-95 transition-all w-full sm:w-auto shadow-lg shadow-emerald-500/20"
               >
                 Inquire Now <ArrowRight className="w-4 h-4 md:w-5 md:h-5 group-hover/btn:translate-x-1 transition-transform" />
               </Link>

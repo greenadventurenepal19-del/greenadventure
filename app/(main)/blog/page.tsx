@@ -501,7 +501,7 @@ export default function BlogPage() {
       </section>
 
       {/* ── Filter Bar ───────────────────────────────────────────── */}
-      <section className="relative z-20 py-6 border-b border-border/40 bg-background/80 backdrop-blur-sm sticky top-16">
+      <section className="relative z-20 py-6 border-b border-border/40 bg-background/80 backdrop-blur-sm">
         <div className="container mx-auto px-4">
           <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
             <div className="flex flex-wrap gap-2">

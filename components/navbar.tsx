@@ -191,10 +191,13 @@ export function Navbar() {
                 priority
               />
             </div>
-            <span className={`text-lg md:text-xl font-bold tracking-tight transition-colors ${
-              isTransparent ? "text-white drop-shadow-md" : "text-foreground"
-            }`}>
-              Green<span className={isTransparent ? "text-brand-300 drop-shadow-sm" : "text-brand-600 dark:text-brand-500"}>Adventure</span>
+            <span className="text-lg md:text-xl font-bold tracking-tight transition-colors">
+              <span className="text-brand-600 dark:text-brand-500">
+                Green
+              </span>
+              <span className={isTransparent ? "text-white drop-shadow-md" : "text-black dark:text-white"}>
+                Adventure
+              </span>
             </span>
           </Link>
 
@@ -215,7 +218,7 @@ export function Navbar() {
                   className={`flex items-center gap-1 px-4 py-2 rounded-full text-sm font-semibold transition-all duration-200 relative overflow-hidden ${
                     isTransparent 
                       ? isActive ? "text-white drop-shadow-md" : "text-white/90 hover:text-white drop-shadow-md"
-                      : isActive ? "text-brand-600 dark:text-brand-500" : "text-muted-foreground hover:text-foreground"
+                      : isActive ? "text-brand-700 dark:text-brand-500" : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
                   <span className={`absolute inset-0 rounded-full opacity-0 scale-75 group-hover:opacity-100 group-hover:scale-100 transition-all duration-300 -z-10 ${
@@ -229,7 +232,7 @@ export function Navbar() {
                     <motion.div
                       layoutId="nav-active"
                       className={`absolute bottom-1.5 left-1/2 -translate-x-1/2 h-1 w-1 rounded-full ${
-                        isTransparent ? "bg-brand-400" : "bg-brand-600 dark:bg-brand-500"
+                        isTransparent ? "bg-brand-400" : "bg-brand-700 dark:bg-brand-500"
                       }`}
                       transition={{ type: "spring", stiffness: 300, damping: 30 }}
                     />
@@ -338,8 +341,9 @@ export function Navbar() {
             <div className="relative h-9 w-9 rounded-full overflow-hidden ring-2 ring-brand-500/30 shadow-md">
               <Image src="/images/logo.png" alt="Green Adventure Nepal" fill sizes="36px" className="object-cover scale-[1.35]" />
             </div>
-            <span className="text-base font-bold tracking-tight text-foreground">
-              Green<span className="text-brand-600 dark:text-brand-500">Adventure</span>
+            <span className="text-base font-bold tracking-tight">
+              <span className="text-brand-600 dark:text-brand-500">Green</span>
+              <span className="text-black dark:text-white">Adventure</span>
             </span>
           </Link>
           <button
@@ -366,7 +370,7 @@ export function Navbar() {
                     onClick={() => { if (!hasDropdown) setIsOpen(false); }}
                     className={`flex-1 py-3 px-4 rounded-2xl text-base font-bold transition-colors ${
                       isActive
-                        ? "bg-brand-500/10 text-brand-600 dark:text-brand-500"
+                        ? "bg-brand-500/10 text-brand-700 dark:text-brand-500"
                         : "hover:bg-muted text-foreground"
                     }`}
                   >

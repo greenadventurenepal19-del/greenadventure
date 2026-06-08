@@ -454,7 +454,7 @@ export default async function TripDetailPage({ params }: { params: Promise<{ slu
       </section>
       {/* 3.5 FAQs SECTION */}
       {trip.faqs && trip.faqs.length > 0 && (
-        <section className="py-24 relative z-10 border-t border-border/30">
+        <section className="py-12 md:py-16 relative z-10 border-t border-border/30">
           <div className="absolute inset-0 -z-10">
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[900px] h-[500px] bg-brand-500/5 rounded-full blur-3xl" />
           </div>
@@ -478,7 +478,7 @@ export default async function TripDetailPage({ params }: { params: Promise<{ slu
 
       {/* 4. RELATED TRIPS */}
       {relatedTrips.length > 0 && (
-        <section className="py-24 relative z-10 border-t border-border/30">
+        <section className="py-12 md:py-16 relative z-10 border-t border-border/30">
           <div className="container mx-auto px-4">
             <div className="flex flex-col md:flex-row md:items-end justify-between mb-16 gap-6">
               <ScrollReveal>

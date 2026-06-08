@@ -780,7 +780,7 @@ export default function HomePage() {
 
 
         {/* 3. FEATURED TOURS */}
-        <section id="featured" className="py-24 relative z-10 border-y border-border/30">
+        <section id="featured" className="py-10 md:py-12 relative z-10 border-y border-border/60">
           <div className="container mx-auto px-4">
             <div className="mb-16">
               <div className="flex flex-row items-center justify-between gap-4 mb-4">
@@ -919,7 +919,7 @@ export default function HomePage() {
         </section>
 
         {/* 3.5. FEATURED TREKKING */}
-        <section id="featured-trekking" className="py-24 relative z-10 border-b border-border/30">
+        <section id="featured-trekking" className="py-10 md:py-12 relative z-10 border-b border-border/60">
           <div className="container mx-auto px-4">
             <div className="mb-16">
               <div className="flex flex-row items-center justify-between gap-4 mb-4">
@@ -1058,7 +1058,7 @@ export default function HomePage() {
         </section>
 
         {/* 4. TREKKING & EXPEDITIONS */}
-        <section className="py-24 relative z-10 border-b border-border/30">
+        <section className="py-10 md:py-12 relative z-10 border-b border-border/60">
           <div className="container mx-auto px-4">
             <div className="text-center mb-16 max-w-3xl mx-auto">
               <motion.h2 
@@ -1127,7 +1127,7 @@ export default function HomePage() {
 
         {/* 5. FEATURED BLOG POSTS */}
         {featuredBlogs.length > 0 && (
-          <section className="pt-24 pb-6 relative z-10 overflow-hidden">
+          <section className="pt-10 md:pt-12 pb-4 relative z-10 overflow-hidden">
 
             <div className="container mx-auto px-4">
               {/* Section Header */}
@@ -1252,18 +1252,18 @@ export default function HomePage() {
         )}
 
         {/* 5.5. EXPERIENCE THE JOURNEY (Video & Expert Contact Section) */}
-        <section className="pt-6 pb-24 relative z-10 border-b border-border/30">
+        <section className="pt-4 pb-10 md:pb-12 relative z-10 border-b border-border/60">
           <div className="container mx-auto px-4">
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-stretch">
               
-              {/* Left Column: Video Embed — fills full grid row height */}
-              <div className="lg:col-span-7 flex flex-col h-full">
+              {/* Left Column: Video Embed — aspect-video sized naturally, vertically centered */}
+              <div className="lg:col-span-7 flex flex-col justify-center">
                 <motion.div 
                   initial={{ opacity: 0, y: 30 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                   transition={{ duration: 0.6 }}
-                  className="relative aspect-video w-full rounded-[2.5rem] overflow-hidden shadow-2xl border border-border bg-black group h-full"
+                  className="relative aspect-video w-full rounded-[2.5rem] overflow-hidden shadow-2xl border border-border bg-black group"
                 >
                   <iframe 
                     src="https://www.youtube.com/embed/U1dORuMjfYM?autoplay=0" 
@@ -1276,21 +1276,21 @@ export default function HomePage() {
               </div>
 
               {/* Right Column: Expert Contact Card + Quote below */}
-              <div className="lg:col-span-5 flex flex-col gap-5">
+              <div className="lg:col-span-5 flex flex-col gap-5 justify-between">
                 <motion.div 
                   initial={{ opacity: 0, y: 30 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                   transition={{ duration: 0.6, delay: 0.1 }}
-                  className="bg-card/80 backdrop-blur-md border border-border/50 rounded-[2.5rem] p-6 md:p-8 shadow-xl flex flex-col justify-between relative overflow-hidden flex-1"
+                  className="bg-card/80 backdrop-blur-md border border-border/50 rounded-[2.5rem] p-5 md:p-6 shadow-xl flex flex-col gap-6 relative overflow-hidden"
                 >
                   {/* Subtle Background Glow */}
                   <div className="absolute inset-0 bg-gradient-to-br from-brand-500/5 to-transparent opacity-100 pointer-events-none" />
 
                   {/* Expert Header Row (Avatar left, Info right) */}
-                  <div className="flex items-center gap-5 w-full relative z-10 text-left mb-6">
+                  <div className="flex items-center gap-4 w-full relative z-10 text-left">
                     {/* Profile Picture */}
-                    <div className="relative w-20 h-20 md:w-24 md:h-24 rounded-full overflow-hidden border-2 border-brand-500/20 shadow-md shrink-0 transition-transform duration-500 hover:scale-105">
+                    <div className="relative w-16 h-16 md:w-20 md:h-20 rounded-full overflow-hidden border-2 border-brand-500/20 shadow-md shrink-0 transition-transform duration-500 hover:scale-105">
                       <Image 
                         src="/images/expert-shiva.png" 
                         alt="Raj Dahal" 
@@ -1301,26 +1301,26 @@ export default function HomePage() {
 
                     {/* Info */}
                     <div>
-                      <span className="text-[10px] md:text-[11px] font-black uppercase tracking-[0.15em] text-[#f97316] dark:text-[#fb923c] block mb-1">
+                      <span className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.15em] text-[#f97316] dark:text-[#fb923c] block mb-0.5">
                         Talk With Our Expert
                       </span>
-                      <h3 className="text-xl md:text-2xl font-black tracking-tight text-foreground leading-tight">
+                      <h3 className="text-lg md:text-xl font-black tracking-tight text-foreground leading-tight">
                         Raj Dahal
                       </h3>
-                      <p className="text-xs md:text-sm font-semibold text-muted-foreground mt-0.5">
+                      <p className="text-xs font-semibold text-muted-foreground mt-0.5">
                         Tour/Trek Organizer
                       </p>
                     </div>
                   </div>
 
                   {/* Contact Actions Container */}
-                  <div className="flex flex-col gap-4 w-full relative z-10 mt-auto">
+                  <div className="flex flex-col gap-3.5 w-full relative z-10">
                     {/* WhatsApp Action Button */}
                     <Link 
                       href={`https://wa.me/${contactInfo.phoneWhatsapp.replace(/[^0-9]/g, "")}`} 
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center justify-center gap-2.5 w-full py-4 rounded-2xl bg-[#22c55e] hover:bg-[#1fae53] text-white font-black uppercase text-sm tracking-wider shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/40 hover:-translate-y-0.5 transition-all duration-300 mb-2 group/btn"
+                      className="flex items-center justify-center gap-2.5 w-full py-3.5 rounded-2xl bg-[#22c55e] hover:bg-[#1fae53] text-white font-black uppercase text-sm tracking-wider shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/40 hover:-translate-y-0.5 transition-all duration-300 group/btn"
                     >
                       <svg className="w-5 h-5 fill-white" viewBox="0 0 24 24">
                         <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.003 5.324 5.328 0 11.89 0c3.18 0 6.171 1.242 8.423 3.497 2.253 2.256 3.489 5.253 3.487 8.437-.004 6.568-5.329 11.892-11.892 11.892-2.001-.001-3.97-.51-5.729-1.479L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.725 1.45 5.58-.003 10.118-4.542 10.12-10.122.002-2.702-1.047-5.245-2.957-7.157C16.628 1.413 14.09.363 11.39.363c-5.582 0-10.12 4.538-10.123 10.12-.001 1.785.474 3.528 1.38 5.083L1.648 22.3l6.902-1.81.097-.058.001-.001-.102.163zM9.513 5.673c-.159-.352-.327-.36-.48-.366-.126-.005-.27-.005-.414-.005-.144 0-.379.054-.577.27-.198.216-.757.739-.757 1.8 0 1.062.774 2.09.882 2.234.108.144 1.524 2.327 3.69 3.262 1.802.778 2.169.624 2.565.587.396-.036 1.279-.522 1.459-1.026.18-.504.18-.936.126-1.026-.054-.09-.198-.144-.414-.252-.216-.108-1.279-.631-1.477-.702-.198-.072-.342-.108-.486.108-.144.216-.559.702-.685.846-.126.144-.252.162-.468.054-.216-.108-.912-.336-1.737-1.072-.642-.573-1.075-1.281-1.201-1.497-.126-.216-.013-.333.095-.44l.325-.379c.108-.144.144-.234.216-.396.072-.162.036-.306-.018-.414-.054-.108-.468-1.127-.642-1.547z" />
@@ -1328,33 +1328,33 @@ export default function HomePage() {
                       Chat on WhatsApp
                     </Link>
 
-                    {/* Support Details List */}
-                    <div className="space-y-3.5 w-full">
+                    {/* Support Details List - Column layout with decreased height */}
+                    <div className="flex flex-col gap-2 w-full">
                       {/* Call Option */}
                       <Link 
                         href={`tel:${contactInfo.phonePrimary.replace(/[^0-9+]/g, "")}`}
-                        className="flex items-center gap-4 p-4 rounded-2xl bg-muted/50 hover:bg-muted border border-border/50 hover:border-brand-500/25 transition-all duration-300 w-full text-left group/item shadow-sm"
+                        className="flex items-center gap-3 py-2 px-3.5 rounded-2xl bg-muted/50 hover:bg-muted border border-border/50 hover:border-brand-500/25 transition-all duration-300 w-full text-left group/item shadow-sm"
                       >
-                        <div className="h-10 w-10 rounded-xl bg-background border border-border shadow-sm flex items-center justify-center text-[#f97316] dark:text-[#fb923c] group-hover/item:bg-[#f97316] group-hover/item:text-white transition-colors duration-300 shrink-0">
-                          <Phone className="w-4 h-4" />
+                        <div className="h-8 w-8 rounded-xl bg-background border border-border shadow-sm flex items-center justify-center text-[#f97316] dark:text-[#fb923c] group-hover/item:bg-[#f97316] group-hover/item:text-white transition-colors duration-300 shrink-0">
+                          <Phone className="w-3.5 h-3.5" />
                         </div>
-                        <div>
-                          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest block mb-0.5">Call Anytime</span>
-                          <span className="text-sm font-black text-foreground group-hover/item:text-brand-600 transition-colors duration-300">{contactInfo.phonePrimary}</span>
+                        <div className="min-w-0">
+                          <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest block mb-0.5 leading-none">Call Anytime</span>
+                          <span className="text-xs md:text-sm font-black text-foreground group-hover/item:text-brand-600 transition-colors duration-300 block leading-tight">{contactInfo.phonePrimary}</span>
                         </div>
                       </Link>
 
                       {/* Email Option */}
                       <Link 
                         href={`mailto:${contactInfo.emailPrimary}`}
-                        className="flex items-center gap-4 p-4 rounded-2xl bg-muted/50 hover:bg-muted border border-border/50 hover:border-brand-500/25 transition-all duration-300 w-full text-left group/item shadow-sm"
+                        className="flex items-center gap-3 py-2 px-3.5 rounded-2xl bg-muted/50 hover:bg-muted border border-border/50 hover:border-brand-500/25 transition-all duration-300 w-full text-left group/item shadow-sm"
                       >
-                        <div className="h-10 w-10 rounded-xl bg-background border border-border shadow-sm flex items-center justify-center text-[#f97316] dark:text-[#fb923c] group-hover/item:bg-[#f97316] group-hover/item:text-white transition-colors duration-300 shrink-0">
-                          <Mail className="w-4 h-4" />
+                        <div className="h-8 w-8 rounded-xl bg-background border border-border shadow-sm flex items-center justify-center text-[#f97316] dark:text-[#fb923c] group-hover/item:bg-[#f97316] group-hover/item:text-white transition-colors duration-300 shrink-0">
+                          <Mail className="w-3.5 h-3.5" />
                         </div>
-                        <div>
-                          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest block mb-0.5">Email Us</span>
-                          <span className="text-sm font-black text-foreground group-hover/item:text-brand-600 transition-colors duration-300 break-all">{contactInfo.emailPrimary}</span>
+                        <div className="min-w-0">
+                          <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest block mb-0.5 leading-none">Email Us</span>
+                          <span className="text-xs md:text-sm font-black text-foreground group-hover/item:text-brand-600 transition-colors duration-300 break-all block leading-tight">{contactInfo.emailPrimary}</span>
                         </div>
                       </Link>
                     </div>
@@ -1374,13 +1374,12 @@ export default function HomePage() {
                 </motion.p>
               </div>
 
-
             </div>
           </div>
         </section>
 
         {/* 2. HIGHLIGHTS (Trust Section) */}
-        <section className="py-24 relative z-10">
+        <section className="py-10 md:py-12 relative z-10 border-b border-border/60">
           <div className="container mx-auto px-4">
             <div className="mb-16">
               <div className="flex flex-row items-center justify-between gap-4 mb-4">
@@ -1482,7 +1481,7 @@ export default function HomePage() {
         
         {/* 6. TESTIMONIALS PREVIEW */}
 
-        <section className="py-24 relative z-10">
+        <section className="py-10 md:py-12 relative z-10 border-b border-border/60">
           <div className="container mx-auto px-4">
             <div className="text-center mb-16">
               <h2 className="text-3xl md:text-4xl font-bold mb-4">What Our Clients Say</h2>
@@ -1552,7 +1551,7 @@ export default function HomePage() {
         </section>
 
         {/* 6. CTA BANNER */}
-        <section className="p-8 md:p-12 lg:px-16 relative overflow-hidden z-[70] rounded-[3rem] mx-4 md:mx-12 mb-12 shadow-2xl bg-card border border-border group">
+        <section className="p-8 md:p-12 lg:px-16 relative overflow-hidden z-30 rounded-[3rem] mx-4 md:mx-12 mb-12 shadow-2xl bg-card border border-border group">
           <div className="absolute -top-32 -right-12 text-slate-200 dark:text-white opacity-[0.25] dark:opacity-[0.07] md:opacity-[0.45] md:dark:opacity-[0.15] pointer-events-none rotate-12 group-hover:rotate-45 group-hover:scale-110 transition-transform duration-1000 ease-out z-0">
             <Compass className="w-[500px] h-[500px]" />
           </div>
@@ -1562,21 +1561,20 @@ export default function HomePage() {
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              className="flex flex-col xl:flex-row items-center justify-between gap-8"
+              className="flex flex-col md:flex-row items-center justify-between gap-8 text-center md:text-left"
             >
-              <div className="relative z-10 max-w-2xl xl:max-w-4xl text-center xl:text-left">
+              <div className="relative z-10 max-w-2xl md:max-w-3xl">
                 <h2 className="text-3xl md:text-[3.25rem] xl:text-[3.5rem] font-black tracking-tight mb-4 text-foreground uppercase leading-[1.1]">
-                  <span className="block md:inline whitespace-normal md:whitespace-nowrap">Ready for the <span className="text-brand-600 dark:text-[#22c55e]">adventure</span></span><br className="hidden md:block" />
-                  <span className="block md:inline mt-2 md:mt-0">of a lifetime?</span>
+                  Ready for the <span className="text-brand-600 dark:text-[#22c55e]">adventure</span><br className="hidden md:block" /> of a lifetime?
                 </h2>
-                <p className="text-muted-foreground text-base md:text-lg font-medium leading-relaxed max-w-xl mx-auto xl:mx-0">
+                <p className="text-muted-foreground text-base md:text-lg font-medium leading-relaxed max-w-xl mx-auto md:mx-0">
                   Book your Himalayan trek today and let us take care of all the details.
                 </p>
               </div>
-              <div className="relative z-10 shrink-0 mt-8 xl:mt-0 w-full sm:w-auto flex justify-center xl:justify-end">
+              <div className="relative z-10 shrink-0 mt-4 w-full sm:w-auto flex justify-center md:justify-end">
                 <Link 
                   href="/contact" 
-                  className="inline-flex items-center justify-center gap-2 px-6 py-4 md:px-10 md:py-5 rounded-full bg-[#22c55e] hover:bg-[#1fae53] text-white font-black tracking-wide uppercase text-xs md:text-sm group/btn hover:scale-105 active:scale-95 transition-all w-full sm:w-auto"
+                  className="inline-flex items-center justify-center gap-2 px-8 py-4 md:px-10 md:py-5 rounded-full bg-[#22c55e] hover:bg-[#1fae53] text-white font-black tracking-wide uppercase text-xs md:text-sm group/btn hover:scale-105 active:scale-95 transition-all w-full sm:w-auto shadow-lg shadow-emerald-500/20"
                 >
                   Plan Your Trip Now <ArrowRight className="w-4 h-4 md:w-5 md:h-5 group-hover/btn:translate-x-1 transition-transform" />
                 </Link>
