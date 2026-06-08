@@ -183,11 +183,11 @@ export function Navbar() {
                 : "ring-brand-500/30 dark:ring-brand-500/40 group-hover:ring-brand-500/60 shadow-md"
             }`}>
               <Image
-                src="/images/logo.png"
+                src="/images/logo-v2.png"
                 alt="Green Adventure Nepal logo"
                 fill
                 sizes="48px"
-                className="object-cover scale-[1.35]"
+                className="object-cover"
                 priority
               />
             </div>
@@ -339,7 +339,7 @@ export function Navbar() {
         <div className="flex items-center justify-between px-5 py-4 border-b border-border/60">
           <Link href="/" onClick={() => setIsOpen(false)} className="flex items-center gap-2.5">
             <div className="relative h-9 w-9 rounded-full overflow-hidden ring-2 ring-brand-500/30 shadow-md">
-              <Image src="/images/logo.png" alt="Green Adventure Nepal" fill sizes="36px" className="object-cover scale-[1.35]" />
+              <Image src="/images/logo-v2.png" alt="Green Adventure Nepal" fill sizes="36px" className="object-cover" />
             </div>
             <span className="text-base font-bold tracking-tight">
               <span className="text-brand-600 dark:text-brand-500">Green</span>
