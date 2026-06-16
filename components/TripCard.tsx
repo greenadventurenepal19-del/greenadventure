@@ -119,7 +119,7 @@ export default function TripCard({ trip, index = 0, basePath }: Props) {
               Organized by
             </span>
             <span className="text-sm font-black tracking-wide shimmer-text">
-              greenAdventure
+              GreenAdventure
             </span>
           </div>
           <Link

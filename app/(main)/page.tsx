@@ -902,7 +902,7 @@ export default function HomePage() {
                         <div className="flex flex-col">
                           <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block mb-0.5">Organized by</span>
                           <span className="text-sm font-black tracking-wide shimmer-text">
-                            greenAdventure
+                            GreenAdventure
                           </span>
                         </div>
                         <Link 
@@ -1049,7 +1049,7 @@ export default function HomePage() {
                         <div className="flex flex-col">
                           <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block mb-0.5">Organized by</span>
                           <span className="text-sm font-black tracking-wide shimmer-text">
-                            greenAdventure
+                            GreenAdventure
                           </span>
                         </div>
                         <Link 
