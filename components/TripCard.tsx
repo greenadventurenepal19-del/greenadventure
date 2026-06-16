@@ -97,6 +97,7 @@ export default function TripCard({ trip, index = 0, basePath }: Props) {
         <div className="mt-auto mb-4" />
 
         <div className="pt-5 border-t border-border/50 flex items-center justify-between mt-auto">
+          {/* Commented out Pay Level as requested
           <div>
             <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block mb-0.5">
               Pay Level
@@ -110,6 +111,15 @@ export default function TripCard({ trip, index = 0, basePath }: Props) {
               ) : (
                 <span className="text-[13px] font-semibold text-muted-foreground">On request</span>
               )}
+            </span>
+          </div>
+          */}
+          <div className="flex flex-col">
+            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block mb-0.5">
+              Organized by
+            </span>
+            <span className="text-sm font-black tracking-wide shimmer-text">
+              greenAdventure
             </span>
           </div>
           <Link

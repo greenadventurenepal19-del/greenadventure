@@ -88,3 +88,30 @@
   margin: 1.5em 0;
 }
 
+@keyframes textShimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.shimmer-text {
+  background: linear-gradient(
+    90deg,
+    #16a34a 0%,
+    #22c55e 25%,
+    #86efac 50%,
+    #22c55e 75%,
+    #16a34a 100%
+  );
+  background-size: 200% auto;
+  color: transparent;
+  background-clip: text;
+  -webkit-background-clip: text;
+  animation: textShimmer 4s linear infinite;
+  display: inline-block;
+}
+
+

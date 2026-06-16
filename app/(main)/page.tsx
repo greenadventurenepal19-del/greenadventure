@@ -891,10 +891,18 @@ export default function HomePage() {
 
                       {/* Footer (Price & Button) */}
                       <div className="pt-5 border-t border-border/50 flex items-center justify-between mt-auto">
+                        {/* Commented out Pay Level as requested
                         <div>
                           <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block mb-0.5">Pay Level</span>
                           <span className="text-xl font-black text-foreground leading-none">
                             ${tour.price?.replace(/usd|\$|per person|\/ person/gi, '').trim()} <span className="text-[13px] font-semibold text-muted-foreground">/ person</span>
+                          </span>
+                        </div>
+                        */}
+                        <div className="flex flex-col">
+                          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block mb-0.5">Organized by</span>
+                          <span className="text-sm font-black tracking-wide shimmer-text">
+                            greenAdventure
                           </span>
                         </div>
                         <Link 
@@ -1030,10 +1038,18 @@ export default function HomePage() {
 
                       {/* Footer (Price & Button) */}
                       <div className="pt-5 border-t border-border/50 flex items-center justify-between mt-auto">
+                        {/* Commented out Pay Level as requested
                         <div>
                           <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block mb-0.5">Pay Level</span>
                           <span className="text-xl font-black text-foreground leading-none">
                             ${trek.price?.replace(/usd|\$|per person|\/ person/gi, '').trim()} <span className="text-[13px] font-semibold text-muted-foreground">/ person</span>
+                          </span>
+                        </div>
+                        */}
+                        <div className="flex flex-col">
+                          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block mb-0.5">Organized by</span>
+                          <span className="text-sm font-black tracking-wide shimmer-text">
+                            greenAdventure
                           </span>
                         </div>
                         <Link 
