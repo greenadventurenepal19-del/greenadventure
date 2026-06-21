@@ -1308,7 +1308,7 @@ export default function HomePage() {
                     {/* Profile Picture */}
                     <div className="relative w-16 h-16 md:w-20 md:h-20 rounded-full overflow-hidden border-2 border-brand-500/20 shadow-md shrink-0 transition-transform duration-500 hover:scale-105">
                       <Image 
-                        src="/images/expert-shiva.png" 
+                        src="/images/expert-raj.jpg" 
                         alt="Raj Dahal" 
                         fill 
                         className="object-cover"

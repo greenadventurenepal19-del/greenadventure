@@ -117,6 +117,7 @@ export default function AdminPage() {
     tours: 0,
     featured: true,
     order: 0,
+    highlights: [] as { icon: string; title: string; desc: string; size: "large" | "medium" | "small" }[],
   });
 
   // Settings state - empty by default so admin must explicitly fill them in.
@@ -1068,7 +1069,7 @@ export default function AdminPage() {
       }
       setIsRegionModalOpen(false);
       setEditingRegion(null);
-      setRegionFormData({ title: "", desc: "", image: "", heroImage: "", subtitle: "", overview: "", tours: 0, featured: true, order: 0 });
+      setRegionFormData({ title: "", desc: "", image: "", heroImage: "", subtitle: "", overview: "", tours: 0, featured: true, order: 0, highlights: [] });
     } catch (error) {
       console.error("Error saving region", error);
       alert("Failed to save region.");
@@ -3427,7 +3428,7 @@ export default function AdminPage() {
                 <button 
                   onClick={() => {
                     setEditingRegion(null);
-                    setRegionFormData({ title: "", desc: "", image: "", heroImage: "", subtitle: "", overview: "", tours: 0, featured: true, order: 0 });
+                    setRegionFormData({ title: "", desc: "", image: "", heroImage: "", subtitle: "", overview: "", tours: 0, featured: true, order: 0, highlights: [] });
                     setIsRegionModalOpen(true);
                   }}
                   className="bg-white hover:bg-gray-100 text-black font-bold py-3 px-6 rounded-xl flex items-center justify-center gap-2 transition-all hover:scale-[1.02] active:scale-[0.98] shadow-xl"
@@ -3467,6 +3468,25 @@ export default function AdminPage() {
                         <button 
                           onClick={() => {
                             setEditingRegion(region);
+                            const fallbackHighlights = 
+                              region.title?.toLowerCase() === "nepal" ? [
+                                { icon: "Mountain", title: "8 highest peaks", desc: "Home to Everest, Annapurna, and more. Witness the majesty of the roof of the world.", size: "large" },
+                                { icon: "Compass", title: "Rich Culture", desc: "Ancient temples, monasteries, and traditions.", size: "medium" },
+                                { icon: "Camera", title: "Scenic Beauty", desc: "Lush valleys, serene lakes, and high passes.", size: "medium" },
+                                { icon: "Sun", title: "Best Time to Visit", desc: "Spring (Mar-May) & Autumn (Sep-Nov).", size: "small" },
+                                { icon: "Heart", title: "Warm Hospitality", desc: "Experience the legendary Sherpa culture.", size: "small" },
+                              ] : region.title?.toLowerCase() === "bhutan" ? [
+                                { icon: "Heart", title: "Happiness Index", desc: "Focuses on Gross National Happiness.", size: "large" },
+                                { icon: "Compass", title: "Tiger's Nest", desc: "Iconic cliffside monastery.", size: "medium" },
+                                { icon: "Leaf", title: "Carbon Negative", desc: "The world's only carbon-negative country.", size: "medium" },
+                                { icon: "Sun", title: "Best Time to Visit", desc: "Spring & Autumn.", size: "small" },
+                              ] : region.title?.toLowerCase() === "india" ? [
+                                { icon: "Mountain", title: "Indian Himalayas", desc: "Ladakh, Himachal, Uttarakhand.", size: "large" },
+                                { icon: "Compass", title: "Spiritual Hubs", desc: "Rishikesh, Dharamshala.", size: "medium" },
+                                { icon: "Camera", title: "Diverse Landscapes", desc: "From green valleys to high-altitude deserts.", size: "medium" },
+                                { icon: "Sun", title: "Best Time to Visit", desc: "May to September.", size: "small" },
+                              ] : [];
+
                             setRegionFormData({
                               title: region.title || "",
                               desc: region.desc || "",
@@ -3476,7 +3496,8 @@ export default function AdminPage() {
                               overview: region.overview || "",
                               tours: region.tours || 0,
                               featured: region.featured !== false,
-                              order: region.order || 0
+                              order: region.order || 0,
+                              highlights: region.highlights || fallbackHighlights
                             });
                             setIsRegionModalOpen(true);
                           }}
@@ -4305,6 +4326,113 @@ export default function AdminPage() {
                     className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-brand-500 transition-colors resize-none"
                     placeholder="Detailed overview of the destination..."
                   ></textarea>
+                </div>
+
+                {/* Highlights Builder */}
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center border-t border-white/10 pt-6">
+                    <label className="block font-medium text-white">Highlights Builder <span className="text-white/30">(destination page grid)</span></label>
+                    <button 
+                      type="button" 
+                      onClick={() => setRegionFormData({
+                        ...regionFormData, 
+                        highlights: [...(regionFormData.highlights || []), { icon: "Compass", title: "", desc: "", size: "medium" }]
+                      })}
+                      className="px-3 py-1.5 bg-brand-500/20 border border-brand-500/30 text-brand-400 hover:bg-brand-500/30 rounded-lg text-xs font-bold transition-colors shadow-lg"
+                    >
+                      + Add Highlight
+                    </button>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    {(!regionFormData.highlights || regionFormData.highlights.length === 0) && (
+                      <div className="p-8 bg-black/30 border border-white/5 rounded-xl text-center text-white/30 text-sm">
+                        No highlights added yet. Click "+ Add Highlight" to start adding destination cards.
+                      </div>
+                    )}
+                    {regionFormData.highlights?.map((highlight, idx) => (
+                      <div key={idx} className="p-4 bg-black/40 border border-white/10 rounded-xl space-y-3 relative group transition-all hover:border-white/20">
+                        <button 
+                          type="button"
+                          onClick={() => {
+                            const newHighlights = [...regionFormData.highlights];
+                            newHighlights.splice(idx, 1);
+                            setRegionFormData({...regionFormData, highlights: newHighlights});
+                          }}
+                          className="absolute top-2 right-2 p-1.5 text-white/30 hover:text-red-400 hover:bg-red-500/10 rounded-md transition-colors opacity-0 group-hover:opacity-100"
+                          title="Remove Highlight"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-3 pr-8">
+                          <div className="md:col-span-2">
+                            <label className="block text-[11px] font-bold uppercase tracking-wider text-white/40 mb-1">Highlight Title</label>
+                            <input
+                              type="text"
+                              value={highlight.title}
+                              onChange={(e) => {
+                                const newHighlights = [...regionFormData.highlights];
+                                newHighlights[idx].title = e.target.value;
+                                setRegionFormData({...regionFormData, highlights: newHighlights});
+                              }}
+                              className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-brand-500 text-sm"
+                              placeholder="Title (e.g. Indian Himalayas)"
+                            />
+                          </div>
+                          <div className="md:col-span-1">
+                            <label className="block text-[11px] font-bold uppercase tracking-wider text-white/40 mb-1">Icon</label>
+                            <select
+                              value={highlight.icon}
+                              onChange={(e) => {
+                                const newHighlights = [...regionFormData.highlights];
+                                newHighlights[idx].icon = e.target.value;
+                                setRegionFormData({...regionFormData, highlights: newHighlights});
+                              }}
+                              className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-brand-500 text-sm"
+                            >
+                              <option value="Mountain">Mountain</option>
+                              <option value="Compass">Compass</option>
+                              <option value="Camera">Camera</option>
+                              <option value="Sun">Sun</option>
+                              <option value="Heart">Heart</option>
+                              <option value="Leaf">Leaf</option>
+                            </select>
+                          </div>
+                          <div className="md:col-span-1">
+                            <label className="block text-[11px] font-bold uppercase tracking-wider text-white/40 mb-1">Card Size</label>
+                            <select
+                              value={highlight.size}
+                              onChange={(e) => {
+                                const newHighlights = [...regionFormData.highlights];
+                                newHighlights[idx].size = e.target.value as "large" | "medium" | "small";
+                                setRegionFormData({...regionFormData, highlights: newHighlights});
+                              }}
+                              className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-brand-500 text-sm"
+                            >
+                              <option value="large">Large</option>
+                              <option value="medium">Medium</option>
+                              <option value="small">Small</option>
+                            </select>
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-bold uppercase tracking-wider text-white/40 mb-1">Description</label>
+                          <textarea
+                            rows={2}
+                            value={highlight.desc}
+                            onChange={(e) => {
+                              const newHighlights = [...regionFormData.highlights];
+                              newHighlights[idx].desc = e.target.value;
+                              setRegionFormData({...regionFormData, highlights: newHighlights});
+                            }}
+                            className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-brand-500 text-sm resize-none"
+                            placeholder="Description of the highlight..."
+                          ></textarea>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </form>
             </div>

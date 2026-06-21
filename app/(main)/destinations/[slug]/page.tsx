@@ -146,13 +146,40 @@ export default function DestinationDynamicPage() {
         ) as any;
 
         const fallback = destinationData[slug];
+
+        // Map highlights from Firestore if they are strings
+        const mapHighlightIcon = (hl: any) => {
+          let resolvedIcon: LucideIcon = Compass;
+          if (typeof hl.icon === "string") {
+            const iconMap: Record<string, LucideIcon> = {
+              Mountain,
+              Compass,
+              Camera,
+              Sun,
+              Heart,
+              Leaf,
+            };
+            resolvedIcon = iconMap[hl.icon] || Compass;
+          } else {
+            resolvedIcon = hl.icon;
+          }
+          return {
+            ...hl,
+            icon: resolvedIcon,
+          };
+        };
+
+        const dbHighlights = Array.isArray(matchedRegion?.highlights)
+          ? matchedRegion.highlights.map(mapHighlightIcon)
+          : [];
+
         const baseInfo: DestinationFallback = matchedRegion
           ? {
               name: matchedRegion.title,
               image: matchedRegion.heroImage || matchedRegion.image || fallback?.image || "/images/everest.png",
               subtitle: matchedRegion.subtitle || fallback?.subtitle || matchedRegion.desc || "",
               overview: matchedRegion.overview || matchedRegion.desc || fallback?.overview || "",
-              highlights: fallback?.highlights || [],
+              highlights: dbHighlights.length > 0 ? dbHighlights : (fallback?.highlights || []),
             }
           : fallback || {
               name: slug.replace(/\b\w/g, (l) => l.toUpperCase()),
