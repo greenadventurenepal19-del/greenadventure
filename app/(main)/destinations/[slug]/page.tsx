@@ -16,6 +16,32 @@ import {
   Sun,
   Info,
   Loader2,
+  Calendar,
+  Users,
+  Award,
+  Clock,
+  TrendingUp,
+  Globe,
+  Activity,
+  Shield,
+  Smile,
+  Star,
+  Flag,
+  Moon,
+  Cloud,
+  Wind,
+  Tent,
+  Coffee,
+  Briefcase,
+  HeartHandshake,
+  Anchor,
+  Flame,
+  Bike,
+  ShoppingBag,
+  Home,
+  Umbrella,
+  Sparkles,
+  Map,
   type LucideIcon,
 } from "lucide-react";
 import Lottie from "lottie-react";
@@ -70,7 +96,7 @@ type DestinationFallback = {
   image: string;
   subtitle: string;
   overview: string;
-  highlights: { icon: LucideIcon; title: string; desc: string; size: "large" | "medium" | "small" }[];
+  highlights: { icon: LucideIcon; title: string; desc: string; size: "extra-large" | "large" | "medium" | "small" }[];
 };
 
 // Fallback metadata only (no fake trips — those come from Firestore based on admin selection)
@@ -158,6 +184,33 @@ export default function DestinationDynamicPage() {
               Sun,
               Heart,
               Leaf,
+              MapPin,
+              Calendar,
+              Users,
+              Award,
+              Clock,
+              TrendingUp,
+              Globe,
+              Activity,
+              Shield,
+              Smile,
+              Star,
+              Flag,
+              Moon,
+              Cloud,
+              Wind,
+              Tent,
+              Coffee,
+              Briefcase,
+              HeartHandshake,
+              Anchor,
+              Flame,
+              Bike,
+              ShoppingBag,
+              Home,
+              Umbrella,
+              Sparkles,
+              Map,
             };
             resolvedIcon = iconMap[hl.icon] || Compass;
           } else {
@@ -346,7 +399,8 @@ export default function DestinationDynamicPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {data.highlights.map((highlight, idx) => {
                   let colSpanClass = "sm:col-span-1 lg:col-span-1";
-                  if (highlight.size === "large") colSpanClass = "sm:col-span-2 lg:col-span-2";
+                  if (highlight.size === "extra-large") colSpanClass = "sm:col-span-2 lg:col-span-3";
+                  else if (highlight.size === "large") colSpanClass = "sm:col-span-2 lg:col-span-2";
 
                   return (
                     <motion.div

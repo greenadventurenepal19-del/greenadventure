@@ -9,7 +9,9 @@ import {
 } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { 
-  Clock, Trash2, Plus, ShieldCheck, AlertCircle, Sparkles, User, MessageSquare, Settings, CheckCircle, LogOut, Mail, Shield, Users, Map, MapPin, Edit, Navigation, X, UploadCloud, Award, Upload, BookOpen
+  Clock, Trash2, Plus, ShieldCheck, AlertCircle, Sparkles, User, MessageSquare, Settings, CheckCircle, LogOut, Mail, Shield, Users, Map, MapPin, Edit, Navigation, X, UploadCloud, Award, Upload, BookOpen,
+  Calendar, TrendingUp, Globe, Activity, Smile, Star, Mountain, Compass, Camera, Sun, Heart, Leaf,
+  Flag, Moon, Cloud, Wind, Tent, Coffee, Briefcase, HeartHandshake, Anchor, Flame, Bike, ShoppingBag, Home, Umbrella
 } from "lucide-react";
 import Image from "next/image";
 import ParticleLoader from "@/components/ParticleLoader";
@@ -21,9 +23,86 @@ import {
   type WhyChooseFeature,
 } from "@/lib/why-choose";
 
+const AVAILABLE_HIGHLIGHT_ICONS = [
+  { name: "Mountain", icon: Mountain },
+  { name: "Compass", icon: Compass },
+  { name: "Camera", icon: Camera },
+  { name: "Sun", icon: Sun },
+  { name: "Heart", icon: Heart },
+  { name: "Leaf", icon: Leaf },
+  { name: "MapPin", icon: MapPin },
+  { name: "Calendar", icon: Calendar },
+  { name: "Users", icon: Users },
+  { name: "Award", icon: Award },
+  { name: "Clock", icon: Clock },
+  { name: "TrendingUp", icon: TrendingUp },
+  { name: "Globe", icon: Globe },
+  { name: "Activity", icon: Activity },
+  { name: "Shield", icon: Shield },
+  { name: "Smile", icon: Smile },
+  { name: "Star", icon: Star },
+  { name: "Flag", icon: Flag },
+  { name: "Moon", icon: Moon },
+  { name: "Cloud", icon: Cloud },
+  { name: "Wind", icon: Wind },
+  { name: "Tent", icon: Tent },
+  { name: "Coffee", icon: Coffee },
+  { name: "Briefcase", icon: Briefcase },
+  { name: "HeartHandshake", icon: HeartHandshake },
+  { name: "Anchor", icon: Anchor },
+  { name: "Flame", icon: Flame },
+  { name: "Bicycle", icon: Bike },
+  { name: "ShoppingBag", icon: ShoppingBag },
+  { name: "Home", icon: Home },
+  { name: "Umbrella", icon: Umbrella },
+  { name: "Sparkles", icon: Sparkles },
+  { name: "Map", icon: Map }
+];
+
 export default function AdminPage() {
   const { user, isAdmin, isSuperAdmin, loading, loginWithGoogle, logout } = useAdminAuth();
   const [activeTab, setActiveTab] = useState<"contacts" | "access" | "settings" | "hero" | "trips" | "regions" | "reviews" | "whyChoose" | "pagesHero" | "aboutPage" | "blog">("contacts");
+  
+  // Custom toast notification system
+  const [toasts, setToasts] = useState<{ id: string; message: string; type: "success" | "error" | "info" }[]>([]);
+
+  const showToast = (message: string, type: "success" | "error" | "info" = "success") => {
+    const id = Math.random().toString();
+    setToasts((prev) => [...prev, { id, message, type }]);
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((t) => t.id !== id));
+    }, 4000);
+  };
+
+  // Shadow global window.alert to render as a premium toast notification
+  const alert = (message: string) => {
+    const lower = message.toLowerCase();
+    const isError = lower.includes("fail") || lower.includes("error") || lower.includes("too large") || lower.includes("invalid") || lower.includes("not logged");
+    showToast(message, isError ? "error" : "success");
+  };
+
+  const [activeIconPickerIdx, setActiveIconPickerIdx] = useState<number | null>(null);
+
+  // Sync active tab with URL query parameter on load
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get("tab");
+    const validTabs = ["contacts", "access", "settings", "hero", "trips", "regions", "reviews", "whyChoose", "pagesHero", "aboutPage", "blog"];
+    if (tab && validTabs.includes(tab)) {
+      setActiveTab(tab as any);
+    }
+  }, []);
+
+  // Update URL query parameter when active tab changes
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("tab") !== activeTab) {
+      params.set("tab", activeTab);
+      const newUrl = `${window.location.pathname}?${params.toString()}`;
+      window.history.replaceState(null, "", newUrl);
+    }
+  }, [activeTab]);
+
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [contactFilter, setContactFilter] = useState<"all" | "booking" | "inquiry">("all");
   
@@ -117,7 +196,7 @@ export default function AdminPage() {
     tours: 0,
     featured: true,
     order: 0,
-    highlights: [] as { icon: string; title: string; desc: string; size: "large" | "medium" | "small" }[],
+    highlights: [] as { icon: string; title: string; desc: string; size: "extra-large" | "large" | "medium" | "small" }[],
   });
 
   // Settings state - empty by default so admin must explicitly fill them in.
@@ -4380,24 +4459,66 @@ export default function AdminPage() {
                               placeholder="Title (e.g. Indian Himalayas)"
                             />
                           </div>
-                          <div className="md:col-span-1">
+                          <div className="md:col-span-1 relative">
                             <label className="block text-[11px] font-bold uppercase tracking-wider text-white/40 mb-1">Icon</label>
-                            <select
-                              value={highlight.icon}
-                              onChange={(e) => {
-                                const newHighlights = [...regionFormData.highlights];
-                                newHighlights[idx].icon = e.target.value;
-                                setRegionFormData({...regionFormData, highlights: newHighlights});
-                              }}
-                              className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-brand-500 text-sm"
+                            
+                            {/* Custom Graphical Icon Picker Dropdown Trigger */}
+                            <button
+                              type="button"
+                              onClick={() => setActiveIconPickerIdx(activeIconPickerIdx === idx ? null : idx)}
+                              className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-brand-500 text-sm flex items-center justify-between text-left h-[38px] hover:bg-white/5 transition-colors"
                             >
-                              <option value="Mountain">Mountain</option>
-                              <option value="Compass">Compass</option>
-                              <option value="Camera">Camera</option>
-                              <option value="Sun">Sun</option>
-                              <option value="Heart">Heart</option>
-                              <option value="Leaf">Leaf</option>
-                            </select>
+                              <span className="flex items-center gap-2">
+                                {(() => {
+                                  const match = AVAILABLE_HIGHLIGHT_ICONS.find(i => i.name === highlight.icon);
+                                  const IconElement = match ? match.icon : Compass;
+                                  return (
+                                    <>
+                                      <IconElement className="w-4 h-4 text-brand-400" />
+                                      {highlight.icon}
+                                    </>
+                                  );
+                                })()}
+                              </span>
+                              <span className="text-white/40 text-xs">▼</span>
+                            </button>
+
+                            {/* Icon Picker Popover */}
+                            {activeIconPickerIdx === idx && (
+                              <>
+                                <div 
+                                  className="fixed inset-0 z-40" 
+                                  onClick={() => setActiveIconPickerIdx(null)}
+                                />
+                                <div className="absolute top-[110%] left-0 z-50 bg-[#161616] border border-white/10 rounded-xl p-3 shadow-2xl w-64 max-h-60 overflow-y-auto grid grid-cols-4 gap-1.5 custom-scrollbar">
+                                  {AVAILABLE_HIGHLIGHT_ICONS.map((item) => {
+                                    const IconComponent = item.icon;
+                                    const isSelected = highlight.icon === item.name;
+                                    return (
+                                      <button
+                                        key={item.name}
+                                        type="button"
+                                        title={item.name}
+                                        onClick={() => {
+                                          const newHighlights = [...regionFormData.highlights];
+                                          newHighlights[idx].icon = item.name;
+                                          setRegionFormData({...regionFormData, highlights: newHighlights});
+                                          setActiveIconPickerIdx(null);
+                                        }}
+                                        className={`flex flex-col items-center justify-center p-2 rounded-lg transition-all border ${
+                                          isSelected 
+                                            ? "bg-brand-500/20 border-brand-500/50 text-brand-400" 
+                                            : "border-transparent text-white/70 hover:bg-white/5 hover:text-white"
+                                        }`}
+                                      >
+                                        <IconComponent className="w-5 h-5 mb-1" />
+                                        <span className="text-[9px] truncate max-w-full leading-none">{item.name}</span>
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </>
+                            )}
                           </div>
                           <div className="md:col-span-1">
                             <label className="block text-[11px] font-bold uppercase tracking-wider text-white/40 mb-1">Card Size</label>
@@ -4405,14 +4526,15 @@ export default function AdminPage() {
                               value={highlight.size}
                               onChange={(e) => {
                                 const newHighlights = [...regionFormData.highlights];
-                                newHighlights[idx].size = e.target.value as "large" | "medium" | "small";
+                                newHighlights[idx].size = e.target.value as "extra-large" | "large" | "medium" | "small";
                                 setRegionFormData({...regionFormData, highlights: newHighlights});
                               }}
-                              className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-brand-500 text-sm"
+                              className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-brand-500 text-sm h-[38px]"
                             >
-                              <option value="large">Large</option>
-                              <option value="medium">Medium</option>
-                              <option value="small">Small</option>
+                              <option value="extra-large">Extra Large (3 cols)</option>
+                              <option value="large">Large (2 cols)</option>
+                              <option value="medium">Medium (1 col)</option>
+                              <option value="small">Small (1 col)</option>
                             </select>
                           </div>
                         </div>
@@ -4897,6 +5019,31 @@ export default function AdminPage() {
           </div>
         </div>
       )}
+
+      {/* Premium Toast Notifications */}
+      <div className="fixed bottom-5 right-5 z-[9999] flex flex-col gap-3 max-w-sm w-full pointer-events-none">
+        {toasts.map((toast) => (
+          <div
+            key={toast.id}
+            className={`pointer-events-auto flex items-center gap-3 px-5 py-4 rounded-2xl shadow-[0_10px_35px_rgba(0,0,0,0.5)] border backdrop-blur-md transition-all duration-300 animate-in slide-in-from-bottom-5 ${
+              toast.type === "error"
+                ? "bg-red-950/80 border-red-500/30 text-red-200"
+                : toast.type === "info"
+                ? "bg-blue-950/80 border-blue-500/30 text-blue-200"
+                : "bg-emerald-950/80 border-emerald-500/30 text-emerald-200"
+            }`}
+          >
+            {toast.type === "error" ? (
+              <AlertCircle className="w-5 h-5 text-red-400 shrink-0" />
+            ) : toast.type === "info" ? (
+              <AlertCircle className="w-5 h-5 text-blue-400 shrink-0" />
+            ) : (
+              <CheckCircle className="w-5 h-5 text-emerald-400 shrink-0" />
+            )}
+            <span className="text-sm font-semibold leading-snug">{toast.message}</span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
