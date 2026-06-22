@@ -7,7 +7,7 @@ import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion"
 import { 
   Mountain, MapPin, Users, Star, 
   ArrowRight, Search, Calendar, Quote,
-  Clock, TrendingUp, Leaf, Cloud, Heart, Volume2, VolumeX,
+  Clock, TrendingUp, Leaf, Cloud, Heart,
   Globe, Plane, Compass, BookOpen, Tag,
   ChevronLeft, ChevronRight, Phone, Mail
 } from "lucide-react";
@@ -64,8 +64,6 @@ export default function HomePage() {
   const bgY = useTransform(scrollY, [0, 1000], [0, 200]);
   const textY = useTransform(scrollY, [0, 1000], [0, 100]);
 
-  const audioRef = React.useRef<HTMLAudioElement>(null);
-  const [isMuted, setIsMuted] = React.useState(true);
   const [currentSlide, setCurrentSlide] = React.useState(0);
   const [activeBgIndex, setActiveBgIndex] = React.useState(0);
   const [textSlide, setTextSlide] = React.useState(0);
@@ -574,20 +572,6 @@ export default function HomePage() {
     }
   };
 
-  const toggleMute = () => {
-    const newMuted = !isMuted;
-    setIsMuted(newMuted);
-    
-    if (audioRef.current) {
-      if (!newMuted) {
-        audioRef.current.volume = 1;
-        audioRef.current.play().catch((err) => console.error("Audio play failed:", err));
-      } else {
-        audioRef.current.pause();
-      }
-    }
-  };
-
   return (
     <div className="flex flex-col min-h-screen">
       <PageLoader isLoading={!pageLoaded} />
@@ -707,35 +691,20 @@ export default function HomePage() {
                       <span key={index}>{char === " " ? "\u00A0" : char}</span>
                     ))}
                   </h1>
-                  <div className="flex items-center justify-between gap-3 mb-4 md:mb-6 w-full">
-                    {/* Sound Toggle */}
-                    <button
-                      onClick={toggleMute}
-                      className="h-12 w-12 md:h-14 md:w-14 shrink-0 rounded-full bg-black/50 hover:bg-black/80 backdrop-blur-md text-white flex items-center justify-center transition-all border border-white/10 shadow-xl group"
-                      aria-label={isMuted ? "Unmute mountain sound" : "Mute mountain sound"}
-                    >
-                      {isMuted ? (
-                        <VolumeX className="h-4 w-4 md:h-5 md:w-5 text-white/70 group-hover:text-white transition-colors" />
-                      ) : (
-                        <Volume2 className="h-4 w-4 md:h-5 md:w-5 text-brand-400 group-hover:text-brand-300 transition-colors" />
-                      )}
-                    </button>
-
+                  <div className="flex items-center gap-3 mb-4 md:mb-6 w-full">
                     {/* Action Buttons */}
-                    <div className="flex items-center gap-3 flex-1">
-                      <Link 
-                        href="/destinations" 
-                        className="px-6 py-3 md:px-8 md:py-4 rounded-full bg-white text-black font-bold text-xs md:text-sm hover:bg-gray-100 transition-colors shadow-[0_0_30px_rgba(255,255,255,0.2)] flex-1 text-center"
-                      >
-                        Discover More
-                      </Link>
-                      <Link 
-                        href={`/destinations/${(heroSlides[textSlide]?.title || "").toLowerCase().trim().replace(/\s+/g, "-")}`}
-                        className="h-12 w-12 md:h-14 md:w-14 shrink-0 rounded-full bg-white text-black flex items-center justify-center hover:bg-gray-100 transition-colors shadow-lg group"
-                      >
-                        <ArrowRight className="h-4 w-4 md:h-5 md:w-5 -rotate-45 group-hover:rotate-0 transition-transform" />
-                      </Link>
-                    </div>
+                    <Link 
+                      href="/destinations" 
+                      className="px-6 py-3 md:px-8 md:py-4 rounded-full bg-white text-black font-bold text-xs md:text-sm hover:bg-gray-100 transition-colors shadow-[0_0_30px_rgba(255,255,255,0.2)] flex-1 text-center"
+                    >
+                      Discover More
+                    </Link>
+                    <Link 
+                      href={`/destinations/${(heroSlides[textSlide]?.title || "").toLowerCase().trim().replace(/\s+/g, "-")}`}
+                      className="h-12 w-12 md:h-14 md:w-14 shrink-0 rounded-full bg-white text-black flex items-center justify-center hover:bg-gray-100 transition-colors shadow-lg group"
+                    >
+                      <ArrowRight className="h-4 w-4 md:h-5 md:w-5 -rotate-45 group-hover:rotate-0 transition-transform" />
+                    </Link>
                   </div>
                   <p className="text-white/90 text-xs sm:text-sm md:text-base leading-relaxed font-medium px-2 md:px-0">
                     {heroSlides[textSlide]?.subtitle}
@@ -747,8 +716,6 @@ export default function HomePage() {
           </div>
         </div>
         
-        {/* Hidden Audio Element for Mountain Sound */}
-        <audio ref={audioRef} src="/audio.mp3" preload="auto" loop />
 
         {/* Previous and Next Navigation Arrows (Bottom Right Corner) */}
         <div className="absolute bottom-6 right-6 md:bottom-10 md:right-10 z-40 flex items-center gap-3 pointer-events-auto">
