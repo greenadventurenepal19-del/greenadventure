@@ -104,6 +104,9 @@ export const metadata: Metadata = {
     statusBarStyle: "black-translucent",
     title: SITE_NAME,
   },
+  verification: {
+    google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION || undefined,
+  },
   other: {
     "geo.region": "NP-BA",
     "geo.placename": "Kathmandu",

@@ -237,6 +237,8 @@ export default async function TripDetailPage({ params }: { params: Promise<{ slu
       tripType: trip.tripType,
       overview: Array.isArray(trip.overview) ? trip.overview : [],
       description: Array.isArray(trip.overview) ? trip.overview[0] || "" : "",
+      itinerary: trip.itinerary,
+      faqs: trip.faqs,
     },
     "tours",
   );

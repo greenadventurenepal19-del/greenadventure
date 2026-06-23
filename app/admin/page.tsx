@@ -199,9 +199,6 @@ export default function AdminPage() {
     highlights: [] as { icon: string; title: string; desc: string; size: "extra-large" | "large" | "medium" | "small" }[],
   });
 
-  // Settings state - empty by default so admin must explicitly fill them in.
-  // The frontend reads from `settings/contact_info` and only displays values
-  // that have been saved here.
   const [settings, setSettings] = useState({
     officeDesc: "",
     locationLine1: "",
@@ -212,7 +209,11 @@ export default function AdminPage() {
     emailSecondary: "",
     mapLat: 27.7126,
     mapLng: 85.3145,
-    mapZoom: 15
+    mapZoom: 15,
+    expertName: "",
+    expertRole: "",
+    expertImage: "",
+    videoUrl: ""
   });
   const [isSavingSettings, setIsSavingSettings] = useState(false);
   const [permissionError, setPermissionError] = useState(false);
@@ -220,6 +221,7 @@ export default function AdminPage() {
   const [isUploadingTripImage, setIsUploadingTripImage] = useState(false);
   const [isUploadingRegionImage, setIsUploadingRegionImage] = useState(false);
   const [isUploadingRegionHeroImage, setIsUploadingRegionHeroImage] = useState(false);
+  const [isUploadingExpertImage, setIsUploadingExpertImage] = useState(false);
   const [uploadingHeroSlide, setUploadingHeroSlide] = useState<number | null>(null);
   const [uploadingHeroMobile, setUploadingHeroMobile] = useState<number | null>(null);
   const [uploadingHeroTablet, setUploadingHeroTablet] = useState<number | null>(null);
@@ -298,6 +300,36 @@ export default function AdminPage() {
     } finally {
       if (field === "heroImage") setIsUploadingRegionHeroImage(false);
       else setIsUploadingRegionImage(false);
+    }
+  };
+
+  const handleExpertImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 4.5 * 1024 * 1024) {
+      alert("File is too large! Please choose an image smaller than 4.5MB.");
+      return;
+    }
+
+    setIsUploadingExpertImage(true);
+    try {
+      const res = await fetch(`/api/upload?filename=${encodeURIComponent(file.name)}`, {
+        method: 'POST',
+        body: file,
+      });
+      const data = await res.json();
+      if (res.ok && data.url) {
+        if (settings.expertImage) await deleteBlobImage(settings.expertImage);
+        setSettings(prev => ({ ...prev, expertImage: data.url }));
+      } else {
+        throw new Error(data.error || `Failed with status ${res.status}`);
+      }
+    } catch (error: any) {
+      console.error("Error uploading expert image:", error);
+      alert("Failed to upload expert image: " + error.message);
+    } finally {
+      setIsUploadingExpertImage(false);
     }
   };
 
@@ -2013,6 +2045,77 @@ export default function AdminPage() {
                           min="1"
                           max="20"
                           required
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4 pt-6 border-t border-white/10">
+                    <h3 className="font-bold text-xl text-white">Expert Profile & Landing Video</h3>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-white/60 mb-2">Expert Name</label>
+                        <input
+                          type="text"
+                          value={settings.expertName || ""}
+                          onChange={(e) => setSettings({ ...settings, expertName: e.target.value })}
+                          placeholder="e.g. Raj Dahal"
+                          className="w-full bg-black/60 border border-white/10 rounded-xl px-5 py-4 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all text-white placeholder:text-white/30"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-white/60 mb-2">Expert Occupation / Role</label>
+                        <input
+                          type="text"
+                          value={settings.expertRole || ""}
+                          onChange={(e) => setSettings({ ...settings, expertRole: e.target.value })}
+                          placeholder="e.g. Tour/Trek Organizer"
+                          className="w-full bg-black/60 border border-white/10 rounded-xl px-5 py-4 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all text-white placeholder:text-white/30"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-white/60 mb-2">Expert Photo</label>
+                        <div className="flex items-center gap-4">
+                          {settings.expertImage && (
+                            <div className="relative w-16 h-16 rounded-full overflow-hidden border border-white/10 bg-black shrink-0">
+                              <Image
+                                src={settings.expertImage}
+                                alt="Expert Preview"
+                                fill
+                                className="object-cover"
+                              />
+                            </div>
+                          )}
+                          <div className="flex-1">
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={handleExpertImageUpload}
+                              className="hidden"
+                              id="expert-image-upload"
+                              disabled={isUploadingExpertImage}
+                            />
+                            <label
+                              htmlFor="expert-image-upload"
+                              className="inline-flex items-center justify-center px-4 py-2.5 rounded-xl border border-white/10 bg-white/5 text-sm font-bold text-white hover:bg-white/10 transition-all cursor-pointer disabled:opacity-50"
+                            >
+                              {isUploadingExpertImage ? "Uploading..." : settings.expertImage ? "Change Image" : "Upload Image"}
+                            </label>
+                          </div>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-white/60 mb-2">Landing Video Link (YouTube)</label>
+                        <input
+                          type="text"
+                          value={settings.videoUrl || ""}
+                          onChange={(e) => setSettings({ ...settings, videoUrl: e.target.value })}
+                          placeholder="e.g. https://www.youtube.com/watch?v=U1dORuMjfYM"
+                          className="w-full bg-black/60 border border-white/10 rounded-xl px-5 py-4 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all text-white placeholder:text-white/30"
                         />
                       </div>
                     </div>

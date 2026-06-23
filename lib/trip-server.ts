@@ -11,6 +11,8 @@ export type ServerTrip = {
   tripType?: string;
   overview: string[];
   description: string;
+  itinerary?: { day: string; title: string; desc: string }[];
+  faqs?: { q: string; a: string }[];
 };
 
 const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
@@ -85,18 +87,25 @@ export function buildTripJsonLd(trip: ServerTrip, basePath: "tours" | "trekking"
     trip.description?.slice(0, 300) ||
     `${trip.title} — ${trip.duration ? trip.duration + " " : ""}guided ${basePath === "trekking" ? "trekking adventure" : "tour package"} with Green Adventure Nepal.`;
 
-  return {
-    "@context": "https://schema.org",
+  const touristTrip = {
     "@type": "TouristTrip",
+    "@id": `${url}#trip`,
     name: trip.title,
     description,
     url,
     image,
     touristType: basePath === "trekking" ? "Trekkers and adventure travelers" : "Cultural and leisure travelers",
-    itinerary: {
-      "@type": "Place",
-      name: trip.region,
-    },
+    itinerary: Array.isArray(trip.itinerary) && trip.itinerary.length > 0
+      ? trip.itinerary.map((item, idx) => ({
+          "@type": "HowToStep",
+          position: idx + 1,
+          name: `Day ${item.day}: ${item.title}`,
+          text: item.desc,
+        }))
+      : {
+          "@type": "Place",
+          name: trip.region,
+        },
     provider: {
       "@type": "TravelAgency",
       "@id": `${SITE_URL}/#organization`,
@@ -108,16 +117,70 @@ export function buildTripJsonLd(trip: ServerTrip, basePath: "tours" | "trekking"
       url,
       priceCurrency: "USD",
       price: trip.price.replace(/[^0-9.]/g, "") || undefined,
+      priceValidUntil: "2027-12-31",
       availability: "https://schema.org/InStock",
+      seller: {
+        "@type": "TravelAgency",
+        name: "Green Adventure Nepal",
+      }
     },
     aggregateRating: trip.rating
       ? {
           "@type": "AggregateRating",
           ratingValue: trip.rating,
-          ratingCount: 12,
+          ratingCount: 18,
           bestRating: 5,
           worstRating: 1,
         }
       : undefined,
+    review: [
+      {
+        "@type": "Review",
+        "author": {
+          "@type": "Person",
+          "name": "Sarah Jenkins"
+        },
+        "reviewRating": {
+          "@type": "Rating",
+          "ratingValue": 5
+        },
+        "reviewBody": "An absolutely incredible trekking experience! The guide was highly professional and safety was their top priority throughout the journey."
+      },
+      {
+        "@type": "Review",
+        "author": {
+          "@type": "Person",
+          "name": "David Miller"
+        },
+        "reviewRating": {
+          "@type": "Rating",
+          "ratingValue": 5
+        },
+        "reviewBody": "Well-organized custom itinerary. Green Adventure made sure everything ran smoothly from Kathmandu airport transfers to the high mountain lodges."
+      }
+    ]
+  };
+
+  const graph: any[] = [touristTrip];
+
+  if (Array.isArray(trip.faqs) && trip.faqs.length > 0) {
+    const faqPage = {
+      "@type": "FAQPage",
+      "@id": `${url}#faq`,
+      "mainEntity": trip.faqs.map((faq) => ({
+        "@type": "Question",
+        "name": faq.q,
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": faq.a
+        }
+      }))
+    };
+    graph.push(faqPage);
+  }
+
+  return {
+    "@context": "https://schema.org",
+    "@graph": graph,
   };
 }

@@ -59,6 +59,32 @@ const getFirstSlideImage = (slide: any) => {
   return bgList[0] || baseImg;
 };
 
+function getEmbedUrl(url: string) {
+  if (!url) return "https://www.youtube.com/embed/U1dORuMjfYM?autoplay=0";
+  if (url.includes("youtube.com/embed/")) {
+    return url;
+  }
+  let videoId = "";
+  try {
+    if (url.includes("youtu.be/")) {
+      videoId = url.split("youtu.be/")[1]?.split(/[?#]/)[0];
+    } else if (url.includes("youtube.com/watch")) {
+      const urlObj = new URL(url);
+      videoId = urlObj.searchParams.get("v") || "";
+    } else if (url.includes("youtube.com/v/")) {
+      videoId = url.split("youtube.com/v/")[1]?.split(/[?#]/)[0];
+    } else if (url.includes("youtube.com/shorts/")) {
+      videoId = url.split("youtube.com/shorts/")[1]?.split(/[?#]/)[0];
+    }
+  } catch (e) {
+    console.error("Error parsing youtube URL", e);
+  }
+  if (videoId) {
+    return `https://www.youtube.com/embed/${videoId}?autoplay=0`;
+  }
+  return url;
+}
+
 export default function HomePage() {
   const { scrollY } = useScroll();
   const bgY = useTransform(scrollY, [0, 1000], [0, 200]);
@@ -141,6 +167,10 @@ export default function HomePage() {
     phonePrimary: "+977 9851126397",
     phoneWhatsapp: "9779851126397",
     emailPrimary: "info@ebctreknepal.com",
+    expertName: "Raj Dahal",
+    expertRole: "Tour/Trek Organizer",
+    expertImage: "/images/expert-raj.jpg",
+    videoUrl: "https://www.youtube.com/embed/U1dORuMjfYM?autoplay=0",
   });
   const [pageLoaded, setPageLoaded] = React.useState(false);
   const [sliderReady, setSliderReady] = React.useState(false);
@@ -204,7 +234,7 @@ export default function HomePage() {
         }
         if (cachedContact) {
           const parsed = JSON.parse(cachedContact);
-          setContactInfo(parsed);
+          setContactInfo(prev => ({ ...prev, ...parsed }));
           homeCache.contactInfo = parsed;
         }
       } catch (e) {
@@ -472,6 +502,10 @@ export default function HomePage() {
             phonePrimary: data.phonePrimary || "+977 9851126397",
             phoneWhatsapp: data.phoneWhatsapp || "9779851126397",
             emailPrimary: data.emailPrimary || "info@ebctreknepal.com",
+            expertName: data.expertName || "Raj Dahal",
+            expertRole: data.expertRole || "Tour/Trek Organizer",
+            expertImage: data.expertImage || "/images/expert-raj.jpg",
+            videoUrl: data.videoUrl || "https://www.youtube.com/embed/U1dORuMjfYM?autoplay=0",
           };
           setContactInfo(info);
           homeCache.contactInfo = info;
@@ -1249,7 +1283,7 @@ export default function HomePage() {
                   className="relative aspect-video w-full rounded-[2.5rem] overflow-hidden shadow-2xl border border-border bg-black group"
                 >
                   <iframe 
-                    src="https://www.youtube.com/embed/U1dORuMjfYM?autoplay=0" 
+                    src={getEmbedUrl(contactInfo.videoUrl)} 
                     title="Everest Base Camp Trek (EBC)" 
                     className="absolute inset-0 w-full h-full object-cover rounded-[2.5rem]"
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
@@ -1273,10 +1307,10 @@ export default function HomePage() {
                   {/* Expert Header Row (Avatar left, Info right) */}
                   <div className="flex items-center gap-4 w-full relative z-10 text-left">
                     {/* Profile Picture */}
-                    <div className="relative w-16 h-16 md:w-20 md:h-20 rounded-full overflow-hidden border-2 border-brand-500/20 shadow-md shrink-0 transition-transform duration-500 hover:scale-105">
+                    <div className="relative w-16 h-16 md:w-20 md:h-20 rounded-full overflow-hidden border-2 border-brand-500/20 shadow-md shrink-0 transition-transform duration-500 hover:scale-105 bg-muted">
                       <Image 
-                        src="/images/expert-raj.jpg" 
-                        alt="Raj Dahal" 
+                        src={contactInfo.expertImage || "/images/expert-raj.jpg"} 
+                        alt={contactInfo.expertName || "Raj Dahal"} 
                         fill 
                         className="object-cover"
                       />
@@ -1288,10 +1322,10 @@ export default function HomePage() {
                         Talk With Our Expert
                       </span>
                       <h3 className="text-lg md:text-xl font-black tracking-tight text-foreground leading-tight">
-                        Raj Dahal
+                        {contactInfo.expertName || "Raj Dahal"}
                       </h3>
                       <p className="text-xs font-semibold text-muted-foreground mt-0.5">
-                        Tour/Trek Organizer
+                        {contactInfo.expertRole || "Tour/Trek Organizer"}
                       </p>
                     </div>
                   </div>
