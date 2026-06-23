@@ -105,7 +105,7 @@ export const metadata: Metadata = {
     title: SITE_NAME,
   },
   verification: {
-    google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION || undefined,
+    google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION || "n6-o5XF5-IhIZ8CbX9weM0TBgF9-PDmFoRiXFK26cUE",
   },
   other: {
     "geo.region": "NP-BA",
