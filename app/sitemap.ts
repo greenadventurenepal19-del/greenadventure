@@ -3,6 +3,7 @@ import { collection, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://greenadventurenepal.com";
+const cleanSiteUrl = SITE_URL.endsWith("/") ? SITE_URL.slice(0, -1) : SITE_URL;
 
 const STATIC_ROUTES: Array<{
   path: string;
@@ -31,14 +32,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
 
   const baseEntries: MetadataRoute.Sitemap = STATIC_ROUTES.map(({ path, changeFrequency, priority }) => ({
-    url: `${SITE_URL}${path}`,
+    url: `${cleanSiteUrl}${path}`,
     lastModified: now,
     changeFrequency,
     priority,
   }));
 
   const destinationEntries: MetadataRoute.Sitemap = STATIC_DESTINATIONS.map((slug) => ({
-    url: `${SITE_URL}/destinations/${slug}`,
+    url: `${cleanSiteUrl}/destinations/${slug}`,
     lastModified: now,
     changeFrequency: "weekly",
     priority: 0.8,
@@ -59,7 +60,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
           ? new Date(data.updatedAt.seconds * 1000)
           : now;
         return {
-          url: `${SITE_URL}${base}/${slug}`,
+          url: `${cleanSiteUrl}${base}/${slug}`,
           lastModified,
           changeFrequency: "monthly" as const,
           priority: 0.7,
