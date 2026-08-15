@@ -439,7 +439,7 @@ export function Footer() {
           <div className="flex items-center gap-4">
             <span className="text-sm font-bold" style={{ color: 'var(--f-muted)' }}>GreenAdventure by</span>
             <a
-              href="http://tritechies.vercel.app/"
+              href="https://www.tritechies.com/"
               target="_blank"
               rel="noopener noreferrer"
               className="tritechies-btn group flex items-center gap-1.5 px-5 py-2.5 border rounded-2xl text-sm font-black shadow-sm shrink-0"
